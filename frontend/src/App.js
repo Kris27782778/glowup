@@ -3,6 +3,7 @@ import Navbar from './Navbar';
 import Hero from './Hero';
 import Footer from './Footer';
 import Login from './Login';
+import Register from './Register';
 import ProductDB from './ProductDB';
 import Dashboard from './Dashboard';
 
@@ -13,6 +14,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Hero />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/products" element={<ProductDB />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
