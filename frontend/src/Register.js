@@ -20,12 +20,34 @@ const tokens = {
 const SKIN_TYPES = ['油肌', '乾肌', '敏感肌', '中性肌', '混合肌'];
 const STEPS = ['基本資料', '帳號設定', '膚質設定'];
 
+function getPasswordStrength(pw) {
+  if (!pw) return 0;
+  let score = 0;
+  if (pw.length >= 6) score++;
+  if (pw.length >= 10) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  return score; // 0–5
+}
+
+const PW_LEVELS = [
+  { label: '請輸入密碼', color: tokens.border },
+  { label: '非常弱', color: '#E05252' },
+  { label: '弱', color: '#E09352' },
+  { label: '普通', color: '#E0C652' },
+  { label: '強', color: '#7ABF6A' },
+  { label: '非常強', color: '#4CAF50' },
+];
+
 function Register() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusField, setFocusField] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [registeredInfo, setRegisteredInfo] = useState(null);
 
   const [form, setForm] = useState({
     student_id: '',
@@ -108,7 +130,14 @@ function Register() {
       });
       const data = await response.json();
       if (response.ok) {
-        navigate('/login');
+        setRegisteredInfo({
+          nickname: form.nickname,
+          studentId: form.email,
+          email: `${form.email}@cloud.fju.edu.tw`,
+          departmentGrade,
+          skinType: skinTypeKey || '（未設定）',
+        });
+        setSuccess(true);
       } else {
         setError(data.error || '註冊失敗，請稍後再試');
         setStep(1); // 退回帳號頁顯示錯誤
@@ -125,6 +154,52 @@ function Register() {
     ...styles.input,
     ...(focusField === field ? styles.inputFocus : {}),
   });
+
+  /* ── 成功畫面 ── */
+  if (success && registeredInfo) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.decorPanel}>
+          <p style={styles.decorLogo}>GLŌW</p>
+          <p style={styles.decorTagline}>輔大美妝交流平台</p>
+          <div style={styles.decorCircle1} />
+          <div style={styles.decorCircle2} />
+        </div>
+        <div style={styles.formPanel}>
+          <div style={styles.card}>
+            <div style={successStyles.iconWrap}>
+              <div style={successStyles.iconCircle}>✓</div>
+            </div>
+            <div style={styles.cardHeader}>
+              <p style={styles.eyebrow}>REGISTRATION COMPLETE</p>
+              <h1 style={styles.title}>註冊成功！</h1>
+              <p style={styles.subtitle}>歡迎加入 GLŌW，以下是你的帳號資訊</p>
+            </div>
+            <div style={successStyles.infoCard}>
+              {[
+                { label: '暱稱', value: registeredInfo.nickname },
+                { label: '學號', value: registeredInfo.studentId },
+                { label: '電子郵件', value: registeredInfo.email },
+                { label: '系級', value: registeredInfo.departmentGrade },
+                { label: '膚質', value: registeredInfo.skinType },
+              ].map(({ label, value }, idx, arr) => (
+                <div key={label} style={{
+                  ...successStyles.infoRow,
+                  ...(idx === arr.length - 1 ? { borderBottom: 'none' } : {}),
+                }}>
+                  <span style={successStyles.infoLabel}>{label}</span>
+                  <span style={successStyles.infoValue}>{value}</span>
+                </div>
+              ))}
+            </div>
+            <button style={styles.btn} onClick={() => navigate('/login')}>
+              前往登入
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>
@@ -162,7 +237,7 @@ function Register() {
             <h1 style={styles.title}>{STEPS[step]}</h1>
             <p style={styles.subtitle}>
               {step === 0 && '告訴我們一些關於你的資訊'}
-              {step === 1 && '設定你的登入帳號'}
+              {step === 1 && '為你的學號設定登入密碼'}
               {step === 2 && '回答 5 題，找出你的膚質類型'}
             </p>
           </div>
@@ -263,8 +338,8 @@ function Register() {
           {step === 1 && (
             <div style={styles.fieldGroup}>
               <div style={styles.previewBox}>
-                <span style={styles.previewLabel}>登入帳號</span>
-                <span style={styles.previewValue}>{form.email}@cloud.fju.edu.tw</span>
+                <span style={styles.previewLabel}>學號</span>
+                <span style={styles.previewValue}>{form.email}</span>
               </div>
               <div style={styles.field}>
                 <label style={styles.label}>密碼</label>
@@ -278,6 +353,30 @@ function Register() {
                   onBlur={() => setFocusField(null)}
                   autoComplete="new-password"
                 />
+                {/* 密碼強度進度條 */}
+                {(() => {
+                  const score = getPasswordStrength(form.password);
+                  const level = PW_LEVELS[score];
+                  return (
+                    <div style={pwStyles.wrap}>
+                      <div style={pwStyles.barTrack}>
+                        {[1,2,3,4,5].map(i => (
+                          <div
+                            key={i}
+                            style={{
+                              ...pwStyles.barSegment,
+                              backgroundColor: i <= score ? level.color : tokens.border,
+                              transition: 'background-color 250ms',
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <span style={{ ...pwStyles.levelText, color: score === 0 ? tokens.textTertiary : level.color }}>
+                        {level.label}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
               <div style={styles.field}>
                 <label style={styles.label}>確認密碼</label>
@@ -682,6 +781,82 @@ const styles = {
     color: tokens.accent,
     textDecoration: 'none',
     fontWeight: 500,
+  },
+};
+
+const pwStyles = {
+  wrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginTop: '6px',
+  },
+  barTrack: {
+    flex: 1,
+    display: 'flex',
+    gap: '4px',
+    height: '4px',
+  },
+  barSegment: {
+    flex: 1,
+    borderRadius: '2px',
+  },
+  levelText: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px',
+    fontWeight: 500,
+    whiteSpace: 'nowrap',
+    minWidth: '48px',
+    textAlign: 'right',
+  },
+};
+
+const successStyles = {
+  iconWrap: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '4px',
+  },
+  iconCircle: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(76,175,80,0.12)',
+    border: '2px solid #4CAF50',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '28px',
+    color: '#4CAF50',
+    fontWeight: 600,
+  },
+  infoCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0',
+    border: `1px solid ${tokens.border}`,
+    borderRadius: '10px',
+    overflow: 'hidden',
+  },
+  infoRow: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '12px 16px',
+    borderBottom: `1px solid ${tokens.border}`,
+    gap: '12px',
+  },
+  infoLabel: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px',
+    fontWeight: 500,
+    letterSpacing: '0.06em',
+    color: tokens.accent,
+    minWidth: '60px',
+  },
+  infoValue: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '14px',
+    color: tokens.textPrimary,
   },
 };
 
