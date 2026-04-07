@@ -345,8 +345,7 @@ function Register() {
 const styles = {
   page: {
     display: 'flex',
-    minHeight: 'calc(100vh - 64px)',
-    marginTop: '64px',
+    minHeight: '100vh',
     backgroundColor: tokens.bgBase,
   },
   decorPanel: {
