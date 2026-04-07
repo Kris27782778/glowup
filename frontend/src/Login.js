@@ -149,7 +149,8 @@ function Login() {
 const styles = {
   page: {
     display: 'flex',
-    minHeight: '100vh',
+    minHeight: 'calc(100vh - 64px)',
+    marginTop: '64px',
     backgroundColor: tokens.bgBase,
   },
   /* 左側裝飾 */
