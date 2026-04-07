@@ -160,10 +160,20 @@ function Register() {
     return (
       <div style={styles.page}>
         <div style={styles.decorPanel}>
-          <p style={styles.decorLogo}>GLŌW</p>
-          <p style={styles.decorTagline}>輔大美妝交流平台</p>
           <div style={styles.decorCircle1} />
           <div style={styles.decorCircle2} />
+          <div style={styles.decorCircle3} />
+          <div style={styles.decorInner}>
+            <div style={styles.decorLogoBlock}>
+              <p style={styles.decorEyebrow}>FU JEN CATHOLIC UNIVERSITY</p>
+              <p style={styles.decorLogo}>GLŌW</p>
+              <div style={styles.decorDivider} />
+              <p style={styles.decorTagline}>
+                了解你擦在<br />臉上的一切
+              </p>
+            </div>
+            <p style={styles.decorFooter}>清晰就是美 · CLARITY IS BEAUTY</p>
+          </div>
         </div>
         <div style={styles.formPanel}>
           <div style={styles.card}>
@@ -205,27 +215,45 @@ function Register() {
     <div style={styles.page}>
       {/* 左側裝飾區 */}
       <div style={styles.decorPanel}>
-        <p style={styles.decorLogo}>GLŌW</p>
-        <p style={styles.decorTagline}>輔大美妝交流平台</p>
-        <div style={styles.stepList}>
-          {STEPS.map((s, i) => (
-            <div key={s} style={styles.stepItem}>
-              <div style={{
-                ...styles.stepDot,
-                ...(i === step ? styles.stepDotActive : {}),
-                ...(i < step ? styles.stepDotDone : {}),
-              }}>
-                {i < step ? '✓' : i + 1}
-              </div>
-              <span style={{
-                ...styles.stepLabel,
-                ...(i === step ? styles.stepLabelActive : {}),
-              }}>{s}</span>
-            </div>
-          ))}
-        </div>
+        {/* 背景裝飾圓 */}
         <div style={styles.decorCircle1} />
         <div style={styles.decorCircle2} />
+        <div style={styles.decorCircle3} />
+
+        <div style={styles.decorInner}>
+          {/* Logo 區 */}
+          <div style={styles.decorLogoBlock}>
+            <p style={styles.decorEyebrow}>FU JEN CATHOLIC UNIVERSITY</p>
+            <p style={styles.decorLogo}>GLŌW</p>
+            <div style={styles.decorDivider} />
+            <p style={styles.decorTagline}>
+              了解你擦在<br />臉上的一切
+            </p>
+          </div>
+
+          {/* 步驟進度 */}
+          <div style={styles.stepList}>
+            <p style={styles.stepEyebrow}>建立帳號</p>
+            {STEPS.map((s, i) => (
+              <div key={s} style={styles.stepItem}>
+                <div style={{
+                  ...styles.stepDot,
+                  ...(i === step ? styles.stepDotActive : {}),
+                  ...(i < step ? styles.stepDotDone : {}),
+                }}>
+                  {i < step ? '✓' : i + 1}
+                </div>
+                <span style={{
+                  ...styles.stepLabel,
+                  ...(i === step ? styles.stepLabelActive : {}),
+                }}>{s}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* 底部標語 */}
+          <p style={styles.decorFooter}>清晰就是美 · CLARITY IS BEAUTY</p>
+        </div>
       </div>
 
       {/* 右側表單區 */}
@@ -444,61 +472,93 @@ function Register() {
 const styles = {
   page: {
     display: 'flex',
-    minHeight: '100vh',
+    minHeight: 'calc(100vh - 64px)',
+    marginTop: '64px',
     backgroundColor: tokens.bgBase,
   },
   decorPanel: {
-    flex: '0 0 30%',
-    backgroundColor: tokens.textPrimary,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flex: '0 0 50%',
     position: 'relative',
     overflow: 'hidden',
-    gap: '12px',
+    display: 'flex',
+    alignItems: 'stretch',
+    background: `linear-gradient(145deg, #2A1F1B 0%, ${tokens.textPrimary} 50%, #0F0D0C 100%)`,
+  },
+  decorInner: {
+    position: 'relative',
+    zIndex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    padding: '72px 64px',
+    width: '100%',
+  },
+  decorLogoBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  decorEyebrow: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '10px',
+    fontWeight: 400,
+    letterSpacing: '0.22em',
+    color: 'rgba(247,244,242,0.3)',
+    margin: '0 0 20px 0',
+    textTransform: 'uppercase',
   },
   decorLogo: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '56px',
+    fontSize: '96px',
     fontWeight: 300,
-    letterSpacing: '0.18em',
+    letterSpacing: '0.1em',
     color: '#F7F4F2',
     margin: 0,
-    position: 'relative',
-    zIndex: 1,
+    lineHeight: 0.9,
+  },
+  decorDivider: {
+    width: '48px',
+    height: '1px',
+    backgroundColor: tokens.accent,
+    margin: '28px 0',
   },
   decorTagline: {
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '12px',
-    letterSpacing: '0.2em',
-    color: tokens.textTertiary,
-    margin: '0 0 32px 0',
-    position: 'relative',
-    zIndex: 1,
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '32px',
+    fontWeight: 300,
+    fontStyle: 'italic',
+    color: 'rgba(247,244,242,0.7)',
+    lineHeight: 1.4,
+    margin: 0,
+  },
+  stepEyebrow: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '10px',
+    fontWeight: 500,
+    letterSpacing: '0.18em',
+    color: 'rgba(247,244,242,0.3)',
+    margin: '0 0 20px 0',
+    textTransform: 'uppercase',
   },
   stepList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px',
-    position: 'relative',
-    zIndex: 1,
+    gap: '16px',
   },
   stepItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: '14px',
   },
   stepDot: {
-    width: '28px',
-    height: '28px',
+    width: '32px',
+    height: '32px',
     borderRadius: '50%',
     border: `1px solid rgba(196,137,122,0.3)`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '12px',
-    color: tokens.textTertiary,
+    fontSize: '13px',
+    color: 'rgba(247,244,242,0.3)',
     fontFamily: '"DM Sans", sans-serif',
     flexShrink: 0,
   },
@@ -515,30 +575,50 @@ const styles = {
   },
   stepLabel: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px',
+    fontSize: '14px',
     color: 'rgba(247,244,242,0.4)',
   },
   stepLabelActive: {
     color: '#F7F4F2',
     fontWeight: 500,
   },
+  decorFooter: {
+    fontFamily: '"Cormorant Garamond", serif',
+    fontSize: '13px',
+    fontWeight: 300,
+    letterSpacing: '0.18em',
+    color: 'rgba(247,244,242,0.2)',
+    margin: 0,
+  },
   decorCircle1: {
     position: 'absolute',
-    width: '320px',
-    height: '320px',
+    width: '600px',
+    height: '600px',
     borderRadius: '50%',
-    border: `1px solid rgba(196,137,122,0.15)`,
-    top: '-80px',
-    right: '-120px',
+    border: '1px solid rgba(196,137,122,0.12)',
+    top: '-120px',
+    right: '-160px',
+    pointerEvents: 'none',
   },
   decorCircle2: {
     position: 'absolute',
-    width: '220px',
-    height: '220px',
+    width: '380px',
+    height: '380px',
     borderRadius: '50%',
-    border: `1px solid rgba(196,137,122,0.1)`,
-    bottom: '-50px',
-    left: '-60px',
+    border: '1px solid rgba(196,137,122,0.08)',
+    bottom: '-80px',
+    left: '-80px',
+    pointerEvents: 'none',
+  },
+  decorCircle3: {
+    position: 'absolute',
+    width: '200px',
+    height: '200px',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(196,137,122,0.04)',
+    top: '40%',
+    left: '10%',
+    pointerEvents: 'none',
   },
   formPanel: {
     flex: 1,

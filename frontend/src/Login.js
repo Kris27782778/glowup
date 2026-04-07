@@ -180,13 +180,14 @@ function Login() {
 const styles = {
   page: {
     display: 'flex',
-    minHeight: '100vh',
+    minHeight: 'calc(100vh - 64px)',
+    marginTop: '64px',
     backgroundColor: T.bgInverse,
   },
 
   /* ── 品牌左側 ── */
   brand: {
-    flex: '0 0 55%',
+    flex: '0 0 50%',
     position: 'relative',
     overflow: 'hidden',
     display: 'flex',
