@@ -16,7 +16,8 @@ const T = {
 
 const CATEGORIES  = ['化妝品', '保養品'];
 const SKIN_TYPES  = ['油性肌', '乾性肌', '混合性肌', '敏感性肌', '中性肌'];
-const EFFECTS     = ['保濕', '控油', '舒緩修復', '抗痘', '去角質', '美白', '抗老'];
+const MAKEUP_EFFECTS   = ['保濕', '控油', '舒緩修復'];
+const SKINCARE_EFFECTS = ['保濕', '控油', '舒緩修復', '抗痘', '去角質'];
 const MAKEUP_ITEMS    = ['粉底液', '遮瑕', '防曬'];
 const SKINCARE_ITEMS  = ['化妝水', '乳液', '霜'];
 
@@ -142,7 +143,7 @@ const fetchProducts = async () => {
           <div style={styles.filterSection}>
             <p style={styles.filterTitle}>功效</p>
             <div style={styles.filterGroup}>
-              {EFFECTS.map(e => (
+             {(category === '化妝品' ? MAKEUP_EFFECTS : SKINCARE_EFFECTS).map(e => (
                 <button
                   key={e}
                   style={{ ...styles.filterChip, ...(effect === e ? styles.filterChipActive : {}) }}
