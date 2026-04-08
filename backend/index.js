@@ -1,8 +1,9 @@
-require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const pool = require('./config/db');
 const authRoutes = require('./routes/auth');
+const productRoutes = require('./routes/products');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -12,6 +13,7 @@ app.use(express.json());
 
 // 路由
 app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
 
 // 測試路由
 app.get('/', (req, res) => {
@@ -25,7 +27,7 @@ app.get('/test-db', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: '資料庫連線失敗' });
+    res.status(500).json({ error: err.message });
   }
 });
 
