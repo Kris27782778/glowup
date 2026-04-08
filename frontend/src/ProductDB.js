@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -17,8 +17,8 @@ const T = {
 const CATEGORIES  = ['化妝品', '保養品'];
 const SKIN_TYPES  = ['油性肌', '乾性肌', '混合性肌', '敏感性肌', '中性肌'];
 const EFFECTS     = ['保濕', '控油', '舒緩修復', '抗痘', '去角質', '美白', '抗老'];
-const MAKEUP_ITEMS    = ['粉底液', '遮瑕膏', '防曬乳', '蜜粉', '腮紅', '眼影'];
-const SKINCARE_ITEMS  = ['化妝水', '精華液', '乳液', '面霜', '面膜', '眼霜'];
+const MAKEUP_ITEMS    = ['粉底液', '遮瑕', '防曬'];
+const SKINCARE_ITEMS  = ['化妝水', '乳液', '霜'];
 
 function ProductDB() {
   const [category,  setCategory]  = useState(null);
@@ -27,10 +27,45 @@ function ProductDB() {
   const [item,      setItem]      = useState(null);
   const [search,    setSearch]    = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
+  const [products,    setProducts]    = useState([]);
+  const [loading,     setLoading]     = useState(false);
 
   const itemOptions = category === '化妝品' ? MAKEUP_ITEMS : SKINCARE_ITEMS;
   const hasFilter   = category || skinType || effect || item;
   const activeTags  = [category, item, skinType, effect].filter(Boolean);
+  const itemMap = {
+  '粉底液': '粉底液',
+  '遮瑕':   '遮瑕',
+  '防曬':   '防曬',
+  '化妝水': '化妝水',
+  '乳液':   '乳液',
+  '霜':     '霜',
+};
+
+useEffect(() => {
+  fetchProducts();
+}, [category, item]);
+
+const fetchProducts = async () => {
+  if (!category && !item) { setProducts([]); return; }
+  setLoading(true);
+  try {
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    if (item)     params.append('sub_category', itemMap[item] || item);
+
+    const res  = await fetch(`http://localhost:5001/api/products?${params}`);
+    const data = await res.json();
+    setProducts(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.error('撈取產品失敗', err);
+    setProducts([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   const clearAll = () => {
     setCategory(null); setSkinType(null); setEffect(null); setItem(null);
@@ -155,19 +190,34 @@ function ProductDB() {
                 ))}
               </div>
 
-              {/* 待串接後端提示 */}
-              <div style={styles.comingSoon}>
-                <div style={styles.comingSoonIcon}>🔍</div>
-                <p style={styles.comingSoonTitle}>篩選條件已設定</p>
-                <p style={styles.comingSoonSub}>
-                  產品資料庫串接後端後將顯示推薦結果
-                </p>
-                <div style={styles.conditionSummary}>
-                  {activeTags.map(tag => (
-                    <span key={tag} style={styles.conditionTag}>{tag}</span>
+              {/* 產品清單 */}
+              {loading ? (
+                <div style={styles.emptyState}>
+                  <p style={styles.emptyTitle}>載入中...</p>
+                </div>
+              ) : products.length === 0 ? (
+                <div style={styles.emptyState}>
+                  <p style={styles.emptyTitle}>找不到符合條件的產品</p>
+                  <p style={styles.emptySub}>試試調整篩選條件</p>
+                </div>
+              ) : (
+                <div style={styles.productGrid}>
+                  {products.map(p => (
+                    <div key={p.product_id} style={styles.productCard}>
+                      <p style={styles.productBrand}>{p.brand}</p>
+                      <p style={styles.productName}>{p.name}</p>
+                      <p style={styles.productSub}>{p.sub_category}</p>
+                      <div style={styles.ingredientRow}>
+                        {p.product_ingredients?.map(pi => (
+                          <span key={pi.ingredient_id} style={styles.conditionTag}>
+                            {pi.ingredients?.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
-              </div>
+              )}
             </>
           ) : (
             <div style={styles.emptyState}>
@@ -407,6 +457,43 @@ const styles = {
     margin: 0,
     textAlign: 'center',
   },
+   productGrid: {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+  gap: '16px',
+},
+productCard: {
+  backgroundColor: T.bgSurface,
+  borderRadius: '12px',
+  border: `1px solid ${T.border}`,
+  padding: '20px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6px',
+},
+productBrand: {
+  fontSize: '11px',
+  fontWeight: 500,
+  color: T.textTertiary,
+  margin: 0,
+  textTransform: 'uppercase',
+},
+productName: {
+  fontSize: '17px',
+  color: T.textPrimary,
+  margin: 0,
+},
+productSub: {
+  fontSize: '12px',
+  color: T.accent,
+  margin: 0,
+},
+ingredientRow: {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '4px',
+  marginTop: '6px',
+},
 };
 
 export default ProductDB;
