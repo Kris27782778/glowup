@@ -44,15 +44,17 @@ function ProductDB() {
 
 useEffect(() => {
   fetchProducts();
-}, [category, item]);
+}, [category, item, skinType, effect]); // ← 加上 skinType, effect
 
 const fetchProducts = async () => {
   if (!category && !item) { setProducts([]); return; }
   setLoading(true);
   try {
     const params = new URLSearchParams();
-    if (category) params.append('category', category);
-    if (item)     params.append('sub_category', itemMap[item] || item);
+    if (category)  params.append('category', category);
+    if (item)      params.append('sub_category', itemMap[item] || item);
+    if (skinType)  params.append('skin_type', skinType);   // ← 新增
+    if (effect)    params.append('effect', effect);         // ← 新增
 
     const res  = await fetch(`http://localhost:5001/api/products?${params}`);
     const data = await res.json();
@@ -207,6 +209,9 @@ const fetchProducts = async () => {
                       <p style={styles.productBrand}>{p.brand}</p>
                       <p style={styles.productName}>{p.name}</p>
                       <p style={styles.productSub}>{p.sub_category}</p>
+                      {(skinType || effect) && (
+                      <p style={styles.productScore}>推薦分數：{p.score} 分</p>
+                      )}
                       <div style={styles.ingredientRow}>
                         {p.product_ingredients?.map(pi => (
                           <span key={pi.ingredient_id} style={styles.conditionTag}>
@@ -237,6 +242,12 @@ const styles = {
     backgroundColor: T.bgBase,
     minHeight: '100vh',
   },
+  productScore: {
+  fontSize: '12px',
+  color: T.accent,
+  fontWeight: 'bold',
+  margin: 0,
+},
   /* 搜尋 Hero */
   searchHero: {
     backgroundColor: T.bgInverse,
