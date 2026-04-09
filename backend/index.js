@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const pool = require('./config/db');
 const authRoutes = require('./routes/auth');
+const productRoutes = require('./routes/products');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -12,6 +13,7 @@ app.use(express.json());
 
 // 路由
 app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
 
 // 測試路由
 app.get('/', (req, res) => {
