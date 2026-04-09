@@ -330,9 +330,75 @@ const SKIN_TOPICS = [
 
 const TICKER_ITEMS = ['成分透明', 'CLARITY IS BEAUTY', '輔大美妝社群', 'INGREDIENT LIBRARY', '膚質配對', 'GLOW UP'];
 
+const INGREDIENTS = [
+  {
+    name: '菸鹼醯胺', en: 'Niacinamide', safeScore: 85,
+    tags: ['美白', '控油', '毛孔', '修護'],
+    desc: '多效合一的明星成分，適合大多數膚質，與 A 醇搭配需注意濃度與順序。',
+    ewg: 'EWG 1 級', barColor: '#7BAE8A',
+  },
+  {
+    name: '玻尿酸', en: 'Hyaluronic Acid', safeScore: 96,
+    tags: ['保濕', '鎖水', '敏感肌', '全膚質'],
+    desc: '天然保濕因子，能吸附自身重量千倍的水分，溫和適合各種膚質使用。',
+    ewg: 'EWG 1 級', barColor: '#7BAE8A',
+  },
+  {
+    name: '視黃醇', en: 'Retinol', safeScore: 62,
+    tags: ['抗老', '促代謝', '淡斑', '需適應期'],
+    desc: '維生素 A 衍生物，刺激膠原蛋白再生，新手建議從低濃度（0.1%）開始使用。',
+    ewg: 'EWG 3 級', barColor: '#D4A853',
+  },
+  {
+    name: '水楊酸', en: 'Salicylic Acid', safeScore: 70,
+    tags: ['去角質', '控油', '痘痘', '毛孔'],
+    desc: '脂溶性酸，能深入毛孔清潔油脂，0.5–2% 濃度適用一般保養品。',
+    ewg: 'EWG 2 級', barColor: '#C4AF7B',
+  },
+  {
+    name: '角鯊烷', en: 'Squalane', safeScore: 93,
+    tags: ['保濕', '柔膚', '油肌', '全膚質'],
+    desc: '植物來源的仿皮脂成分，質地輕薄不黏膩，油性肌膚也能安心使用。',
+    ewg: 'EWG 1 級', barColor: '#7BAE8A',
+  },
+  {
+    name: '杏仁酸', en: 'Mandelic Acid', safeScore: 75,
+    tags: ['去角質', '敏感肌', '溫和', '淡斑'],
+    desc: '分子量大的果酸，滲透速度慢，敏感肌與換膚新手的首選入門酸。',
+    ewg: 'EWG 2 級', barColor: '#C4AF7B',
+  },
+];
+
 function LandingPage() {
   const navigate = useNavigate();
   useReveal();
+
+  const [ingIdx,  setIngIdx]  = useState(0);
+  const [fading,  setFading]  = useState(false);
+  const [barReady, setBarReady] = useState(false);
+
+  /* 每 5 秒切換成分 */
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setIngIdx(i => (i + 1) % INGREDIENTS.length);
+        setFading(false);
+        setBarReady(false);
+        // 讓 safeBar transition 在新值渲染後觸發
+        requestAnimationFrame(() => requestAnimationFrame(() => setBarReady(true)));
+      }, 350);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  /* 初次載入時啟動 bar */
+  useEffect(() => {
+    const t = setTimeout(() => setBarReady(true), 200);
+    return () => clearTimeout(t);
+  }, []);
+
+  const ing = INGREDIENTS[ingIdx];
 
   return (
     <div style={L.page}>
@@ -356,18 +422,43 @@ function LandingPage() {
 
           <div style={L.heroRight} className="g-scale-in gd-2">
             <div style={L.heroCard} className="g-float">
-              <p style={L.cardLabel}>今日成分</p>
-              <p style={L.cardIngredient}>菸鹼醯胺</p>
-              <p style={L.cardEn}>Niacinamide</p>
-              <div style={L.safeBar}><div style={L.safeBarFill} className="g-safe-bar-fill" /></div>
-              <div style={L.cardTags}>
-                {['美白', '控油', '毛孔', '修護'].map(t => <span key={t} style={L.cardTag}>{t}</span>)}
+              {/* 成分內容：淡入淡出 */}
+              <div style={{ opacity: fading ? 0 : 1, transition: 'opacity 300ms ease' }}>
+                <p style={L.cardLabel}>成分介紹</p>
+                <p style={L.cardIngredient}>{ing.name}</p>
+                <p style={L.cardEn}>{ing.en}</p>
+                {/* 安全評分 bar */}
+                <div style={{ marginBottom: '4px' }}>
+                  <div style={L.safeBar}>
+                    <div style={{
+                      ...L.safeBarFill,
+                      backgroundColor: ing.barColor,
+                      width: barReady ? `${ing.safeScore}%` : '0%',
+                      transition: 'width 700ms cubic-bezier(0.22,1,0.36,1)',
+                    }} />
+                  </div>
+                  <p style={L.safeScore}>安全評分 {ing.safeScore} / 100</p>
+                </div>
+                <div style={L.cardTags}>
+                  {ing.tags.map(t => <span key={t} style={L.cardTag}>{t}</span>)}
+                </div>
+                <p style={L.cardDesc}>{ing.desc}</p>
               </div>
-              <p style={L.cardDesc}>多效合一的明星成分，適合大多數膚質，與 A 醇搭配需注意濃度與順序。</p>
+              {/* 分頁圓點 */}
+              <div style={L.dotRow}>
+                {INGREDIENTS.map((_, i) => (
+                  <button
+                    key={i}
+                    style={{ ...L.dot, ...(i === ingIdx ? L.dotActive : {}) }}
+                    onClick={() => { setFading(true); setTimeout(() => { setIngIdx(i); setFading(false); setBarReady(false); requestAnimationFrame(() => requestAnimationFrame(() => setBarReady(true))); }, 350); }}
+                    aria-label={`成分 ${i + 1}`}
+                  />
+                ))}
+              </div>
             </div>
-            <div style={L.floatCard} className="g-float-sm">
-              <span style={L.floatIcon}>✓</span>
-              <span style={L.floatText}>成分安全 · EWG 1 級</span>
+            <div style={{ ...L.floatCard, opacity: fading ? 0 : 1, transition: 'opacity 300ms ease' }} className="g-float-sm">
+              <span style={{ ...L.floatIcon, color: ing.barColor }}>✓</span>
+              <span style={L.floatText}>{ing.ewg}</span>
             </div>
           </div>
         </div>
@@ -858,8 +949,19 @@ const L = {
     fontFamily: '"DM Sans", sans-serif', fontSize: '13px',
     color: T.textTertiary, margin: '-6px 0 0 0', letterSpacing: '0.06em',
   },
-  safeBar: { height: '6px', backgroundColor: T.bgSubtle, borderRadius: '999px', overflow: 'hidden' },
-  safeBarFill: { height: '100%', width: '85%', backgroundColor: '#7BAE8A', borderRadius: '999px' },
+  safeBar: { height: '6px', backgroundColor: T.bgSubtle, borderRadius: '999px', overflow: 'hidden', marginBottom: '4px' },
+  safeBarFill: { height: '100%', borderRadius: '999px' },
+  safeScore: {
+    fontFamily: '"DM Sans", sans-serif', fontSize: '10px',
+    color: T.textTertiary, margin: '4px 0 0 0', letterSpacing: '0.04em',
+  },
+  dotRow: { display: 'flex', gap: '6px', alignItems: 'center', paddingTop: '4px' },
+  dot: {
+    width: '6px', height: '6px', borderRadius: '50%',
+    backgroundColor: T.border, border: 'none', padding: 0, cursor: 'pointer',
+    transition: 'background-color 250ms, transform 250ms',
+  },
+  dotActive: { backgroundColor: T.accent, transform: 'scale(1.3)' },
   cardTags: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
   cardTag: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', fontSize: '11px',

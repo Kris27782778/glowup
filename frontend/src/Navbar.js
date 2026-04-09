@@ -53,7 +53,7 @@ function Navbar() {
     localStorage.removeItem('user');
     setUser(null);
     setMenuOpen(false);
-    navigate('/');
+    navigate('/', { state: { showSplash: true } });
   };
 
   const initial = user?.nickname?.[0]?.toUpperCase() || '?';

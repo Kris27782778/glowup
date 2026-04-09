@@ -28,14 +28,14 @@ function Login() {
   const [error,       setError]       = useState('');
   const [loading,     setLoading]     = useState(false);
   const [focusField,  setFocusField]  = useState(null);
-  // splash: 'in' → 'exit' → 'done'
+  // 頁面載入時的 splash：'in' → 'exit' → 'done'
   const [splash, setSplash] = useState('in');
   const navigate = useNavigate();
 
   useEffect(() => {
-    const exitTimer = setTimeout(() => setSplash('exit'), 2000);
-    const doneTimer = setTimeout(() => setSplash('done'), 2800);
-    return () => { clearTimeout(exitTimer); clearTimeout(doneTimer); };
+    const t1 = setTimeout(() => setSplash('exit'), 2000);
+    const t2 = setTimeout(() => setSplash('done'), 2800);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   const handleLogin = async () => {
@@ -50,7 +50,8 @@ function Login() {
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        navigate('/');
+        // 由 App.js 的 GlobalSplash 負責播放動畫，這裡直接跳轉
+        navigate('/', { state: { showSplash: true } });
       } else {
         setError(data.error || '登入失敗，請確認帳號密碼');
       }
