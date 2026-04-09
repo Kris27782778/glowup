@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -14,11 +14,35 @@ const T = {
   border:        '#E5DDD9',
 };
 
-const CATEGORIES  = ['化妝品', '保養品'];
-const SKIN_TYPES  = ['油性肌', '乾性肌', '混合性肌', '敏感性肌', '中性肌'];
-const EFFECTS     = ['保濕', '控油', '舒緩修復', '抗痘', '去角質', '美白', '抗老'];
+const CATEGORIES      = ['化妝品', '保養品'];
+const SKIN_TYPES      = ['油性肌', '乾性肌', '混合性肌', '敏感性肌', '中性肌'];
+const EFFECTS         = ['保濕', '控油', '舒緩修復', '抗痘', '去角質', '美白', '抗老'];
 const MAKEUP_ITEMS    = ['粉底液', '遮瑕膏', '防曬乳', '蜜粉', '腮紅', '眼影'];
 const SKINCARE_ITEMS  = ['化妝水', '精華液', '乳液', '面霜', '面膜', '眼霜'];
+
+// ✅ 修復1：補上 FilterChip 元件定義
+function FilterChip({ label, active, onToggle }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      style={{
+        fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+        fontSize: '12px',
+        padding: '5px 12px',
+        borderRadius: '999px',
+        border: `1px solid ${active ? T.accent : T.border}`,
+        backgroundColor: active ? T.accent : T.bgSurface,
+        color: active ? T.textInverse : T.textSecondary,
+        cursor: 'pointer',
+        transition: 'all 150ms ease',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
 function ProductDB() {
   const [category,    setCategory]    = useState(null);
@@ -30,7 +54,14 @@ function ProductDB() {
 
   const itemOptions = category === '化妝品' ? MAKEUP_ITEMS : SKINCARE_ITEMS;
   const hasFilter   = category || skinType || effect || item;
-  const activeTags  = [category, item, skinType, effect].filter(Boolean);
+
+  // ✅ 修復3：activeTags 改成物件陣列，帶 label 和 remove
+  const activeTags = [
+    category && { label: category, remove: () => { setCategory(null); setItem(null); } },
+    item     && { label: item,     remove: () => setItem(null) },
+    skinType && { label: skinType, remove: () => setSkinType(null) },
+    effect   && { label: effect,   remove: () => setEffect(null) },
+  ].filter(Boolean);
 
   const clearAll = () => {
     setCategory(null); setSkinType(null); setEffect(null); setItem(null);
@@ -72,7 +103,7 @@ function ProductDB() {
           <div style={styles.filterSection}>
             <p style={styles.filterTitle}>
               探索領域
-              {category && <span className="filter-count" key={category}>1</span>}
+              {category && <span style={styles.filterCount}>1</span>}
             </p>
             <div style={styles.filterGroup}>
               {CATEGORIES.map(cat => (
@@ -91,7 +122,7 @@ function ProductDB() {
           <div style={styles.filterSection}>
             <p style={styles.filterTitle}>
               適合膚質
-              {skinType && <span className="filter-count" key={skinType}>1</span>}
+              {skinType && <span style={styles.filterCount}>1</span>}
             </p>
             <div style={styles.filterGroup}>
               {SKIN_TYPES.map(s => (
@@ -107,14 +138,15 @@ function ProductDB() {
 
           <div style={styles.filterDivider} />
 
+          {/* ✅ 修復2：功效區改用 FilterChip（原本誤用 <button>） */}
           <div style={styles.filterSection}>
             <p style={styles.filterTitle}>
               功效
-              {effect && <span className="filter-count" key={effect}>1</span>}
+              {effect && <span style={styles.filterCount}>1</span>}
             </p>
             <div style={styles.filterGroup}>
               {EFFECTS.map(e => (
-                <button
+                <FilterChip
                   key={e}
                   label={e}
                   active={effect === e}
@@ -124,14 +156,14 @@ function ProductDB() {
             </div>
           </div>
 
-          {/* 品項：選了分類才出現，帶展開動畫 */}
+          {/* 品項：選了分類才出現 */}
           {category && (
             <div key={category}>
               <div style={styles.filterDivider} />
-              <div className="section-reveal" style={styles.filterSection}>
+              <div style={styles.filterSection}>
                 <p style={styles.filterTitle}>
                   品項
-                  {item && <span className="filter-count" key={item}>1</span>}
+                  {item && <span style={styles.filterCount}>1</span>}
                 </p>
                 <div style={styles.filterGroup}>
                   {itemOptions.map(i => (
@@ -161,10 +193,10 @@ function ProductDB() {
               {/* 已選標籤列 */}
               <div style={styles.activeTagRow}>
                 {activeTags.map(tag => (
-                  <span key={tag.label} className="active-tag">
+                  <span key={tag.label} style={styles.activeTag}>
                     {tag.label}
                     <button
-                      className="active-tag-x"
+                      style={styles.activeTagX}
                       onClick={tag.remove}
                       type="button"
                       aria-label={`移除 ${tag.label}`}
@@ -187,7 +219,7 @@ function ProductDB() {
                 </p>
                 <div style={styles.conditionSummary}>
                   {activeTags.map(tag => (
-                    <span key={tag} style={styles.conditionTag}>{tag}</span>
+                    <span key={tag.label} style={styles.conditionTag}>{tag.label}</span>
                   ))}
                 </div>
               </div>
@@ -211,7 +243,6 @@ const styles = {
     backgroundColor: T.bgBase,
     minHeight: '100vh',
   },
-  /* 搜尋 Hero */
   searchHero: {
     backgroundColor: T.bgInverse,
     padding: '56px 40px 48px',
@@ -315,6 +346,15 @@ const styles = {
     textTransform: 'uppercase',
     display: 'flex',
     alignItems: 'center',
+    gap: '6px',
+  },
+  filterCount: {
+    backgroundColor: T.accent,
+    color: T.textInverse,
+    borderRadius: '999px',
+    fontSize: '10px',
+    fontWeight: 600,
+    padding: '1px 6px',
   },
   filterGroup: {
     display: 'flex',
@@ -348,6 +388,26 @@ const styles = {
     gap: '8px',
     alignItems: 'center',
     marginBottom: '24px',
+  },
+  activeTag: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: T.accentLight,
+    color: T.textPrimary,
+    borderRadius: '999px',
+    fontSize: '12px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    padding: '4px 10px 4px 12px',
+  },
+  activeTagX: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '10px',
+    color: T.textSecondary,
+    padding: 0,
+    lineHeight: 1,
   },
   clearAllInline: {
     background: 'none',
@@ -388,6 +448,21 @@ const styles = {
     fontSize: '14px',
     color: T.textTertiary,
     margin: 0,
+  },
+  conditionSummary: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px',
+    marginTop: '8px',
+    justifyContent: 'center',
+  },
+  conditionTag: {
+    backgroundColor: T.bgSubtle,
+    color: T.textSecondary,
+    borderRadius: '999px',
+    fontSize: '12px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    padding: '4px 12px',
   },
   emptyState: {
     display: 'flex',
