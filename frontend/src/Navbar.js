@@ -119,9 +119,14 @@ function Navbar() {
                     style={styles.dropItem}
                     onClick={() => { navigate('/dashboard'); setMenuOpen(false); }}
                   >
+                    <DropIcon type="person" />
                     個人主頁
                   </button>
-                  <button style={styles.dropItem} onClick={() => setMenuOpen(false)}>
+                  <button
+                    style={styles.dropItem}
+                    onClick={() => { navigate('/settings'); setMenuOpen(false); }}
+                  >
+                    <DropIcon type="settings" />
                     帳號設定
                   </button>
 
@@ -146,6 +151,24 @@ function Navbar() {
   );
 }
 
+function DropIcon({ type }) {
+  const color = 'var(--text-tertiary)';
+  if (type === 'person') return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+      <circle cx="7" cy="4.5" r="2.5" stroke={color} strokeWidth="1.2"/>
+      <path d="M1.5 12.5c0-2.76 2.46-5 5.5-5s5.5 2.24 5.5 5" stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  );
+  if (type === 'settings') return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+      <circle cx="7" cy="7" r="2" stroke={color} strokeWidth="1.2"/>
+      <path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M10.01 10.01l1.06 1.06M2.93 11.07l1.06-1.06M10.01 3.99l1.06-1.06"
+        stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  );
+  return null;
+}
+
 function ChevronIcon({ open }) {
   return (
     <svg
@@ -168,8 +191,8 @@ const styles = {
     right: 0,
     zIndex: 100,
     height: '64px',
-    backgroundColor: T.bg,
-    borderBottom: `1px solid ${T.bgBorder}`,
+    backgroundColor: 'var(--bg-surface)',
+    borderBottom: '1px solid var(--border)',
     backdropFilter: 'blur(12px)',
   },
   inner: {
@@ -193,13 +216,13 @@ const styles = {
     fontSize: '22px',
     fontWeight: 300,
     letterSpacing: '0.2em',
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     textDecoration: 'none',
   },
   divider: {
     width: '1px',
     height: '18px',
-    backgroundColor: T.bgBorder,
+    backgroundColor: 'var(--border)',
   },
   navLinks: {
     display: 'flex',
@@ -210,15 +233,15 @@ const styles = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
     fontWeight: 400,
-    color: T.textSecondary,
+    color: 'var(--text-secondary)',
     textDecoration: 'none',
     padding: '6px 12px',
     borderRadius: '6px',
     transition: 'color 150ms, background-color 150ms',
   },
   navLinkActive: {
-    color: T.textPrimary,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    color: 'var(--text-primary)',
+    backgroundColor: 'var(--bg-subtle)',
   },
 
   /* 右側 */
@@ -237,7 +260,7 @@ const styles = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
     fontWeight: 400,
-    color: T.textSecondary,
+    color: 'var(--text-secondary)',
     textDecoration: 'none',
     padding: '7px 16px',
     borderRadius: '6px',
@@ -247,11 +270,11 @@ const styles = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
     fontWeight: 500,
-    color: '#F7F4F2',
+    color: 'var(--text-inverse)',
     textDecoration: 'none',
     padding: '7px 18px',
     borderRadius: '6px',
-    backgroundColor: '#1C1917',
+    backgroundColor: 'var(--bg-inverse)',
     transition: 'opacity 150ms',
   },
 
@@ -264,18 +287,18 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
     background: 'none',
-    border: `1px solid ${T.bgBorder}`,
+    border: '1px solid var(--border)',
     borderRadius: '8px',
     padding: '6px 12px 6px 6px',
     cursor: 'pointer',
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     transition: 'border-color 150ms, background-color 150ms',
   },
   avatar: {
     width: '28px',
     height: '28px',
     borderRadius: '50%',
-    backgroundColor: T.accent,
+    backgroundColor: 'var(--accent)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -289,7 +312,7 @@ const styles = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
     fontWeight: 400,
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     maxWidth: '100px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -302,11 +325,11 @@ const styles = {
     top: 'calc(100% + 8px)',
     right: 0,
     width: '220px',
-    backgroundColor: '#FFFFFF',
-    border: `1px solid ${T.bgBorder}`,
+    backgroundColor: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
     borderRadius: '12px',
     overflow: 'hidden',
-    boxShadow: '0 8px 32px rgba(28,25,23,0.12)',
+    boxShadow: '0 8px 32px rgba(28,25,23,0.16)',
     zIndex: 200,
   },
   dropHeader: {
@@ -319,7 +342,7 @@ const styles = {
     width: '40px',
     height: '40px',
     borderRadius: '50%',
-    backgroundColor: T.accent,
+    backgroundColor: 'var(--accent)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -338,7 +361,7 @@ const styles = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
     fontWeight: 500,
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -346,14 +369,14 @@ const styles = {
   dropEmail: {
     fontFamily: '"DM Sans", sans-serif',
     fontSize: '11px',
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
   dropSeparator: {
     height: '1px',
-    backgroundColor: T.bgBorder,
+    backgroundColor: 'var(--border)',
     margin: '0',
   },
   dropItem: {
@@ -367,13 +390,13 @@ const styles = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
     fontWeight: 400,
-    color: T.textSecondary,
+    color: 'var(--text-secondary)',
     cursor: 'pointer',
     textAlign: 'left',
     transition: 'background-color 120ms, color 120ms',
   },
   dropItemDanger: {
-    color: T.danger,
+    color: '#C0504A',
   },
   dropItemIcon: {
     fontSize: '14px',

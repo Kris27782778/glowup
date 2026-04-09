@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReveal } from './hooks/useReveal';
+import SkinQuiz from './components/SkinQuiz';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -42,8 +43,10 @@ const EMPTY_STATE = [
 ];
 
 function Dashboard() {
-  const [user, setUser] = useState(null);
-  const [tab,  setTab]  = useState(0);
+  const [user, setUser]       = useState(null);
+  const [tab,  setTab]        = useState(0);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -54,6 +57,20 @@ function Dashboard() {
 
   useReveal();
 
+  const handleQuizComplete = (skinKey) => {
+    const updated = { ...user, skin_type: skinKey };
+    localStorage.setItem('user', JSON.stringify(updated));
+    setUser(updated);
+    setShowQuiz(false);
+  };
+
+  const handleProfileSave = (patch) => {
+    const updated = { ...user, ...patch };
+    localStorage.setItem('user', JSON.stringify(updated));
+    setUser(updated);
+    setShowEdit(false);
+  };
+
   if (!user) return null;
 
   const initial  = user.nickname?.[0]?.toUpperCase() || '?';
@@ -62,6 +79,32 @@ function Dashboard() {
 
   return (
     <div style={styles.page}>
+
+      {/* ══ 編輯個人資料 Modal ══ */}
+      {showEdit && (
+        <EditProfileModal
+          user={user}
+          onSave={handleProfileSave}
+          onClose={() => setShowEdit(false)}
+        />
+      )}
+
+      {/* ══ 膚質測驗 Modal ══ */}
+      {showQuiz && (
+        <div style={styles.modalOverlay} onClick={() => setShowQuiz(false)}>
+          <div style={styles.modalBox} onClick={e => e.stopPropagation()}>
+            <button style={styles.modalClose} onClick={() => setShowQuiz(false)}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M2 2L14 14M14 2L2 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <SkinQuiz
+              onComplete={handleQuizComplete}
+              onSkip={() => setShowQuiz(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ══ Cover Hero ══ */}
       <div style={styles.cover}>
@@ -92,6 +135,9 @@ function Dashboard() {
 
           {/* 基本資訊 */}
           <div style={styles.infoBlock} className="g-fade-up gd-3">
+            {user.bio && (
+              <p style={styles.bioText}>{user.bio}</p>
+            )}
             {user.department_grade && (
               <div style={styles.infoRow}>
                 <span style={styles.infoText}>{user.department_grade}</span>
@@ -110,7 +156,7 @@ function Dashboard() {
               <p style={styles.skinCardEyebrow}>我的膚質</p>
               <p style={styles.skinCardTitle}>{skinInfo.label}</p>
               <p style={styles.skinCardDesc}>{skinInfo.desc}</p>
-              <button style={styles.skinRetakeBtn} onClick={() => navigate('#')}>
+              <button style={styles.skinRetakeBtn} onClick={() => setShowQuiz(true)}>
                 重新測驗
               </button>
             </div>
@@ -118,7 +164,7 @@ function Dashboard() {
             <div style={styles.skinCardEmpty} className="g-reveal delay-1">
               <p style={styles.skinCardEyebrow}>膚質尚未設定</p>
               <p style={styles.skinCardEmptyDesc}>完成膚質測驗，獲得個人化推薦</p>
-              <button style={styles.skinTakeBtn} onClick={() => navigate('/register')}>
+              <button style={styles.skinTakeBtn} onClick={() => setShowQuiz(true)}>
                 開始測驗
               </button>
             </div>
@@ -141,7 +187,18 @@ function Dashboard() {
 
           {/* 操作按鈕 */}
           <div style={styles.actions}>
-            <button style={styles.editBtn}>編輯個人資料</button>
+            <button style={styles.editBtn} onClick={() => setShowEdit(true)}>編輯個人資料</button>
+            <button
+              style={styles.settingsBtn}
+              onClick={() => navigate('/settings')}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+                <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.2"/>
+                <path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M10.01 10.01l1.06 1.06M2.93 11.07l1.06-1.06M10.01 3.99l1.06-1.06"
+                  stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+              設定
+            </button>
             <button
               style={styles.logoutBtn}
               onClick={() => { localStorage.removeItem('user'); navigate('/'); }}
@@ -185,6 +242,327 @@ function Dashboard() {
   );
 }
 
+// ── 編輯個人資料 Modal ──────────────────────────────────────
+function EditProfileModal({ user, onSave, onClose }) {
+  const [nickname, setNickname] = useState(user.nickname || '');
+  const [bio,      setBio]      = useState(user.bio      || '');
+  const [error,    setError]    = useState('');
+
+  const initial = nickname?.[0]?.toUpperCase() || '?';
+
+  const handleSave = () => {
+    if (!nickname.trim()) { setError('暱稱不能為空'); return; }
+    onSave({ nickname: nickname.trim(), bio: bio.trim() });
+  };
+
+  return (
+    <div style={ep.overlay} onClick={onClose}>
+      <div style={ep.box} onClick={e => e.stopPropagation()}>
+
+        {/* 關閉 */}
+        <button style={ep.close} onClick={onClose}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2 2L14 14M14 2L2 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </button>
+
+        {/* Header */}
+        <div style={ep.header}>
+          <p style={ep.eyebrow}>EDIT PROFILE</p>
+          <h2 style={ep.title}>編輯個人資料</h2>
+        </div>
+
+        {/* 頭像預覽 */}
+        <div style={ep.avatarRow}>
+          <div style={ep.avatar}>{initial}</div>
+          <div style={ep.avatarInfo}>
+            <p style={ep.avatarLabel}>個人頭像</p>
+            <p style={ep.avatarHint}>以暱稱首字母顯示</p>
+          </div>
+        </div>
+
+        {/* 表單 */}
+        <div style={ep.form}>
+
+          {/* 暱稱 */}
+          <div style={ep.field}>
+            <label style={ep.label}>暱稱</label>
+            <input
+              style={{ ...ep.input, ...(error ? ep.inputError : {}) }}
+              value={nickname}
+              onChange={e => { setNickname(e.target.value); setError(''); }}
+              maxLength={20}
+              placeholder="輸入你的暱稱"
+            />
+            {error && <p style={ep.errorMsg}>{error}</p>}
+          </div>
+
+          {/* 個人簡介 */}
+          <div style={ep.field}>
+            <label style={ep.label}>個人簡介</label>
+            <textarea
+              style={ep.textarea}
+              value={bio}
+              onChange={e => setBio(e.target.value)}
+              maxLength={120}
+              rows={3}
+              placeholder="簡短介紹自己（選填）"
+            />
+            <p style={ep.charCount}>{bio.length} / 120</p>
+          </div>
+
+          {/* 唯讀欄位 */}
+          {(user.department_grade || user.email) && (
+            <div style={ep.readonlyGroup}>
+              {[
+                user.department_grade && { label: '系級',      value: user.department_grade },
+                user.email            && { label: '電子郵件',   value: user.email },
+              ].filter(Boolean).map((row, i, arr) => (
+                <div
+                  key={row.label}
+                  style={{
+                    ...ep.readonlyField,
+                    ...(i < arr.length - 1 ? { borderBottom: '1px solid var(--border)' } : {}),
+                  }}
+                >
+                  <span style={ep.readonlyLabel}>{row.label}</span>
+                  <span style={ep.readonlyValue}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+        </div>
+
+        {/* 操作 */}
+        <div style={ep.actions}>
+          <button style={ep.cancelBtn} onClick={onClose}>取消</button>
+          <button style={ep.saveBtn} onClick={handleSave}>儲存變更</button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+const ep = {
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 1000,
+    backgroundColor: 'rgba(28,25,23,0.6)',
+    backdropFilter: 'blur(4px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '24px',
+  },
+  box: {
+    position: 'relative',
+    backgroundColor: 'var(--bg-surface)',
+    borderRadius: '20px',
+    padding: '40px',
+    width: '100%',
+    maxWidth: '480px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
+    boxShadow: '0 24px 64px rgba(28,25,23,0.2)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '28px',
+  },
+  close: {
+    position: 'absolute',
+    top: '16px',
+    right: '16px',
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-subtle)',
+    color: 'var(--text-tertiary)',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+  },
+  header: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  eyebrow: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '10px',
+    fontWeight: 500,
+    letterSpacing: '0.14em',
+    color: 'var(--accent)',
+    margin: 0,
+  },
+  title: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '28px',
+    fontWeight: 400,
+    color: 'var(--text-primary)',
+    margin: 0,
+  },
+  /* 頭像 */
+  avatarRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  avatar: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
+    backgroundColor: 'var(--accent)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontFamily: '"Cormorant Garamond", serif',
+    fontSize: '28px',
+    fontWeight: 400,
+    color: '#FFFFFF',
+    flexShrink: 0,
+  },
+  avatarInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  avatarLabel: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: 'var(--text-primary)',
+    margin: 0,
+  },
+  avatarHint: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px',
+    color: 'var(--text-tertiary)',
+    margin: 0,
+  },
+  /* 表單 */
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+  },
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  label: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px',
+    fontWeight: 500,
+    letterSpacing: '0.06em',
+    color: 'var(--text-secondary)',
+  },
+  input: {
+    height: '44px',
+    padding: '0 14px',
+    borderRadius: '10px',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-subtle)',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '14px',
+    color: 'var(--text-primary)',
+    outline: 'none',
+    transition: 'border-color 150ms',
+  },
+  inputError: {
+    borderColor: '#C0504A',
+  },
+  textarea: {
+    padding: '12px 14px',
+    borderRadius: '10px',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-subtle)',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '14px',
+    color: 'var(--text-primary)',
+    outline: 'none',
+    resize: 'vertical',
+    lineHeight: 1.6,
+    transition: 'border-color 150ms',
+  },
+  charCount: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '11px',
+    color: 'var(--text-tertiary)',
+    margin: 0,
+    textAlign: 'right',
+  },
+  errorMsg: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px',
+    color: '#C0504A',
+    margin: 0,
+  },
+  /* 唯讀欄位 */
+  readonlyGroup: {
+    backgroundColor: 'var(--bg-subtle)',
+    borderRadius: '10px',
+    overflow: 'hidden',
+  },
+  readonlyField: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '12px 16px',
+    gap: '16px',
+  },
+  readonlyLabel: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px',
+    fontWeight: 500,
+    color: 'var(--text-tertiary)',
+    flexShrink: 0,
+  },
+  readonlyValue: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: 'var(--text-secondary)',
+    textAlign: 'right',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  /* 操作 */
+  actions: {
+    display: 'flex',
+    gap: '10px',
+  },
+  cancelBtn: {
+    flex: 1,
+    height: '44px',
+    backgroundColor: 'transparent',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '14px',
+    color: 'var(--text-secondary)',
+    cursor: 'pointer',
+  },
+  saveBtn: {
+    flex: 2,
+    height: '44px',
+    backgroundColor: 'var(--bg-inverse)',
+    border: 'none',
+    borderRadius: '10px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '14px',
+    fontWeight: 500,
+    color: 'var(--text-inverse)',
+    cursor: 'pointer',
+  },
+};
+
 function EmptyState({ title, sub }) {
   return (
     <div style={emptyStyle.wrap}>
@@ -214,13 +592,13 @@ const emptyStyle = {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
     fontSize: '22px',
     fontWeight: 400,
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     margin: 0,
   },
   sub: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     margin: 0,
     textAlign: 'center',
     maxWidth: '320px',
@@ -229,9 +607,49 @@ const emptyStyle = {
 };
 
 const styles = {
+  /* ── Modal ── */
+  modalOverlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 1000,
+    backgroundColor: 'rgba(28,25,23,0.6)',
+    backdropFilter: 'blur(4px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '24px',
+  },
+  modalBox: {
+    position: 'relative',
+    backgroundColor: 'var(--bg-surface)',
+    borderRadius: '20px',
+    padding: '40px',
+    width: '100%',
+    maxWidth: '520px',
+    maxHeight: '88vh',
+    overflowY: 'auto',
+    boxShadow: '0 24px 64px rgba(28,25,23,0.2)',
+  },
+  modalClose: {
+    position: 'absolute',
+    top: '16px',
+    right: '16px',
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-subtle)',
+    color: 'var(--text-tertiary)',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+  },
+
   page: {
     paddingTop: '64px',
-    backgroundColor: T.bgBase,
+    backgroundColor: 'var(--bg-base)',
     minHeight: '100vh',
   },
 
@@ -318,7 +736,7 @@ const styles = {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
     fontSize: '28px',
     fontWeight: 400,
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     margin: 0,
     lineHeight: 1.2,
   },
@@ -327,7 +745,7 @@ const styles = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '12px',
     fontWeight: 500,
-    color: T.accent,
+    color: 'var(--accent)',
     backgroundColor: 'rgba(196,137,122,0.1)',
     border: '1px solid rgba(196,137,122,0.2)',
     padding: '3px 12px',
@@ -350,14 +768,21 @@ const styles = {
   infoText: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '13px',
-    color: T.textSecondary,
+    color: 'var(--text-secondary)',
     lineHeight: 1.4,
+  },
+  bioText: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: 'var(--text-secondary)',
+    lineHeight: 1.6,
+    margin: 0,
   },
 
   /* 膚質卡 */
   skinCard: {
-    backgroundColor: T.bgSurface,
-    border: `1px solid ${T.border}`,
+    backgroundColor: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
     borderRadius: '12px',
     padding: '20px',
     display: 'flex',
@@ -365,8 +790,8 @@ const styles = {
     gap: '8px',
   },
   skinCardEmpty: {
-    backgroundColor: T.bgSurface,
-    border: `1px dashed ${T.border}`,
+    backgroundColor: 'var(--bg-surface)',
+    border: '1px dashed var(--border)',
     borderRadius: '12px',
     padding: '20px',
     display: 'flex',
@@ -378,7 +803,7 @@ const styles = {
     fontSize: '10px',
     fontWeight: 500,
     letterSpacing: '0.14em',
-    color: T.accent,
+    color: 'var(--accent)',
     margin: 0,
     textTransform: 'uppercase',
   },
@@ -386,20 +811,20 @@ const styles = {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
     fontSize: '20px',
     fontWeight: 400,
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     margin: 0,
   },
   skinCardDesc: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '12px',
-    color: T.textSecondary,
+    color: 'var(--text-secondary)',
     lineHeight: 1.6,
     margin: 0,
   },
   skinCardEmptyDesc: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '12px',
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     lineHeight: 1.6,
     margin: 0,
   },
@@ -410,7 +835,7 @@ const styles = {
     padding: 0,
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '12px',
-    color: T.accent,
+    color: 'var(--accent)',
     cursor: 'pointer',
     textAlign: 'left',
     textDecoration: 'underline',
@@ -419,7 +844,7 @@ const styles = {
   skinTakeBtn: {
     marginTop: '4px',
     height: '34px',
-    backgroundColor: T.accent,
+    backgroundColor: 'var(--accent)',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '6px',
@@ -431,8 +856,8 @@ const styles = {
 
   /* 數據 */
   statsCard: {
-    backgroundColor: T.bgSurface,
-    border: `1px solid ${T.border}`,
+    backgroundColor: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
     borderRadius: '12px',
     display: 'flex',
     overflow: 'hidden',
@@ -450,13 +875,13 @@ const styles = {
     fontFamily: '"Cormorant Garamond", serif',
     fontSize: '28px',
     fontWeight: 400,
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     lineHeight: 1,
   },
   statLabel: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '11px',
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     letterSpacing: '0.04em',
   },
   statDivider: {
@@ -465,7 +890,7 @@ const styles = {
     top: '20%',
     height: '60%',
     width: '1px',
-    backgroundColor: T.border,
+    backgroundColor: 'var(--border)',
   },
 
   /* 操作 */
@@ -476,8 +901,8 @@ const styles = {
   },
   editBtn: {
     height: '40px',
-    backgroundColor: T.bgInverse,
-    color: T.textInverse,
+    backgroundColor: 'var(--bg-inverse)',
+    color: 'var(--text-inverse)',
     border: 'none',
     borderRadius: '8px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
@@ -486,11 +911,25 @@ const styles = {
     cursor: 'pointer',
     letterSpacing: '0.04em',
   },
+  settingsBtn: {
+    height: '40px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    backgroundColor: 'transparent',
+    color: 'var(--text-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    cursor: 'pointer',
+  },
   logoutBtn: {
     height: '40px',
     backgroundColor: 'transparent',
-    color: T.textTertiary,
-    border: `1px solid ${T.border}`,
+    color: 'var(--text-tertiary)',
+    border: '1px solid var(--border)',
     borderRadius: '8px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '13px',
@@ -505,8 +944,8 @@ const styles = {
   },
   tabBar: {
     display: 'flex',
-    borderBottom: `1px solid ${T.border}`,
-    backgroundColor: T.bgSurface,
+    borderBottom: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
     borderRadius: '12px 12px 0 0',
     overflow: 'hidden',
     padding: '0 8px',
@@ -522,13 +961,13 @@ const styles = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
     fontWeight: 400,
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     cursor: 'pointer',
     transition: 'color 150ms',
     whiteSpace: 'nowrap',
   },
   tabBtnActive: {
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     fontWeight: 500,
   },
   tabIcon: {
@@ -540,13 +979,13 @@ const styles = {
     left: '12px',
     right: '12px',
     height: '2px',
-    backgroundColor: T.accent,
+    backgroundColor: 'var(--accent)',
     borderRadius: '999px',
   },
   tabContent: {
-    backgroundColor: T.bgSurface,
+    backgroundColor: 'var(--bg-surface)',
     borderRadius: '0 0 12px 12px',
-    border: `1px solid ${T.border}`,
+    border: '1px solid var(--border)',
     borderTop: 'none',
     minHeight: '400px',
   },

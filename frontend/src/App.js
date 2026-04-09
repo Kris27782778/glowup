@@ -7,7 +7,12 @@ import Login from './Login';
 import Register from './Register';
 import ProductDB from './ProductDB';
 import Dashboard from './Dashboard';
+import Settings from './Settings';
+import { applyTheme, getStoredSettings } from './hooks/useSettings';
 import './animations.css';
+
+// Apply saved theme before first render
+applyTheme(getStoredSettings().theme);
 
 const SPLASH_BG = '#1C1917';
 const SPLASH_ACCENT = '#C4897A';
@@ -83,6 +88,7 @@ function Layout() {
           <Route path="/register"  element={<Register />} />
           <Route path="/products"  element={<ProductDB />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/settings"  element={<Settings />} />
         </Routes>
       </div>
       <Footer />
