@@ -20,6 +20,30 @@ const EFFECTS         = ['保濕', '控油', '舒緩修復', '抗痘', '去角�
 const MAKEUP_ITEMS    = ['粉底液', '遮瑕膏', '防曬乳', '蜜粉', '腮紅', '眼影'];
 const SKINCARE_ITEMS  = ['化妝水', '精華液', '乳液', '面霜', '面膜', '眼霜'];
 
+// ✅ 修復1：補上 FilterChip 元件定義
+function FilterChip({ label, active, onToggle }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      style={{
+        fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+        fontSize: '12px',
+        padding: '5px 12px',
+        borderRadius: '999px',
+        border: `1px solid ${active ? T.accent : T.border}`,
+        backgroundColor: active ? T.accent : T.bgSurface,
+        color: active ? T.textInverse : T.textSecondary,
+        cursor: 'pointer',
+        transition: 'all 150ms ease',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 function ProductDB() {
   const [category,    setCategory]    = useState(null);
   const [skinType,    setSkinType]    = useState(null);
@@ -30,7 +54,14 @@ function ProductDB() {
 
   const itemOptions = category === '化妝品' ? MAKEUP_ITEMS : SKINCARE_ITEMS;
   const hasFilter   = category || skinType || effect || item;
-  const activeTags  = [category, item, skinType, effect].filter(Boolean);
+
+  // ✅ 修復3：activeTags 改成物件陣列，帶 label 和 remove
+  const activeTags = [
+    category && { label: category, remove: () => { setCategory(null); setItem(null); } },
+    item     && { label: item,     remove: () => setItem(null) },
+    skinType && { label: skinType, remove: () => setSkinType(null) },
+    effect   && { label: effect,   remove: () => setEffect(null) },
+  ].filter(Boolean);
 
   const clearAll = () => {
     setCategory(null); setSkinType(null); setEffect(null); setItem(null);
