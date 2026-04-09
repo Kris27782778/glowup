@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useReveal } from './hooks/useReveal';
 
 const T = {
@@ -369,6 +369,151 @@ const INGREDIENTS = [
   },
 ];
 
+/* ═══════════════════════════════════════
+   互動背景畫布（油彩暈染擴散）
+   ═══════════════════════════════════════ */
+function InteractiveBg() {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animId, W = 0, H = 0;
+
+    const mouse = { x: -999, y: -999, active: false };
+
+    /* 跟隨鼠標的主光暈（帶緩動） */
+    const glow = { x: 0, y: 0 };
+
+    /* 擴散暈染池：鼠標停頓時從該點緩慢向外暈染 */
+    const blooms = [];
+    const MAX_BLOOMS = 7;
+    let lastBloom = 0;
+
+    /* 兩個極緩慢漂移的背景色塊 */
+    const bg = [
+      { x: 0, y: 0, speed: 0.008, R: 380, r: 196, g: 137, b: 122, a: 0.07 },
+      { x: 0, y: 0, speed: 0.005, R: 320, r: 200, g: 152,  b: 72, a: 0.05 },
+    ];
+
+    const resize = () => {
+      W = canvas.width  = canvas.offsetWidth;
+      H = canvas.height = canvas.offsetHeight;
+      glow.x = W / 2; glow.y = H / 2;
+      bg[0].x = W * 0.65; bg[0].y = H * 0.40;
+      bg[1].x = W * 0.30; bg[1].y = H * 0.60;
+    };
+
+    const onMove = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+      mouse.active = true;
+    };
+
+    resize();
+    window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', onMove);
+
+    const draw = (time) => {
+      ctx.clearRect(0, 0, W, H);
+
+      /* ── 背景靜態色塊（極緩慢呼吸） ── */
+      bg.forEach((b, i) => {
+        const pulse = 1 + Math.sin(time * 0.0004 + i * Math.PI) * 0.06;
+        const ox = Math.sin(time * 0.0003 + i * 1.8) * 50;
+        const oy = Math.cos(time * 0.00025 + i * 2.2) * 40;
+        b.x += (W * (i === 0 ? 0.65 : 0.30) + ox - b.x) * b.speed;
+        b.y += (H * (i === 0 ? 0.40 : 0.60) + oy - b.y) * b.speed;
+
+        const gr = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.R * pulse);
+        gr.addColorStop(0, `rgba(${b.r},${b.g},${b.b},${b.a})`);
+        gr.addColorStop(1, `rgba(${b.r},${b.g},${b.b},0)`);
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.R * pulse, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      /* ── 主光暈：緩動跟隨鼠標 ── */
+      if (mouse.active) {
+        glow.x += (mouse.x - glow.x) * 0.07;
+        glow.y += (mouse.y - glow.y) * 0.07;
+
+        const gr = ctx.createRadialGradient(glow.x, glow.y, 0, glow.x, glow.y, 130);
+        gr.addColorStop(0,   'rgba(196,137,122,0.14)');
+        gr.addColorStop(0.5, 'rgba(196,137,122,0.06)');
+        gr.addColorStop(1,   'rgba(196,137,122,0)');
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(glow.x, glow.y, 130, 0, Math.PI * 2);
+        ctx.fill();
+
+        /* ── 每隔 500ms 在鼠標位置生成一個向外暈染的油彩圓 ── */
+        if (time - lastBloom > 500) {
+          lastBloom = time;
+          if (blooms.length >= MAX_BLOOMS) blooms.shift();
+          const cols = [[196,137,122],[200,152,72],[196,110,88]];
+          const col  = cols[Math.floor(Math.random() * cols.length)];
+          blooms.push({
+            x:    mouse.x + (Math.random() - 0.5) * 20,
+            y:    mouse.y + (Math.random() - 0.5) * 20,
+            r:    8,
+            maxR: 120 + Math.random() * 80,
+            col,
+            a0:   0.13 + Math.random() * 0.07, // 初始透明度
+          });
+        }
+      }
+
+      /* ── 擴散暈染：由內向外，中心先淡 ── */
+      for (let i = blooms.length - 1; i >= 0; i--) {
+        const bl = blooms[i];
+        bl.r += (bl.maxR - bl.r) * 0.016; // 緩出 easing
+        const p = bl.r / bl.maxR;          // 0→1
+
+        // 整體透明度：p^0.5 讓擴散初期有值，後期漸無
+        const alpha = bl.a0 * Math.pow(1 - p, 0.9);
+        if (alpha < 0.004) { blooms.splice(i, 1); continue; }
+
+        // 環形漸變：中心淡（已擴散）、邊緣濃
+        const [r, g, b] = bl.col;
+        const innerA = alpha * Math.max(0, 1 - p * 1.6); // 中心更早消失
+        const gr = ctx.createRadialGradient(bl.x, bl.y, bl.r * 0.3, bl.x, bl.y, bl.r);
+        gr.addColorStop(0,    `rgba(${r},${g},${b},${innerA})`);
+        gr.addColorStop(0.55, `rgba(${r},${g},${b},${alpha})`);
+        gr.addColorStop(1,    `rgba(${r},${g},${b},0)`);
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(bl.x, bl.y, bl.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    animId = requestAnimationFrame(draw);
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', onMove);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute', inset: 0,
+        width: '100%', height: '100%',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}
+    />
+  );
+}
+
 function LandingPage() {
   const navigate = useNavigate();
   useReveal();
@@ -404,6 +549,7 @@ function LandingPage() {
     <div style={L.page}>
 
       <section style={L.hero}>
+        <InteractiveBg />
         <div style={L.heroInner}>
           <div style={L.heroLeft}>
             <p style={L.heroEyebrow} className="g-fade-in gd-0">輔仁大學 · 美妝知識平台</p>
