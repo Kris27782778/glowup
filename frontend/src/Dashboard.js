@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useReveal } from './hooks/useReveal';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -27,17 +28,17 @@ const SKIN_LABELS = {
 };
 
 const TABS = [
-  { label: '帖子',   icon: '✍️' },
-  { label: '問答',   icon: '❓' },
-  { label: '收藏',   icon: '🔖' },
-  { label: '成分筆記', icon: '⚗️' },
+  { label: '帖子' },
+  { label: '問答' },
+  { label: '收藏' },
+  { label: '成分筆記' },
 ];
 
 const EMPTY_STATE = [
-  { icon: '✍️', title: '還沒有貼文', sub: '分享你的保養心得，讓社群看見你的經驗' },
-  { icon: '❓', title: '還沒有問答記錄', sub: '向社群提出你的保養疑問' },
-  { icon: '🔖', title: '收藏夾是空的', sub: '收藏喜歡的貼文、成分與產品' },
-  { icon: '⚗️', title: '成分筆記尚未建立', sub: '標記你用過的成分，記錄使用心得' },
+  { title: '還沒有貼文',     sub: '分享你的保養心得，讓社群看見你的經驗' },
+  { title: '還沒有問答記錄', sub: '向社群提出你的保養疑問' },
+  { title: '收藏夾是空的',   sub: '收藏喜歡的貼文、成分與產品' },
+  { title: '成分筆記尚未建立', sub: '標記你用過的成分，記錄使用心得' },
 ];
 
 function Dashboard() {
@@ -50,6 +51,8 @@ function Dashboard() {
     if (!stored) { navigate('/login'); return; }
     setUser(JSON.parse(stored));
   }, [navigate]);
+
+  useReveal();
 
   if (!user) return null;
 
@@ -75,12 +78,12 @@ function Dashboard() {
         <aside style={styles.sidebar}>
 
           {/* 頭像 */}
-          <div style={styles.avatarWrap}>
+          <div style={styles.avatarWrap} className="g-scale-in gd-1">
             <div style={styles.avatar}>{initial}</div>
           </div>
 
           {/* 名稱區 */}
-          <div style={styles.nameBlock}>
+          <div style={styles.nameBlock} className="g-fade-up gd-2">
             <h1 style={styles.nickname}>{user.nickname}</h1>
             {skinLabel && (
               <span style={styles.skinBadge}>{skinLabel}</span>
@@ -88,16 +91,14 @@ function Dashboard() {
           </div>
 
           {/* 基本資訊 */}
-          <div style={styles.infoBlock}>
+          <div style={styles.infoBlock} className="g-fade-up gd-3">
             {user.department_grade && (
               <div style={styles.infoRow}>
-                <span style={styles.infoIcon}>🎓</span>
                 <span style={styles.infoText}>{user.department_grade}</span>
               </div>
             )}
             {user.email && (
               <div style={styles.infoRow}>
-                <span style={styles.infoIcon}>✉️</span>
                 <span style={styles.infoText}>{user.email}</span>
               </div>
             )}
@@ -105,7 +106,7 @@ function Dashboard() {
 
           {/* 膚質卡 */}
           {skinInfo ? (
-            <div style={styles.skinCard}>
+            <div style={styles.skinCard} className="g-reveal delay-1">
               <p style={styles.skinCardEyebrow}>我的膚質</p>
               <p style={styles.skinCardTitle}>{skinInfo.label}</p>
               <p style={styles.skinCardDesc}>{skinInfo.desc}</p>
@@ -114,7 +115,7 @@ function Dashboard() {
               </button>
             </div>
           ) : (
-            <div style={styles.skinCardEmpty}>
+            <div style={styles.skinCardEmpty} className="g-reveal delay-1">
               <p style={styles.skinCardEyebrow}>膚質尚未設定</p>
               <p style={styles.skinCardEmptyDesc}>完成膚質測驗，獲得個人化推薦</p>
               <button style={styles.skinTakeBtn} onClick={() => navigate('/register')}>
@@ -124,7 +125,7 @@ function Dashboard() {
           )}
 
           {/* 數據列 */}
-          <div style={styles.statsCard}>
+          <div style={styles.statsCard} className="g-reveal delay-2">
             {[
               { num: '0', label: '貼文' },
               { num: '0', label: '追蹤者' },
@@ -162,20 +163,20 @@ function Dashboard() {
                 style={{ ...styles.tabBtn, ...(tab === i ? styles.tabBtnActive : {}) }}
                 onClick={() => setTab(i)}
               >
-                <span style={styles.tabIcon}>{t.icon}</span>
                 {t.label}
                 {tab === i && <span style={styles.tabLine} />}
               </button>
             ))}
           </div>
 
-          {/* 內容區 */}
+          {/* 內容區：key 讓 tab 切換時重新掛載觸發動畫 */}
           <div style={styles.tabContent}>
-            <EmptyState
-              icon={EMPTY_STATE[tab].icon}
-              title={EMPTY_STATE[tab].title}
-              sub={EMPTY_STATE[tab].sub}
-            />
+            <div key={tab} className="g-tab-content">
+              <EmptyState
+                title={EMPTY_STATE[tab].title}
+                sub={EMPTY_STATE[tab].sub}
+              />
+            </div>
           </div>
 
         </main>
@@ -184,10 +185,9 @@ function Dashboard() {
   );
 }
 
-function EmptyState({ icon, title, sub }) {
+function EmptyState({ title, sub }) {
   return (
     <div style={emptyStyle.wrap}>
-      <div style={emptyStyle.iconWrap}>{icon}</div>
       <p style={emptyStyle.title}>{title}</p>
       <p style={emptyStyle.sub}>{sub}</p>
     </div>

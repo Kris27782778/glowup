@@ -29,7 +29,7 @@ function Footer() {
               <div key={group} style={styles.linkGroup}>
                 <p style={styles.groupTitle}>{group}</p>
                 {items.map(({ label, to }) => (
-                  <Link key={label} to={to} style={styles.footerLink}>{label}</Link>
+                  <Link key={label} to={to} style={styles.footerLink} className="g-footer-link">{label}</Link>
                 ))}
               </div>
             ))}

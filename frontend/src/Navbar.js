@@ -1,5 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import './animations.css';
 
 const T = {
   bg:            '#FFFFFF',
@@ -21,9 +22,16 @@ const NAV_LINKS = [
 function Navbar() {
   const [user, setUser]         = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const menuRef                 = useRef(null);
   const navigate                = useNavigate();
   const location                = useLocation();
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -51,7 +59,7 @@ function Navbar() {
   const initial = user?.nickname?.[0]?.toUpperCase() || '?';
 
   return (
-    <nav style={styles.nav}>
+    <nav style={styles.nav} className={scrolled ? 'navbar-scrolled' : ''}>
       <div style={styles.inner}>
 
         {/* ── 左側：Logo + 導覽 ── */}
@@ -63,6 +71,7 @@ function Navbar() {
               <Link
                 key={label}
                 to={to}
+                className="g-nav-link"
                 style={{
                   ...styles.navLink,
                   ...(location.pathname === to ? styles.navLinkActive : {}),
@@ -110,18 +119,15 @@ function Navbar() {
                     style={styles.dropItem}
                     onClick={() => { navigate('/dashboard'); setMenuOpen(false); }}
                   >
-                    <span style={styles.dropItemIcon}>👤</span>
                     個人主頁
                   </button>
                   <button style={styles.dropItem} onClick={() => setMenuOpen(false)}>
-                    <span style={styles.dropItemIcon}>⚙️</span>
                     帳號設定
                   </button>
 
                   <div style={styles.dropSeparator} />
 
                   <button style={{ ...styles.dropItem, ...styles.dropItemDanger }} onClick={handleLogout}>
-                    <span style={styles.dropItemIcon}>↩</span>
                     登出
                   </button>
                 </div>

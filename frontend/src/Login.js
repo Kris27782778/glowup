@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 const T = {
@@ -17,9 +17,9 @@ const T = {
 };
 
 const FEATURES = [
-  { icon: '⚗️', text: '成分透明，每一瓶都清楚' },
-  { icon: '💬', text: '輔大同學的真實保養心得' },
-  { icon: '🔍', text: '依膚質推薦適合你的產品' },
+  '成分透明，每一瓶都清楚',
+  '輔大同學的真實保養心得',
+  '依膚質推薦適合你的產品',
 ];
 
 function Login() {
@@ -28,7 +28,15 @@ function Login() {
   const [error,       setError]       = useState('');
   const [loading,     setLoading]     = useState(false);
   const [focusField,  setFocusField]  = useState(null);
+  // splash: 'in' → 'exit' → 'done'
+  const [splash, setSplash] = useState('in');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const exitTimer = setTimeout(() => setSplash('exit'), 2000);
+    const doneTimer = setTimeout(() => setSplash('done'), 2800);
+    return () => { clearTimeout(exitTimer); clearTimeout(doneTimer); };
+  }, []);
 
   const handleLogin = async () => {
     if (!studentId || !password) { setError('請填寫學號與密碼'); return; }
@@ -42,7 +50,7 @@ function Login() {
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        navigate('/dashboard');
+        navigate('/');
       } else {
         setError(data.error || '登入失敗，請確認帳號密碼');
       }
@@ -60,6 +68,26 @@ function Login() {
 
   return (
     <div style={styles.page}>
+
+      {/* ── GLŌW Splash ── */}
+      {splash !== 'done' && (
+        <div style={{
+          ...splashStyles.overlay,
+          animation: splash === 'exit'
+            ? 'glow-splash-rise 750ms cubic-bezier(0.76, 0, 0.24, 1) forwards'
+            : 'none',
+        }}>
+          {/* 裝飾圓 */}
+          <div style={splashStyles.circle1} />
+          <div style={splashStyles.circle2} />
+
+          <div style={splashStyles.content}>
+            <h1 style={splashStyles.logo}>GLŌW</h1>
+            <div style={splashStyles.line} />
+            <p style={splashStyles.sub}>輔大美妝交流平台</p>
+          </div>
+        </div>
+      )}
 
       {/* ── 左側：品牌主視覺 ── */}
       <div style={styles.brand}>
@@ -82,10 +110,10 @@ function Login() {
 
           {/* 特色列表 */}
           <div style={styles.featureList}>
-            {FEATURES.map((f, i) => (
+            {FEATURES.map((text, i) => (
               <div key={i} style={styles.featureItem}>
-                <span style={styles.featureIcon}>{f.icon}</span>
-                <span style={styles.featureText}>{f.text}</span>
+                <span style={styles.featureDot} />
+                <span style={styles.featureText}>{text}</span>
               </div>
             ))}
           </div>
@@ -97,7 +125,7 @@ function Login() {
 
       {/* ── 右側：登入表單 ── */}
       <div style={styles.form}>
-        <div style={styles.formCard}>
+        <div style={styles.formCard} className="g-scale-in gd-1">
 
           {/* 標題 */}
           <div style={styles.formHeader}>
@@ -176,6 +204,73 @@ function Login() {
     </div>
   );
 }
+
+const splashStyles = {
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 999,
+    backgroundColor: T.bgInverse,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  circle1: {
+    position: 'absolute',
+    width: '600px',
+    height: '600px',
+    borderRadius: '50%',
+    border: '1px solid rgba(196,137,122,0.1)',
+    top: '-160px',
+    right: '-160px',
+    pointerEvents: 'none',
+  },
+  circle2: {
+    position: 'absolute',
+    width: '360px',
+    height: '360px',
+    borderRadius: '50%',
+    border: '1px solid rgba(196,137,122,0.07)',
+    bottom: '-80px',
+    left: '-80px',
+    pointerEvents: 'none',
+  },
+  content: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '0',
+    position: 'relative',
+    zIndex: 1,
+  },
+  logo: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '100px',
+    fontWeight: 300,
+    letterSpacing: '0.18em',
+    color: T.textInverse,
+    margin: 0,
+    lineHeight: 1,
+    animation: 'glow-splash-text 800ms cubic-bezier(0.22,1,0.36,1) 150ms both',
+  },
+  line: {
+    width: '48px',
+    height: '1px',
+    backgroundColor: T.accent,
+    margin: '28px auto 24px',
+    animation: 'glow-splash-line 600ms cubic-bezier(0.22,1,0.36,1) 600ms both',
+  },
+  sub: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px',
+    fontWeight: 400,
+    letterSpacing: '0.22em',
+    color: 'rgba(196,137,122,0.75)',
+    margin: 0,
+    animation: 'glow-splash-sub 500ms ease 800ms both',
+  },
+};
 
 const styles = {
   page: {
@@ -289,16 +384,13 @@ const styles = {
     alignItems: 'center',
     gap: '14px',
   },
-  featureIcon: {
-    fontSize: '18px',
-    width: '36px',
-    height: '36px',
-    borderRadius: '10px',
-    backgroundColor: 'rgba(196,137,122,0.12)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+  featureDot: {
+    width: '5px',
+    height: '5px',
+    borderRadius: '50%',
+    backgroundColor: T.accent,
     flexShrink: 0,
+    marginTop: '7px',
   },
   featureText: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',

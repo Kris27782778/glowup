@@ -1,0 +1,248 @@
+/* ═══════════════════════════════════════
+   GLŌW  Global Animation System
+   ═══════════════════════════════════════ */
+
+/* ── Keyframes ── */
+@keyframes glow-page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow-fade-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes glow-scale-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes glow-slide-left {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes glow-slide-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes glow-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33%       { transform: translateY(-10px) rotate(0.5deg); }
+  66%       { transform: translateY(-4px) rotate(-0.3deg); }
+}
+
+@keyframes glow-float-sm {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes glow-ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes glow-pulse-ring {
+  0%   { transform: scale(0.9); opacity: 0.5; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+@keyframes glow-safe-fill {
+  from { width: 0; }
+  to   { width: 85%; }
+}
+
+@keyframes glow-splash-text {
+  from { opacity: 0; transform: translateY(18px); letter-spacing: 0.3em; }
+  to   { opacity: 1; transform: translateY(0);    letter-spacing: 0.18em; }
+}
+
+@keyframes glow-splash-sub {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow-splash-line {
+  from { width: 0; }
+  to   { width: 48px; }
+}
+
+@keyframes glow-splash-rise {
+  0%   { transform: translateY(0);     opacity: 1; }
+  100% { transform: translateY(-100%); opacity: 1; }
+}
+
+/* ── Page transition ── */
+.glow-page {
+  animation: glow-page-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Entrance utilities ── */
+.g-fade-up   { animation: glow-fade-up   500ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.g-fade-in   { animation: glow-fade-in   400ms ease both; }
+.g-scale-in  { animation: glow-scale-in  450ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.g-slide-l   { animation: glow-slide-left  450ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.g-slide-r   { animation: glow-slide-right 450ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ── Stagger delays ── */
+.gd-0 { animation-delay: 0ms; }
+.gd-1 { animation-delay: 80ms; }
+.gd-2 { animation-delay: 160ms; }
+.gd-3 { animation-delay: 240ms; }
+.gd-4 { animation-delay: 320ms; }
+.gd-5 { animation-delay: 400ms; }
+.gd-6 { animation-delay: 480ms; }
+
+/* ── Scroll reveal ── */
+.g-reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.g-reveal-l {
+  opacity: 0;
+  transform: translateX(-32px);
+  transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.g-reveal-r {
+  opacity: 0;
+  transform: translateX(32px);
+  transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.g-reveal.visible,
+.g-reveal-l.visible,
+.g-reveal-r.visible {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+/* ── Float ── */
+.g-float    { animation: glow-float    5s ease-in-out infinite; }
+.g-float-sm { animation: glow-float-sm 3.5s ease-in-out infinite; }
+
+/* ── Ticker ── */
+.g-ticker-track {
+  display: flex;
+  width: max-content;
+  animation: glow-ticker 28s linear infinite;
+}
+.g-ticker-track:hover {
+  animation-play-state: paused;
+}
+
+/* ── Global button press ── */
+button:not(:disabled) {
+  transition-property: opacity, transform, background-color, border-color, color, box-shadow;
+  transition-duration: 140ms;
+  transition-timing-function: ease;
+}
+button:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+/* ── Navbar scroll shadow ── */
+.navbar-scrolled {
+  box-shadow: 0 2px 20px rgba(28, 25, 23, 0.1) !important;
+}
+
+/* ── Hero card safe bar animation ── */
+.g-safe-bar-fill {
+  animation: glow-safe-fill 1.2s cubic-bezier(0.22, 1, 0.36, 1) 600ms both;
+}
+
+/* ── Feature card hover ── */
+.g-feature-card {
+  cursor: default;
+  transition: background-color 220ms, transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 220ms !important;
+}
+.g-feature-card:hover {
+  background-color: #F0EBE7 !important;
+  transform: translateY(-6px);
+  box-shadow: 0 12px 40px rgba(28, 25, 23, 0.09);
+  z-index: 1;
+  position: relative;
+}
+.g-feature-card:hover .g-feature-cta {
+  color: #9E6457;
+  letter-spacing: 0.06em;
+}
+.g-feature-cta {
+  transition: color 200ms, letter-spacing 200ms !important;
+}
+
+/* ── Topic item hover ── */
+.g-topic-item {
+  transition: padding-left 200ms ease, opacity 200ms !important;
+  cursor: pointer;
+}
+.g-topic-item:hover {
+  padding-left: 12px !important;
+}
+.g-topic-item:hover .g-topic-arrow {
+  color: rgba(247, 244, 242, 0.7) !important;
+  transform: translateX(6px);
+}
+.g-topic-arrow {
+  transition: color 200ms, transform 200ms !important;
+}
+.g-topic-item:hover .g-topic-title {
+  color: rgba(247, 244, 242, 1) !important;
+}
+.g-topic-title {
+  transition: color 200ms !important;
+}
+
+/* ── Footer link hover ── */
+.g-footer-link {
+  position: relative;
+  text-decoration: none;
+  transition: color 180ms !important;
+}
+.g-footer-link:hover {
+  color: rgba(247, 244, 242, 0.8) !important;
+}
+.g-footer-link::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  bottom: -2px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 250ms ease;
+}
+.g-footer-link:hover::after {
+  transform: scaleX(1);
+}
+
+/* ── Nav link hover ── */
+.g-nav-link {
+  transition: color 150ms, background-color 150ms !important;
+}
+.g-nav-link:hover {
+  color: #1C1917 !important;
+  background-color: rgba(28, 25, 23, 0.06) !important;
+}
+
+/* ── Dashboard tab content transition ── */
+.g-tab-content {
+  animation: glow-fade-in 250ms ease both;
+}
+
+/* ── Stagger reveal for lists ── */
+.g-reveal.delay-1 { transition-delay: 80ms; }
+.g-reveal.delay-2 { transition-delay: 160ms; }
+.g-reveal.delay-3 { transition-delay: 240ms; }
+.g-reveal.delay-4 { transition-delay: 320ms; }

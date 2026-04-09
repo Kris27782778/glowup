@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { COLLEGES, getDepts, getDivisions, getGrades } from './data/departments';
 import CustomSelect from './components/Select';
@@ -18,7 +18,7 @@ const tokens = {
 };
 
 const SKIN_TYPES = ['油肌', '乾肌', '敏感肌', '中性肌', '混合肌'];
-const STEPS = ['基本資料', '帳號設定', '膚質設定'];
+const STEPS = ['基本資料', '帳號設定', '電子郵件驗證', '膚質設定'];
 
 function getPasswordStrength(pw) {
   if (!pw) return 0;
@@ -48,6 +48,18 @@ function Register() {
   const [focusField, setFocusField] = useState(null);
   const [success, setSuccess] = useState(false);
   const [registeredInfo, setRegisteredInfo] = useState(null);
+
+  // 電子郵件驗證
+  const [otpDigits, setOtpDigits] = useState(Array(6).fill(''));
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const otpRefs = useRef([]);
+  const cooldownRef = useRef(null);
+
+  // 進入驗證步驟時啟動倒計時
+  useEffect(() => {
+    if (step === 2) startCooldown();
+    return () => clearInterval(cooldownRef.current);
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [form, setForm] = useState({
     student_id: '',
@@ -86,6 +98,53 @@ function Register() {
     setError('');
   };
 
+  // ── OTP helpers ──
+  const startCooldown = () => {
+    clearInterval(cooldownRef.current);
+    setResendCooldown(60);
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown(s => {
+        if (s <= 1) { clearInterval(cooldownRef.current); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+  };
+
+  const handleOtpChange = (e, idx) => {
+    const val = e.target.value.replace(/\D/g, '').slice(-1);
+    setOtpDigits(d => {
+      const next = [...d];
+      next[idx] = val;
+      return next;
+    });
+    setError('');
+    if (val && idx < 5) otpRefs.current[idx + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (e, idx) => {
+    if (e.key === 'Backspace' && !otpDigits[idx] && idx > 0) {
+      otpRefs.current[idx - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+    setOtpDigits(Array(6).fill('').map((_, i) => pasted[i] || ''));
+    setError('');
+    otpRefs.current[Math.min(pasted.length, 5)]?.focus();
+  };
+
+  const handleResend = () => {
+    startCooldown();
+    setOtpDigits(Array(6).fill(''));
+    setError('');
+    otpRefs.current[0]?.focus();
+    // TODO: 後端串接後在此呼叫重新發送 API
+    // await fetch('http://localhost:5001/api/auth/send-verification', { ... })
+  };
+
   const validateStep = () => {
     if (step === 0) {
       if (!form.nickname.trim()) return '請輸入暱稱';
@@ -100,7 +159,11 @@ function Register() {
       if (form.password.length < 6) return '密碼至少需要 6 個字元';
       if (form.password !== form.passwordConfirm) return '兩次密碼輸入不一致';
     }
-    // step 2 由 SkinQuiz 元件自行處理，無需外層驗證
+    if (step === 2) {
+      if (otpDigits.some(d => d === '')) return '請輸入完整的 6 位驗證碼';
+      // TODO: 後端串接後在此呼叫驗證 API，目前前端僅檢查格式
+    }
+    // step 3 由 SkinQuiz 元件自行處理，無需外層驗證
     return null;
   };
 
@@ -202,8 +265,8 @@ function Register() {
                 </div>
               ))}
             </div>
-            <button style={styles.btn} onClick={() => navigate('/login')}>
-              前往登入
+            <button style={styles.btn} onClick={() => navigate('/')}>
+              進入 GLŌW
             </button>
           </div>
         </div>
@@ -258,7 +321,7 @@ function Register() {
 
       {/* 右側表單區 */}
       <div style={styles.formPanel}>
-        <div style={styles.card}>
+        <div style={styles.card} className="g-scale-in gd-1">
           {/* Header */}
           <div style={styles.cardHeader}>
             <p style={styles.eyebrow}>STEP {step + 1} / {STEPS.length}</p>
@@ -266,7 +329,8 @@ function Register() {
             <p style={styles.subtitle}>
               {step === 0 && '告訴我們一些關於你的資訊'}
               {step === 1 && '為你的學號設定登入密碼'}
-              {step === 2 && '回答 5 題，找出你的膚質類型'}
+              {step === 2 && `驗證碼已寄送至 ${form.email}@cloud.fju.edu.tw`}
+              {step === 3 && '回答 5 題，找出你的膚質類型'}
             </p>
           </div>
 
@@ -422,8 +486,55 @@ function Register() {
             </div>
           )}
 
-          {/* Step 2：膚質測驗 */}
+          {/* Step 2：電子郵件驗證 */}
           {step === 2 && (
+            <div style={styles.fieldGroup}>
+              {/* 說明卡 */}
+              <div style={verifyStyles.infoBox}>
+                <div style={verifyStyles.infoText}>
+                  <p style={verifyStyles.infoTitle}>請查收驗證信件</p>
+                  <p style={verifyStyles.infoEmail}>{form.email}@cloud.fju.edu.tw</p>
+                </div>
+              </div>
+
+              {/* OTP 輸入格 */}
+              <div style={verifyStyles.otpWrap} onPaste={handleOtpPaste}>
+                {otpDigits.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={el => { otpRefs.current[i] = el; }}
+                    style={{
+                      ...verifyStyles.otpInput,
+                      ...(digit ? verifyStyles.otpInputFilled : {}),
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={e => handleOtpChange(e, i)}
+                    onKeyDown={e => handleOtpKeyDown(e, i)}
+                    onFocus={e => e.target.select()}
+                    autoComplete="one-time-code"
+                  />
+                ))}
+              </div>
+
+              {/* 重新發送 */}
+              <div style={verifyStyles.resendRow}>
+                <span style={verifyStyles.resendHint}>沒有收到信件？</span>
+                {resendCooldown > 0 ? (
+                  <span style={verifyStyles.cooldownText}>{resendCooldown}s 後可重新發送</span>
+                ) : (
+                  <button style={verifyStyles.resendBtn} onClick={handleResend} type="button">
+                    重新發送
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Step 3：膚質測驗 */}
+          {step === 3 && (
             <SkinQuiz
               onComplete={(skinTypeKey) => {
                 setForm(f => ({ ...f, skin_type: skinTypeKey }));
@@ -443,21 +554,23 @@ function Register() {
             </div>
           )}
 
-          {/* Actions（Step 2 由 SkinQuiz 自帶按鈕，不顯示此區塊）*/}
-          {step < 2 && <div style={styles.actions}>
-            {step > 0 && (
-              <button
-                style={styles.backBtn}
-                onClick={() => { setStep(s => s - 1); setError(''); }}
-                type="button"
-              >
-                返回
+          {/* Actions（Step 3 由 SkinQuiz 自帶按鈕，不顯示此區塊）*/}
+          {step < 3 && (
+            <div style={styles.actions}>
+              {step > 0 && (
+                <button
+                  style={styles.backBtn}
+                  onClick={() => { setStep(s => s - 1); setError(''); }}
+                  type="button"
+                >
+                  返回
+                </button>
+              )}
+              <button style={{ ...styles.btn, flex: 1 }} onClick={handleNext} type="button">
+                {step === 2 ? '驗證並繼續' : '下一步'}
               </button>
-            )}
-            <button style={{ ...styles.btn, flex: 1 }} onClick={handleNext} type="button">
-              下一步
-            </button>
-          </div>}
+            </div>
+          )}
 
           <p style={styles.loginHint}>
             已有帳號？{' '}
@@ -861,6 +974,95 @@ const styles = {
     color: tokens.accent,
     textDecoration: 'none',
     fontWeight: 500,
+  },
+};
+
+const verifyStyles = {
+  infoBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    padding: '14px 16px',
+    backgroundColor: 'rgba(196,137,122,0.06)',
+    border: `1px solid rgba(196,137,122,0.2)`,
+    borderRadius: '10px',
+  },
+  infoIcon: {
+    fontSize: '22px',
+    flexShrink: 0,
+  },
+  infoText: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+  },
+  infoTitle: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: tokens.textSecondary,
+    margin: 0,
+  },
+  infoEmail: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '13px',
+    color: tokens.accent,
+    fontWeight: 500,
+    margin: 0,
+    wordBreak: 'break-all',
+  },
+  otpWrap: {
+    display: 'flex',
+    gap: '10px',
+    justifyContent: 'center',
+    padding: '8px 0',
+  },
+  otpInput: {
+    width: '52px',
+    height: '60px',
+    textAlign: 'center',
+    fontSize: '24px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontWeight: 500,
+    color: tokens.textPrimary,
+    backgroundColor: tokens.bgSurface,
+    border: `1.5px solid ${tokens.border}`,
+    borderRadius: '10px',
+    outline: 'none',
+    caretColor: tokens.accent,
+    transition: 'border-color 150ms, box-shadow 150ms',
+  },
+  otpInputFilled: {
+    borderColor: tokens.accent,
+    boxShadow: `0 0 0 3px rgba(196,137,122,0.12)`,
+  },
+  resendRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+  },
+  resendHint: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: tokens.textTertiary,
+  },
+  cooldownText: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '13px',
+    color: tokens.textTertiary,
+  },
+  resendBtn: {
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: tokens.accent,
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    textUnderlineOffset: '3px',
   },
 };
 
