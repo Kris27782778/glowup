@@ -1,24 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const T = {
-  bgBase:        '#F7F4F2',
-  bgSurface:     '#FFFFFF',
-  bgSubtle:      '#F0EBE7',
-  bgInverse:     '#1C1917',
-  accent:        '#C4897A',
-  accentLight:   '#E8C4BA',
-  textPrimary:   '#1C1917',
+  bgBase: '#F7F4F2',
+  bgSurface: '#FFFFFF',
+  bgSubtle: '#F0EBE7',
+  bgInverse: '#1C1917',
+  accent: '#C4897A',
+  accentLight: '#E8C4BA',
+  textPrimary: '#1C1917',
   textSecondary: '#6B5E58',
-  textTertiary:  '#A89990',
-  textInverse:   '#F7F4F2',
-  border:        '#E5DDD9',
+  textTertiary: '#A89990',
+  textInverse: '#F7F4F2',
+  border: '#E5DDD9',
 };
 
-const CATEGORIES      = ['化妝品', '保養品'];
-const SKIN_TYPES      = ['油性肌', '乾性肌', '混合性肌', '敏感性肌', '中性肌'];
-const EFFECTS         = ['保濕', '控油', '舒緩修復', '抗痘', '去角質', '美白', '抗老'];
-const MAKEUP_ITEMS    = ['粉底液', '遮瑕膏', '防曬乳', '蜜粉', '腮紅', '眼影'];
-const SKINCARE_ITEMS  = ['化妝水', '精華液', '乳液', '面霜', '面膜', '眼霜'];
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001';
+
+const CATEGORIES = ['化妝品', '保養品'];
+const SKIN_TYPES = ['油性肌', '乾性肌', '混合性肌', '敏感性肌', '中性肌'];
+const EFFECTS = ['保濕', '控油', '舒緩修復', '抗痘', '去角質', '美白', '抗老'];
+const MAKEUP_ITEMS = ['粉底液', '遮瑕膏', '防曬乳', '蜜粉', '腮紅', '眼影'];
+const SKINCARE_ITEMS = ['化妝水', '精華液', '乳液', '面霜', '面膜', '眼霜'];
 
 function FilterChip({ label, active, onToggle }) {
   return (
@@ -27,15 +29,14 @@ function FilterChip({ label, active, onToggle }) {
       onClick={onToggle}
       style={{
         fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-        fontSize: '12px',
+        fontSize: '13px',
         padding: '5px 12px',
         borderRadius: '999px',
-        border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
-        backgroundColor: active ? 'var(--accent)' : 'var(--bg-subtle)',
-        color: active ? '#FFFFFF' : 'var(--text-secondary)',
+        border: `1px solid ${active ? T.accent : T.border}`,
+        backgroundColor: active ? T.accent : T.bgSurface,
+        color: active ? T.textInverse : T.textSecondary,
         cursor: 'pointer',
-        transition: 'all 150ms ease',
-        whiteSpace: 'nowrap',
+        transition: 'all 150ms',
       }}
     >
       {label}
@@ -43,74 +44,158 @@ function FilterChip({ label, active, onToggle }) {
   );
 }
 
+const toDisplayName = (product) =>
+  product.name ||
+  product.product_name ||
+  product.title ||
+  product.product_title ||
+  `產品 #${product.product_id || product.id || '未知'}`;
+
+const toDisplayBrand = (product) =>
+  product.brand || product.brand_name || product.company || '未提供品牌';
+
 function ProductDB() {
-  const [category,    setCategory]    = useState(null);
-  const [skinType,    setSkinType]    = useState(null);
-  const [effect,      setEffect]      = useState(null);
-  const [item,        setItem]        = useState(null);
-  const [search,      setSearch]      = useState('');
+  const [category, setCategory] = useState(null);
+  const [skinType, setSkinType] = useState(null);
+  const [effect, setEffect] = useState(null);
+  const [item, setItem] = useState(null);
+  const [search, setSearch] = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
 
-  const itemOptions = category === '化妝品' ? MAKEUP_ITEMS : SKINCARE_ITEMS;
-  const hasFilter   = category || skinType || effect || item;
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // ✅ 修復3：activeTags 改成物件陣列，帶 label 和 remove
+  const itemOptions = category === '化妝品' ? MAKEUP_ITEMS : SKINCARE_ITEMS;
+  const hasFilter = category || skinType || effect || item;
+
   const activeTags = [
-    category && { label: category, remove: () => { setCategory(null); setItem(null); } },
-    item     && { label: item,     remove: () => setItem(null) },
+    category && {
+      label: category,
+      remove: () => {
+        setCategory(null);
+        setItem(null);
+      },
+    },
+    item && { label: item, remove: () => setItem(null) },
     skinType && { label: skinType, remove: () => setSkinType(null) },
-    effect   && { label: effect,   remove: () => setEffect(null) },
+    effect && { label: effect, remove: () => setEffect(null) },
   ].filter(Boolean);
 
   const clearAll = () => {
-    setCategory(null); setSkinType(null); setEffect(null); setItem(null);
+    setCategory(null);
+    setSkinType(null);
+    setEffect(null);
+    setItem(null);
+    setError('');
+    setProducts([]);
   };
+
+  useEffect(() => {
+    if (!hasFilter) return;
+
+    const controller = new AbortController();
+
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
+
+        const params = new URLSearchParams();
+        if (category) params.set('category', category);
+        if (item) params.set('sub_category', item);
+        if (skinType) params.set('skin_type', skinType);
+        if (effect) params.set('effect', effect);
+
+        const response = await fetch(`${API_BASE_URL}/api/products?${params.toString()}`, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.error || '查詢產品失敗');
+        }
+
+        const data = await response.json();
+        setProducts(Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        setError(err.message || '查詢產品失敗');
+        setProducts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+
+    return () => controller.abort();
+  }, [hasFilter, category, item, skinType, effect]);
+
+  const searchedProducts = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) return products;
+
+    return products.filter((product) => {
+      const searchable = [
+        toDisplayName(product),
+        toDisplayBrand(product),
+        product.category,
+        product.sub_category,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchable.includes(keyword);
+    });
+  }, [products, search]);
 
   return (
     <div style={styles.page}>
-      {/* 搜尋 Hero */}
       <div style={styles.searchHero}>
         <p style={styles.heroEyebrow}>INGREDIENT LIBRARY</p>
         <h1 style={styles.heroTitle}>產品資料庫</h1>
         <p style={styles.heroSub}>依膚質、功效找到真正適合你的產品</p>
         <div style={{ ...styles.searchBox, ...(searchFocus ? styles.searchBoxFocus : {}) }}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-            <circle cx="7" cy="7" r="5" stroke="rgba(247,244,242,0.5)" strokeWidth="1.5"/>
-            <path d="M10.5 10.5L13.5 13.5" stroke="rgba(247,244,242,0.5)" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="7" cy="7" r="5" stroke="rgba(247,244,242,0.5)" strokeWidth="1.5" />
+            <path d="M10.5 10.5L13.5 13.5" stroke="rgba(247,244,242,0.5)" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
           <input
             style={styles.searchInput}
             type="text"
-            placeholder="搜尋產品、成分、功效…"
+            placeholder="搜尋產品、品牌、分類…"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             onFocus={() => setSearchFocus(true)}
             onBlur={() => setSearchFocus(false)}
           />
           {search && (
-            <button style={styles.searchClear} onClick={() => setSearch('')} type="button">✕</button>
+            <button style={styles.searchClear} onClick={() => setSearch('')} type="button">
+              ✕
+            </button>
           )}
         </div>
       </div>
 
-      {/* 主體：篩選 + 結果 */}
       <div style={styles.body}>
-
-        {/* 側欄篩選 */}
         <aside style={styles.sidebar}>
-
           <div style={styles.filterSection}>
             <p style={styles.filterTitle}>
               探索領域
-              {category && <span style={styles.filterCount}>1</span>}
+              {category && <span className="filter-count">1</span>}
             </p>
             <div style={styles.filterGroup}>
-              {CATEGORIES.map(cat => (
+              {CATEGORIES.map((cat) => (
                 <FilterChip
                   key={cat}
                   label={cat}
                   active={category === cat}
-                  onToggle={() => { setCategory(category === cat ? null : cat); setItem(null); }}
+                  onToggle={() => {
+                    setCategory(category === cat ? null : cat);
+                    setItem(null);
+                  }}
                 />
               ))}
             </div>
@@ -121,10 +206,10 @@ function ProductDB() {
           <div style={styles.filterSection}>
             <p style={styles.filterTitle}>
               適合膚質
-              {skinType && <span style={styles.filterCount}>1</span>}
+              {skinType && <span className="filter-count">1</span>}
             </p>
             <div style={styles.filterGroup}>
-              {SKIN_TYPES.map(s => (
+              {SKIN_TYPES.map((s) => (
                 <FilterChip
                   key={s}
                   label={s}
@@ -137,14 +222,13 @@ function ProductDB() {
 
           <div style={styles.filterDivider} />
 
-          {/* ✅ 修復2：功效區改用 FilterChip（原本誤用 <button>） */}
           <div style={styles.filterSection}>
             <p style={styles.filterTitle}>
               功效
-              {effect && <span style={styles.filterCount}>1</span>}
+              {effect && <span className="filter-count">1</span>}
             </p>
             <div style={styles.filterGroup}>
-              {EFFECTS.map(e => (
+              {EFFECTS.map((e) => (
                 <FilterChip
                   key={e}
                   label={e}
@@ -155,17 +239,16 @@ function ProductDB() {
             </div>
           </div>
 
-          {/* 品項：選了分類才出現 */}
           {category && (
             <div key={category}>
               <div style={styles.filterDivider} />
-              <div style={styles.filterSection}>
+              <div className="section-reveal" style={styles.filterSection}>
                 <p style={styles.filterTitle}>
                   品項
-                  {item && <span style={styles.filterCount}>1</span>}
+                  {item && <span className="filter-count">1</span>}
                 </p>
                 <div style={styles.filterGroup}>
-                  {itemOptions.map(i => (
+                  {itemOptions.map((i) => (
                     <FilterChip
                       key={i}
                       label={i}
@@ -185,21 +268,14 @@ function ProductDB() {
           )}
         </aside>
 
-        {/* 結果區 */}
         <main style={styles.results}>
           {hasFilter ? (
             <>
-              {/* 已選標籤列 */}
               <div style={styles.activeTagRow}>
-                {activeTags.map(tag => (
-                  <span key={tag.label} style={styles.activeTag}>
+                {activeTags.map((tag) => (
+                  <span key={tag.label} className="active-tag">
                     {tag.label}
-                    <button
-                      style={styles.activeTagX}
-                      onClick={tag.remove}
-                      type="button"
-                      aria-label={`移除 ${tag.label}`}
-                    >
+                    <button className="active-tag-x" onClick={tag.remove} type="button" aria-label={`移除 ${tag.label}`}>
                       ✕
                     </button>
                   </span>
@@ -209,19 +285,55 @@ function ProductDB() {
                 </button>
               </div>
 
-              {/* 待串接後端提示 */}
-              <div style={styles.comingSoon}>
-                <div style={styles.comingSoonIcon}>🔍</div>
-                <p style={styles.comingSoonTitle}>篩選條件已設定</p>
-                <p style={styles.comingSoonSub}>
-                  產品資料庫串接後端後將顯示推薦結果
-                </p>
-                <div style={styles.conditionSummary}>
-                  {activeTags.map(tag => (
-                    <span key={tag.label} style={styles.conditionTag}>{tag.label}</span>
-                  ))}
+              {isLoading && (
+                <div style={styles.comingSoon}>
+                  <p style={styles.comingSoonTitle}>載入中...</p>
+                  <p style={styles.comingSoonSub}>正在根據篩選條件查詢產品</p>
                 </div>
-              </div>
+              )}
+
+              {!isLoading && error && (
+                <div style={styles.comingSoon}>
+                  <p style={styles.comingSoonTitle}>查詢失敗</p>
+                  <p style={styles.comingSoonSub}>{error}</p>
+                </div>
+              )}
+
+              {!isLoading && !error && searchedProducts.length === 0 && (
+                <div style={styles.comingSoon}>
+                  <p style={styles.comingSoonTitle}>找不到符合條件的產品</p>
+                  <p style={styles.comingSoonSub}>請調整篩選條件或關鍵字後再試一次</p>
+                </div>
+              )}
+
+              {!isLoading && !error && searchedProducts.length > 0 && (
+                <>
+                  <p style={styles.resultCount}>共找到 {searchedProducts.length} 筆產品</p>
+                  <div style={styles.productGrid}>
+                    {searchedProducts.map((product) => {
+                      const productId = product.product_id || product.id || toDisplayName(product);
+                      const ingredientCount = Array.isArray(product.product_ingredients)
+                        ? product.product_ingredients.length
+                        : 0;
+
+                      return (
+                        <article key={productId} style={styles.productCard}>
+                          <div style={styles.cardTopRow}>
+                            <span style={styles.productCategory}>{product.category || '未分類'}</span>
+                            {product.score != null && <span style={styles.scoreTag}>推薦分數 {product.score}</span>}
+                          </div>
+                          <h3 style={styles.productName}>{toDisplayName(product)}</h3>
+                          <p style={styles.productMeta}>
+                            品牌：{toDisplayBrand(product)}
+                            {product.sub_category ? ` · 品項：${product.sub_category}` : ''}
+                          </p>
+                          <p style={styles.productMeta}>成分數：{ingredientCount}</p>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <div style={styles.emptyState}>
@@ -239,11 +351,11 @@ function ProductDB() {
 const styles = {
   page: {
     paddingTop: '64px',
-    backgroundColor: 'var(--bg-base)',
+    backgroundColor: T.bgBase,
     minHeight: '100vh',
   },
   searchHero: {
-    backgroundColor: '#1C1917',
+    backgroundColor: T.bgInverse,
     padding: '56px 40px 48px',
     display: 'flex',
     flexDirection: 'column',
@@ -255,14 +367,14 @@ const styles = {
     fontSize: '11px',
     fontWeight: 500,
     letterSpacing: '0.16em',
-    color: 'var(--accent)',
+    color: T.accent,
     margin: 0,
   },
   heroTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
     fontSize: '48px',
     fontWeight: 300,
-    color: '#F7F4F2',
+    color: T.textInverse,
     margin: 0,
     letterSpacing: '0.04em',
   },
@@ -319,9 +431,9 @@ const styles = {
   sidebar: {
     width: '260px',
     flexShrink: 0,
-    backgroundColor: 'var(--bg-surface)',
+    backgroundColor: T.bgSurface,
     borderRadius: '12px',
-    border: '1px solid var(--border)',
+    border: `1px solid ${T.border}`,
     padding: '24px',
     display: 'flex',
     flexDirection: 'column',
@@ -340,20 +452,11 @@ const styles = {
     fontSize: '11px',
     fontWeight: 500,
     letterSpacing: '0.1em',
-    color: 'var(--text-tertiary)',
+    color: T.textTertiary,
     margin: 0,
     textTransform: 'uppercase',
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-  },
-  filterCount: {
-    backgroundColor: 'var(--accent)',
-    color: '#FFFFFF',
-    borderRadius: '999px',
-    fontSize: '10px',
-    fontWeight: 600,
-    padding: '1px 6px',
   },
   filterGroup: {
     display: 'flex',
@@ -362,13 +465,13 @@ const styles = {
   },
   filterDivider: {
     height: '1px',
-    backgroundColor: 'var(--border)',
+    backgroundColor: T.border,
   },
   clearBtn: {
     marginTop: '16px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '12px',
-    color: 'var(--text-tertiary)',
+    color: T.textTertiary,
     background: 'none',
     border: 'none',
     cursor: 'pointer',
@@ -388,81 +491,95 @@ const styles = {
     alignItems: 'center',
     marginBottom: '24px',
   },
-  activeTag: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    backgroundColor: 'rgba(196,137,122,0.15)',
-    color: 'var(--text-primary)',
-    border: '1px solid rgba(196,137,122,0.3)',
-    borderRadius: '999px',
-    fontSize: '12px',
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    padding: '4px 10px 4px 12px',
-  },
-  activeTagX: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '10px',
-    color: 'var(--text-secondary)',
-    padding: 0,
-    lineHeight: 1,
-  },
   clearAllInline: {
     background: 'none',
     border: 'none',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '12px',
-    color: 'var(--text-tertiary)',
+    color: T.textTertiary,
     cursor: 'pointer',
     padding: '4px 8px',
     textDecoration: 'underline',
     textUnderlineOffset: '3px',
     transition: 'color 120ms',
   },
-  comingSoon: {
-    backgroundColor: 'var(--bg-surface)',
+  resultCount: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: T.textSecondary,
+    margin: '0 0 12px 0',
+  },
+  productGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+    gap: '14px',
+  },
+  productCard: {
+    backgroundColor: T.bgSurface,
     borderRadius: '12px',
-    border: '1px solid var(--border)',
+    border: `1px solid ${T.border}`,
+    padding: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  cardTopRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  productCategory: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px',
+    color: T.textTertiary,
+    letterSpacing: '0.04em',
+  },
+  scoreTag: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px',
+    color: T.accent,
+    backgroundColor: 'rgba(196, 137, 122, 0.12)',
+    padding: '3px 8px',
+    borderRadius: '999px',
+  },
+  productName: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '24px',
+    lineHeight: 1.2,
+    color: T.textPrimary,
+    margin: 0,
+  },
+  productMeta: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: T.textSecondary,
+    margin: 0,
+    lineHeight: 1.5,
+  },
+  comingSoon: {
+    backgroundColor: T.bgSurface,
+    borderRadius: '12px',
+    border: `1px solid ${T.border}`,
     padding: '56px 40px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     gap: '10px',
   },
-  comingSoonIcon: {
-    fontSize: '32px',
-    lineHeight: 1,
-    marginBottom: '4px',
-  },
   comingSoonTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
     fontSize: '22px',
     fontWeight: 400,
-    color: 'var(--text-primary)',
+    color: T.textPrimary,
     margin: 0,
   },
   comingSoonSub: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
-    color: 'var(--text-tertiary)',
+    color: T.textTertiary,
     margin: 0,
-  },
-  conditionSummary: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '6px',
-    marginTop: '8px',
-    justifyContent: 'center',
-  },
-  conditionTag: {
-    backgroundColor: 'var(--bg-subtle)',
-    color: 'var(--text-secondary)',
-    borderRadius: '999px',
-    fontSize: '12px',
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    padding: '4px 12px',
+    textAlign: 'center',
   },
   emptyState: {
     display: 'flex',
@@ -474,20 +591,20 @@ const styles = {
   },
   emptyIcon: {
     fontSize: '28px',
-    color: 'var(--accent-light)',
+    color: T.accentLight,
     lineHeight: 1,
   },
   emptyTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
     fontSize: '22px',
     fontWeight: 400,
-    color: 'var(--text-primary)',
+    color: T.textPrimary,
     margin: 0,
   },
   emptySub: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
-    color: 'var(--text-tertiary)',
+    color: T.textTertiary,
     margin: 0,
     textAlign: 'center',
   },

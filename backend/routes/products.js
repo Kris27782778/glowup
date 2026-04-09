@@ -18,6 +18,8 @@ const effectMap = {
   '舒緩修復': 'effect_repair',
   '抗痘':   'effect_anti_acne',
   '去角質':  'effect_exfoliate',
+  '美白':   'effect_whitening',
+  '抗老':   'effect_anti_aging',
 };
 
 router.get('/', async (req, res) => {
@@ -43,7 +45,9 @@ router.get('/', async (req, res) => {
             effect_oil_control,
             effect_repair,
             effect_anti_acne,
-            effect_exfoliate
+            effect_exfoliate,
+            effect_whitening,
+            effect_anti_aging
           )
         )
       `);
