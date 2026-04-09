@@ -1,202 +1,122 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const T = {
-  bgBase: '#F7F4F2',
-  bgSurface: '#FFFFFF',
-  bgSubtle: '#F0EBE7',
-  bgInverse: '#1C1917',
-  accent: '#C4897A',
-  accentLight: '#E8C4BA',
-  textPrimary: '#1C1917',
+  bgBase:        '#F7F4F2',
+  bgSurface:     '#FFFFFF',
+  bgSubtle:      '#F0EBE7',
+  bgInverse:     '#1C1917',
+  accent:        '#C4897A',
+  accentLight:   '#E8C4BA',
+  textPrimary:   '#1C1917',
   textSecondary: '#6B5E58',
-  textTertiary: '#A89990',
-  textInverse: '#F7F4F2',
-  border: '#E5DDD9',
+  textTertiary:  '#A89990',
+  textInverse:   '#F7F4F2',
+  border:        '#E5DDD9',
 };
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001';
-
-const CATEGORIES = ['化妝品', '保養品'];
-const SKIN_TYPES = ['油性肌', '乾性肌', '混合性肌', '敏感性肌', '中性肌'];
-const EFFECTS = ['保濕', '控油', '舒緩修復', '抗痘', '去角質', '美白', '抗老'];
-const MAKEUP_ITEMS = ['粉底液', '遮瑕膏', '防曬乳', '蜜粉', '腮紅', '眼影'];
-const SKINCARE_ITEMS = ['化妝水', '精華液', '乳液', '面霜', '面膜', '眼霜'];
-
-function FilterChip({ label, active, onToggle }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      style={{
-        fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-        fontSize: '13px',
-        padding: '5px 12px',
-        borderRadius: '999px',
-        border: `1px solid ${active ? T.accent : T.border}`,
-        backgroundColor: active ? T.accent : T.bgSurface,
-        color: active ? T.textInverse : T.textSecondary,
-        cursor: 'pointer',
-        transition: 'all 150ms',
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-const toDisplayName = (product) =>
-  product.name ||
-  product.product_name ||
-  product.title ||
-  product.product_title ||
-  `產品 #${product.product_id || product.id || '未知'}`;
-
-const toDisplayBrand = (product) =>
-  product.brand || product.brand_name || product.company || '未提供品牌';
+const CATEGORIES  = ['化妝品', '保養品'];
+const SKIN_TYPES  = ['油性肌', '乾性肌', '混合性肌', '敏感性肌', '中性肌'];
+const MAKEUP_EFFECTS   = ['保濕', '控油', '舒緩修復'];
+const SKINCARE_EFFECTS = ['保濕', '控油', '舒緩修復', '抗痘', '去角質'];
+const MAKEUP_ITEMS    = ['粉底液', '遮瑕', '防曬'];
+const SKINCARE_ITEMS  = ['化妝水', '乳液', '霜'];
 
 function ProductDB() {
-  const [category, setCategory] = useState(null);
-  const [skinType, setSkinType] = useState(null);
-  const [effect, setEffect] = useState(null);
-  const [item, setItem] = useState(null);
-  const [search, setSearch] = useState('');
+  const [category,  setCategory]  = useState(null);
+  const [skinType,  setSkinType]  = useState(null);
+  const [effect,    setEffect]    = useState(null);
+  const [item,      setItem]      = useState(null);
+  const [search,    setSearch]    = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
-
-  const [products, setProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [products,    setProducts]    = useState([]);
+  const [loading,     setLoading]     = useState(false);
 
   const itemOptions = category === '化妝品' ? MAKEUP_ITEMS : SKINCARE_ITEMS;
-  const hasFilter = category || skinType || effect || item;
+  const hasFilter   = category || skinType || effect || item;
+  const activeTags  = [category, item, skinType, effect].filter(Boolean);
+  const itemMap = {
+  '粉底液': '粉底液',
+  '遮瑕':   '遮瑕',
+  '防曬':   '防曬',
+  '化妝水': '化妝水',
+  '乳液':   '乳液',
+  '霜':     '霜',
+};
 
-  const activeTags = [
-    category && {
-      label: category,
-      remove: () => {
-        setCategory(null);
-        setItem(null);
-      },
-    },
-    item && { label: item, remove: () => setItem(null) },
-    skinType && { label: skinType, remove: () => setSkinType(null) },
-    effect && { label: effect, remove: () => setEffect(null) },
-  ].filter(Boolean);
+useEffect(() => {
+  fetchProducts();
+}, [category, item, skinType, effect]); // ← 加上 skinType, effect
+
+const fetchProducts = async () => {
+  if (!category && !item) { setProducts([]); return; }
+  setLoading(true);
+  try {
+    const params = new URLSearchParams();
+    if (category)  params.append('category', category);
+    if (item)      params.append('sub_category', itemMap[item] || item);
+    if (skinType)  params.append('skin_type', skinType);   // ← 新增
+    if (effect)    params.append('effect', effect);         // ← 新增
+
+    const res  = await fetch(`http://localhost:5001/api/products?${params}`);
+    const data = await res.json();
+    setProducts(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.error('撈取產品失敗', err);
+    setProducts([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   const clearAll = () => {
-    setCategory(null);
-    setSkinType(null);
-    setEffect(null);
-    setItem(null);
-    setError('');
-    setProducts([]);
+    setCategory(null); setSkinType(null); setEffect(null); setItem(null);
   };
-
-  useEffect(() => {
-    if (!hasFilter) return;
-
-    const controller = new AbortController();
-
-    const fetchProducts = async () => {
-      try {
-        setIsLoading(true);
-        setError('');
-
-        const params = new URLSearchParams();
-        if (category) params.set('category', category);
-        if (item) params.set('sub_category', item);
-        if (skinType) params.set('skin_type', skinType);
-        if (effect) params.set('effect', effect);
-
-        const response = await fetch(`${API_BASE_URL}/api/products?${params.toString()}`, {
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}));
-          throw new Error(payload.error || '查詢產品失敗');
-        }
-
-        const data = await response.json();
-        setProducts(Array.isArray(data) ? data : []);
-      } catch (err) {
-        if (err.name === 'AbortError') return;
-        setError(err.message || '查詢產品失敗');
-        setProducts([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProducts();
-
-    return () => controller.abort();
-  }, [hasFilter, category, item, skinType, effect]);
-
-  const searchedProducts = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-    if (!keyword) return products;
-
-    return products.filter((product) => {
-      const searchable = [
-        toDisplayName(product),
-        toDisplayBrand(product),
-        product.category,
-        product.sub_category,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      return searchable.includes(keyword);
-    });
-  }, [products, search]);
 
   return (
     <div style={styles.page}>
+      {/* 搜尋 Hero */}
       <div style={styles.searchHero}>
         <p style={styles.heroEyebrow}>INGREDIENT LIBRARY</p>
         <h1 style={styles.heroTitle}>產品資料庫</h1>
         <p style={styles.heroSub}>依膚質、功效找到真正適合你的產品</p>
-        <div style={{ ...styles.searchBox, ...(searchFocus ? styles.searchBoxFocus : {}) }}>
+        <div style={{
+          ...styles.searchBox,
+          ...(searchFocus ? styles.searchBoxFocus : {}),
+        }}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-            <circle cx="7" cy="7" r="5" stroke="rgba(247,244,242,0.5)" strokeWidth="1.5" />
-            <path d="M10.5 10.5L13.5 13.5" stroke="rgba(247,244,242,0.5)" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="7" cy="7" r="5" stroke="rgba(247,244,242,0.5)" strokeWidth="1.5"/>
+            <path d="M10.5 10.5L13.5 13.5" stroke="rgba(247,244,242,0.5)" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
           <input
             style={styles.searchInput}
             type="text"
-            placeholder="搜尋產品、品牌、分類…"
+            placeholder="搜尋產品、成分、功效…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
             onFocus={() => setSearchFocus(true)}
             onBlur={() => setSearchFocus(false)}
           />
-          {search && (
-            <button style={styles.searchClear} onClick={() => setSearch('')} type="button">
-              ✕
-            </button>
-          )}
         </div>
       </div>
 
+      {/* 主體：篩選 + 結果 */}
       <div style={styles.body}>
+        {/* 側欄篩選 */}
         <aside style={styles.sidebar}>
+
           <div style={styles.filterSection}>
-            <p style={styles.filterTitle}>
-              探索領域
-              {category && <span className="filter-count">1</span>}
-            </p>
+            <p style={styles.filterTitle}>探索領域</p>
             <div style={styles.filterGroup}>
-              {CATEGORIES.map((cat) => (
-                <FilterChip
+              {CATEGORIES.map(cat => (
+                <button
                   key={cat}
-                  label={cat}
-                  active={category === cat}
-                  onToggle={() => {
-                    setCategory(category === cat ? null : cat);
-                    setItem(null);
-                  }}
-                />
+                  style={{ ...styles.filterChip, ...(category === cat ? styles.filterChipActive : {}) }}
+                  onClick={() => { setCategory(category === cat ? null : cat); setItem(null); }}
+                >
+                  {cat === '化妝品' ? '💄 ' : '🧴 '}{cat}
+                </button>
               ))}
             </div>
           </div>
@@ -204,18 +124,16 @@ function ProductDB() {
           <div style={styles.filterDivider} />
 
           <div style={styles.filterSection}>
-            <p style={styles.filterTitle}>
-              適合膚質
-              {skinType && <span className="filter-count">1</span>}
-            </p>
+            <p style={styles.filterTitle}>適合膚質</p>
             <div style={styles.filterGroup}>
-              {SKIN_TYPES.map((s) => (
-                <FilterChip
+              {SKIN_TYPES.map(s => (
+                <button
                   key={s}
-                  label={s}
-                  active={skinType === s}
-                  onToggle={() => setSkinType(skinType === s ? null : s)}
-                />
+                  style={{ ...styles.filterChip, ...(skinType === s ? styles.filterChipActive : {}) }}
+                  onClick={() => setSkinType(skinType === s ? null : s)}
+                >
+                  {s}
+                </button>
               ))}
             </div>
           </div>
@@ -223,121 +141,92 @@ function ProductDB() {
           <div style={styles.filterDivider} />
 
           <div style={styles.filterSection}>
-            <p style={styles.filterTitle}>
-              功效
-              {effect && <span className="filter-count">1</span>}
-            </p>
+            <p style={styles.filterTitle}>功效</p>
             <div style={styles.filterGroup}>
-              {EFFECTS.map((e) => (
-                <FilterChip
+             {(category === '化妝品' ? MAKEUP_EFFECTS : SKINCARE_EFFECTS).map(e => (
+                <button
                   key={e}
-                  label={e}
-                  active={effect === e}
-                  onToggle={() => setEffect(effect === e ? null : e)}
-                />
+                  style={{ ...styles.filterChip, ...(effect === e ? styles.filterChipActive : {}) }}
+                  onClick={() => setEffect(effect === e ? null : e)}
+                >
+                  {e}
+                </button>
               ))}
             </div>
           </div>
 
           {category && (
-            <div key={category}>
+            <>
               <div style={styles.filterDivider} />
-              <div className="section-reveal" style={styles.filterSection}>
-                <p style={styles.filterTitle}>
-                  品項
-                  {item && <span className="filter-count">1</span>}
-                </p>
+              <div style={styles.filterSection}>
+                <p style={styles.filterTitle}>品項</p>
                 <div style={styles.filterGroup}>
-                  {itemOptions.map((i) => (
-                    <FilterChip
+                  {itemOptions.map(i => (
+                    <button
                       key={i}
-                      label={i}
-                      active={item === i}
-                      onToggle={() => setItem(item === i ? null : i)}
-                    />
+                      style={{ ...styles.filterChip, ...(item === i ? styles.filterChipActive : {}) }}
+                      onClick={() => setItem(item === i ? null : i)}
+                    >
+                      {i}
+                    </button>
                   ))}
                 </div>
               </div>
-            </div>
+            </>
           )}
 
           {hasFilter && (
-            <button style={styles.clearBtn} onClick={clearAll} type="button">
-              清除所有篩選 ({activeTags.length})
+            <button style={styles.clearBtn} onClick={clearAll}>
+              清除所有篩選
             </button>
           )}
         </aside>
 
+        {/* 結果區 */}
         <main style={styles.results}>
           {hasFilter ? (
             <>
+              {/* 已選標籤 */}
               <div style={styles.activeTagRow}>
-                {activeTags.map((tag) => (
-                  <span key={tag.label} className="active-tag">
-                    {tag.label}
-                    <button className="active-tag-x" onClick={tag.remove} type="button" aria-label={`移除 ${tag.label}`}>
-                      ✕
-                    </button>
-                  </span>
+                {activeTags.map(tag => (
+                  <span key={tag} style={styles.activeTag}>{tag}</span>
                 ))}
-                <button style={styles.clearAllInline} onClick={clearAll} type="button">
-                  全部清除
-                </button>
               </div>
 
-              {isLoading && (
-                <div style={styles.comingSoon}>
-                  <p style={styles.comingSoonTitle}>載入中...</p>
-                  <p style={styles.comingSoonSub}>正在根據篩選條件查詢產品</p>
+              {/* 產品清單 */}
+              {loading ? (
+                <div style={styles.emptyState}>
+                  <p style={styles.emptyTitle}>載入中...</p>
                 </div>
-              )}
-
-              {!isLoading && error && (
-                <div style={styles.comingSoon}>
-                  <p style={styles.comingSoonTitle}>查詢失敗</p>
-                  <p style={styles.comingSoonSub}>{error}</p>
+              ) : products.length === 0 ? (
+                <div style={styles.emptyState}>
+                  <p style={styles.emptyTitle}>找不到符合條件的產品</p>
+                  <p style={styles.emptySub}>試試調整篩選條件</p>
                 </div>
-              )}
-
-              {!isLoading && !error && searchedProducts.length === 0 && (
-                <div style={styles.comingSoon}>
-                  <p style={styles.comingSoonTitle}>找不到符合條件的產品</p>
-                  <p style={styles.comingSoonSub}>請調整篩選條件或關鍵字後再試一次</p>
+              ) : (
+                <div style={styles.productGrid}>
+                  {products.map(p => (
+                    <div key={p.product_id} style={styles.productCard}>
+                      <p style={styles.productBrand}>{p.brand}</p>
+                      <p style={styles.productName}>{p.name}</p>
+                      <p style={styles.productSub}>{p.sub_category}</p>
+                      {(skinType || effect) && (
+                      <p style={styles.productScore}>推薦分數：{p.score} 分</p>
+                      )}
+                      <div style={styles.ingredientRow}>
+                        {p.product_ingredients?.map(pi => (
+                          <span key={pi.ingredient_id} style={styles.conditionTag}>
+                            {pi.ingredients?.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-
-              {!isLoading && !error && searchedProducts.length > 0 && (
-                <>
-                  <p style={styles.resultCount}>共找到 {searchedProducts.length} 筆產品</p>
-                  <div style={styles.productGrid}>
-                    {searchedProducts.map((product) => {
-                      const productId = product.product_id || product.id || toDisplayName(product);
-                      const ingredientCount = Array.isArray(product.product_ingredients)
-                        ? product.product_ingredients.length
-                        : 0;
-
-                      return (
-                        <article key={productId} style={styles.productCard}>
-                          <div style={styles.cardTopRow}>
-                            <span style={styles.productCategory}>{product.category || '未分類'}</span>
-                            {product.score != null && <span style={styles.scoreTag}>推薦分數 {product.score}</span>}
-                          </div>
-                          <h3 style={styles.productName}>{toDisplayName(product)}</h3>
-                          <p style={styles.productMeta}>
-                            品牌：{toDisplayBrand(product)}
-                            {product.sub_category ? ` · 品項：${product.sub_category}` : ''}
-                          </p>
-                          <p style={styles.productMeta}>成分數：{ingredientCount}</p>
-                        </article>
-                      );
-                    })}
-                  </div>
-                </>
               )}
             </>
           ) : (
             <div style={styles.emptyState}>
-              <div style={styles.emptyIcon}>✦</div>
               <p style={styles.emptyTitle}>從左側設定篩選條件</p>
               <p style={styles.emptySub}>選擇探索領域、膚質、功效，找到最適合你的產品</p>
             </div>
@@ -354,6 +243,13 @@ const styles = {
     backgroundColor: T.bgBase,
     minHeight: '100vh',
   },
+  productScore: {
+  fontSize: '12px',
+  color: T.accent,
+  fontWeight: 'bold',
+  margin: 0,
+},
+  /* 搜尋 Hero */
   searchHero: {
     backgroundColor: T.bgInverse,
     padding: '56px 40px 48px',
@@ -395,7 +291,7 @@ const styles = {
     alignItems: 'center',
     padding: '0 20px',
     gap: '12px',
-    transition: 'border-color 200ms, background-color 200ms',
+    transition: 'border-color 150ms, background-color 150ms',
   },
   searchBoxFocus: {
     backgroundColor: 'rgba(247,244,242,0.12)',
@@ -409,17 +305,9 @@ const styles = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '15px',
     color: T.textInverse,
+    '::placeholder': { color: 'rgba(247,244,242,0.4)' },
   },
-  searchClear: {
-    background: 'none',
-    border: 'none',
-    color: 'rgba(247,244,242,0.4)',
-    fontSize: '13px',
-    cursor: 'pointer',
-    padding: '0 2px',
-    flexShrink: 0,
-    transition: 'color 120ms',
-  },
+  /* 主體 */
   body: {
     display: 'flex',
     maxWidth: '1200px',
@@ -428,6 +316,7 @@ const styles = {
     gap: '40px',
     alignItems: 'flex-start',
   },
+  /* 篩選側欄 */
   sidebar: {
     width: '260px',
     flexShrink: 0,
@@ -455,13 +344,28 @@ const styles = {
     color: T.textTertiary,
     margin: 0,
     textTransform: 'uppercase',
-    display: 'flex',
-    alignItems: 'center',
   },
   filterGroup: {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '6px',
+  },
+  filterChip: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: T.textSecondary,
+    backgroundColor: 'transparent',
+    border: `1px solid ${T.border}`,
+    borderRadius: '999px',
+    padding: '5px 12px',
+    cursor: 'pointer',
+    transition: 'all 150ms',
+  },
+  filterChipActive: {
+    backgroundColor: 'rgba(196,137,122,0.1)',
+    borderColor: T.accent,
+    color: T.accent,
+    fontWeight: 500,
   },
   filterDivider: {
     height: '1px',
@@ -479,8 +383,8 @@ const styles = {
     padding: '4px 0',
     textDecoration: 'underline',
     textUnderlineOffset: '3px',
-    transition: 'color 120ms',
   },
+  /* 結果區 */
   results: {
     flex: 1,
   },
@@ -488,74 +392,17 @@ const styles = {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '8px',
-    alignItems: 'center',
     marginBottom: '24px',
   },
-  clearAllInline: {
-    background: 'none',
-    border: 'none',
+  activeTag: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '12px',
-    color: T.textTertiary,
-    cursor: 'pointer',
-    padding: '4px 8px',
-    textDecoration: 'underline',
-    textUnderlineOffset: '3px',
-    transition: 'color 120ms',
-  },
-  resultCount: {
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px',
-    color: T.textSecondary,
-    margin: '0 0 12px 0',
-  },
-  productGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-    gap: '14px',
-  },
-  productCard: {
-    backgroundColor: T.bgSurface,
-    borderRadius: '12px',
-    border: `1px solid ${T.border}`,
-    padding: '16px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  cardTopRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  productCategory: {
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '11px',
-    color: T.textTertiary,
-    letterSpacing: '0.04em',
-  },
-  scoreTag: {
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '11px',
+    fontWeight: 500,
     color: T.accent,
-    backgroundColor: 'rgba(196, 137, 122, 0.12)',
-    padding: '3px 8px',
+    backgroundColor: 'rgba(196,137,122,0.1)',
+    border: `1px solid rgba(196,137,122,0.25)`,
     borderRadius: '999px',
-  },
-  productName: {
-    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '24px',
-    lineHeight: 1.2,
-    color: T.textPrimary,
-    margin: 0,
-  },
-  productMeta: {
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px',
-    color: T.textSecondary,
-    margin: 0,
-    lineHeight: 1.5,
+    padding: '4px 12px',
   },
   comingSoon: {
     backgroundColor: T.bgSurface,
@@ -566,6 +413,11 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     gap: '10px',
+  },
+  comingSoonIcon: {
+    fontSize: '32px',
+    lineHeight: 1,
+    marginBottom: '4px',
   },
   comingSoonTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
@@ -579,20 +431,29 @@ const styles = {
     fontSize: '14px',
     color: T.textTertiary,
     margin: 0,
-    textAlign: 'center',
+  },
+  conditionSummary: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px',
+    marginTop: '8px',
+    justifyContent: 'center',
+  },
+  conditionTag: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px',
+    color: T.textSecondary,
+    backgroundColor: T.bgSubtle,
+    borderRadius: '999px',
+    padding: '3px 10px',
   },
   emptyState: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '12px',
+    gap: '10px',
     minHeight: '320px',
-  },
-  emptyIcon: {
-    fontSize: '28px',
-    color: T.accentLight,
-    lineHeight: 1,
   },
   emptyTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
@@ -608,6 +469,44 @@ const styles = {
     margin: 0,
     textAlign: 'center',
   },
+   productGrid: {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+  gap: '16px',
+},
+productCard: {
+  backgroundColor: T.bgSurface,
+  borderRadius: '12px',
+  border: `1px solid ${T.border}`,
+  padding: '20px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6px',
+},
+productBrand: {
+  fontSize: '11px',
+  fontWeight: 500,
+  color: T.textTertiary,
+  margin: 0,
+  textTransform: 'uppercase',
+},
+productName: {
+  fontSize: '17px',
+  color: T.textPrimary,
+  margin: 0,
+},
+productSub: {
+  fontSize: '12px',
+  color: T.accent,
+  margin: 0,
+},
+ingredientRow: {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '4px',
+  marginTop: '6px',
+},
 };
 
 export default ProductDB;
+
