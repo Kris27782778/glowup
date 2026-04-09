@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -52,7 +52,12 @@ function ProductDB() {
 
   const itemOptions = category === '化妝品' ? MAKEUP_ITEMS : SKINCARE_ITEMS;
   const hasFilter   = category || skinType || effect || item;
-  const activeTags  = [category, item, skinType, effect].filter(Boolean);
+  const activeTags = [
+    category && { label: category, remove: () => { setCategory(null); setItem(null); } },
+    item     && { label: item,     remove: () => setItem(null) },
+    skinType && { label: skinType, remove: () => setSkinType(null) },
+    effect   && { label: effect,   remove: () => setEffect(null) },
+  ].filter(Boolean);
 
   const clearAll = () => {
     setCategory(null); setSkinType(null); setEffect(null); setItem(null);
@@ -136,7 +141,7 @@ function ProductDB() {
             </p>
             <div style={styles.filterGroup}>
               {EFFECTS.map(e => (
-                <button
+                <FilterChip
                   key={e}
                   label={e}
                   active={effect === e}
@@ -209,7 +214,7 @@ function ProductDB() {
                 </p>
                 <div style={styles.conditionSummary}>
                   {activeTags.map(tag => (
-                    <span key={tag} style={styles.conditionTag}>{tag}</span>
+                    <span key={tag.label} style={styles.conditionTag}>{tag.label}</span>
                   ))}
                 </div>
               </div>
