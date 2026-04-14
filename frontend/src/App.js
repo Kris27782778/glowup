@@ -9,6 +9,8 @@ import ProductDB from './ProductDB';
 import Dashboard from './Dashboard';
 import Settings from './Settings';
 import AuthGate from './components/AuthGate';
+import Community from './Community';
+import QA from './QA';
 import { applyTheme, getStoredSettings } from './hooks/useSettings';
 import './animations.css';
 
@@ -93,6 +95,8 @@ function Layout() {
           <Route path="/"          element={<Hero />} />
           <Route path="/login"     element={<Login />} />
           <Route path="/register"  element={<Register />} />
+          <Route path="/community" element={<RequireAuth feature="community"><Community /></RequireAuth>} />
+          <Route path="/qa"        element={<RequireAuth feature="qa"><QA /></RequireAuth>} />
           <Route path="/products"  element={<RequireAuth feature="products"><ProductDB /></RequireAuth>} />
           <Route path="/dashboard" element={<RequireAuth feature="dashboard"><Dashboard /></RequireAuth>} />
           <Route path="/settings"  element={<RequireAuth feature="settings"><Settings /></RequireAuth>} />

@@ -15,9 +15,9 @@ const T = {
 };
 
 const NAV_KEYS = [
-  { key: '社群討論',   to: '#' },
+  { key: '社群討論',   to: '/community' },
   { key: '產品資料庫', to: '/products' },
-  { key: '問答',       to: '#' },
+  { key: '問答',       to: '/qa' },
 ];
 
 function Navbar() {

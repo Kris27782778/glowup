@@ -214,6 +214,47 @@ const en = {
   '以成分透明為核心，共建知識型美妝社群':
     'Building a knowledge-based beauty community powered by ingredient transparency',
 
+  // ── Community ───────────────────────────────────
+  '與輔大同學交流真實的保養心得，找到你信任的美妝知識。': 'Exchange real skincare experiences with FJU classmates.',
+  '篇貼文': 'posts',
+  '位成員': 'members',
+  '個標籤': 'tags',
+  '搜尋貼文、標籤…': 'Search posts, tags…',
+  '發布貼文': 'New Post',
+  '最新': 'Latest',
+  '精選': 'Featured',
+  '篇': '',
+  '本週熱門話題': 'This Week',
+  '活躍成員': 'Active Members',
+  '找不到符合的貼文': 'No matching posts',
+  '試試其他關鍵字或標籤': 'Try a different keyword or tag',
+  '全部': 'All',
+
+  // Tags shared between Community and QA
+  '去角質': 'Exfoliation',
+  '混合性肌': 'Combination Skin',
+
+  // ── QA ──────────────────────────────────────────
+  '向社群提出你的保養疑問，獲得同學的真實解答。': 'Ask the community your skincare questions and get real answers.',
+  '個問題': 'questions',
+  '則回答': 'answers',
+  '待解決': 'Open',
+  '搜尋問題、成分、關鍵字…': 'Search questions, ingredients…',
+  '提出問題': 'Ask',
+  '全部問題': 'All',
+  '未解決': 'Open',
+  '已解決': 'Solved',
+  '我的提問': 'My Questions',
+  '題': '',
+  '熱門標籤': 'Hot Tags',
+  '優質回答者': 'Top Answerers',
+  '回答此問題': 'Answer',
+  '找不到符合的問題': 'No matching questions',
+  '與輔大同學交流保養心得、分享真實使用經驗。登入後即可參與社群討論。':
+    'Share skincare tips and real experiences with FJU classmates. Sign in to join the conversation.',
+  '向社群提出保養疑問，獲得真實回答。登入後即可提問與回答。':
+    'Ask the community your skincare questions and get real answers. Sign in to participate.',
+
   // ── Shared ──────────────────────────────────────
   '學號': 'Student ID',
 
