@@ -32,10 +32,15 @@ function ProductDB() {
   const [searchFocus, setSearchFocus] = useState(false);
   const [products,    setProducts]    = useState([]);
   const [loading,     setLoading]     = useState(false);
+  const [page,        setPage]        = useState(1);
+  const PAGE_SIZE = 10;
 
   const itemOptions = category === '化妝品' ? MAKEUP_ITEMS : SKINCARE_ITEMS;
   const hasFilter   = category || skinType || effect || item;
   const activeTags  = [category, item, skinType, effect].filter(Boolean);
+
+  const totalPages   = Math.ceil(products.length / PAGE_SIZE);
+  const pagedProducts = products.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const itemMap = {
   '粉底液': '粉底液',
   '遮瑕':   '遮瑕',
@@ -46,8 +51,9 @@ function ProductDB() {
 };
 
 useEffect(() => {
+  setPage(1);
   fetchProducts();
-}, [category, item, skinType, effect]); // ← 加上 skinType, effect
+}, [category, item, skinType, effect]);
 
 const fetchProducts = async () => {
   if (!category && !item) { setProducts([]); return; }
@@ -206,25 +212,86 @@ const fetchProducts = async () => {
                   <p style={styles.emptySub}>{t('試試調整篩選條件')}</p>
                 </div>
               ) : (
-                <div style={styles.productGrid}>
-                  {products.map(p => (
-                    <div key={p.product_id} style={styles.productCard}>
-                      <p style={styles.productBrand}>{p.brand}</p>
-                      <p style={styles.productName}>{p.name}</p>
-                      <p style={styles.productSub}>{p.sub_category}</p>
-                      {(skinType || effect) && (
-                      <p style={styles.productScore}>{t('推薦分數：')}{p.score}</p>
-                      )}
-                      <div style={styles.ingredientRow}>
-                        {p.product_ingredients?.map(pi => (
-                          <span key={pi.ingredient_id} style={styles.conditionTag}>
-                            {pi.ingredients?.name}
-                          </span>
-                        ))}
-                      </div>
+                <>
+                  <p style={styles.resultCount}>
+                    {t('共')} {products.length} {t('項結果')}
+                    {totalPages > 1 && `，第 ${page} / ${totalPages} 頁`}
+                  </p>
+                  <div style={styles.productGrid}>
+                    {pagedProducts.map(p => {
+                      const scoreNum = parseFloat(p.score);
+                      const scorePct = isNaN(scoreNum) ? 0 : Math.min(100, Math.max(0, scoreNum * 10));
+                      const scoreColor = scorePct >= 80 ? '#7BAF7B' : scorePct >= 50 ? T.accent : T.textTertiary;
+                      return (
+                        <div key={p.product_id} style={styles.productCard}>
+                          {/* 品牌 + 品項 */}
+                          <div style={styles.cardHeader}>
+                            <span style={styles.productBrand}>{p.brand}</span>
+                            <span style={styles.productSubBadge}>{p.sub_category}</span>
+                          </div>
+
+                          {/* 產品名稱 */}
+                          <p style={styles.productName}>{p.name}</p>
+
+                          {/* 推薦分數進度條 */}
+                          {(skinType || effect) && !isNaN(scoreNum) && (
+                            <div style={styles.scoreSection}>
+                              <div style={styles.scoreLabelRow}>
+                                <span style={styles.scoreLabel}>{t('推薦分數')}</span>
+                                <span style={{ ...styles.scoreValue, color: scoreColor }}>
+                                  {scoreNum.toFixed(1)}
+                                </span>
+                              </div>
+                              <div style={styles.progressTrack}>
+                                <div style={{
+                                  ...styles.progressFill,
+                                  width: `${scorePct}%`,
+                                  backgroundColor: scoreColor,
+                                }} />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 成分標籤 */}
+                          {p.product_ingredients?.length > 0 && (
+                            <div style={styles.ingredientRow}>
+                              {p.product_ingredients.map(pi => (
+                                <span key={pi.ingredient_id} style={styles.conditionTag}>
+                                  {pi.ingredients?.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* 分頁列 */}
+                  {totalPages > 1 && (
+                    <div style={styles.pagination}>
+                      <button
+                        style={{ ...styles.pageBtn, ...(page === 1 ? styles.pageBtnDisabled : {}) }}
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                      >‹</button>
+
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+                        <button
+                          key={n}
+                          style={{ ...styles.pageBtn, ...(n === page ? styles.pageBtnActive : {}) }}
+                          onClick={() => setPage(n)}
+                        >{n}</button>
+                      ))}
+
+                      <button
+                        style={{ ...styles.pageBtn, ...(page === totalPages ? styles.pageBtnDisabled : {}) }}
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                      >›</button>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </>
           ) : (
@@ -244,12 +311,6 @@ const styles = {
     paddingTop: '64px',
     backgroundColor: 'var(--bg-base)',
     minHeight: '100vh',
-  },
-  productScore: {
-    fontSize: '12px',
-    color: 'var(--accent)',
-    fontWeight: 'bold',
-    margin: 0,
   },
   /* 搜尋 Hero */
   searchHero: {
@@ -471,43 +532,134 @@ const styles = {
     margin: 0,
     textAlign: 'center',
   },
+  resultCount: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: 'var(--text-tertiary)',
+    marginBottom: '16px',
+  },
   productGrid: {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-  gap: '16px',
-},
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: '20px',
+  },
   productCard: {
     backgroundColor: 'var(--bg-surface)',
-    borderRadius: '12px',
+    borderRadius: '16px',
     border: '1px solid var(--border)',
-    padding: '20px',
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    transition: 'box-shadow 200ms, transform 200ms',
+    cursor: 'default',
+  },
+  cardHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '8px',
+  },
+  productBrand: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px',
+    fontWeight: 600,
+    color: 'var(--text-tertiary)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+  },
+  productSubBadge: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px',
+    fontWeight: 500,
+    color: 'var(--accent)',
+    backgroundColor: 'rgba(196,137,122,0.1)',
+    border: '1px solid rgba(196,137,122,0.2)',
+    borderRadius: '999px',
+    padding: '2px 10px',
+    whiteSpace: 'nowrap',
+  },
+  productName: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '18px',
+    fontWeight: 400,
+    color: 'var(--text-primary)',
+    margin: 0,
+    lineHeight: 1.4,
+  },
+  scoreSection: {
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
+    marginTop: '4px',
   },
-  productBrand: {
+  scoreLabelRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  scoreLabel: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '11px',
-    fontWeight: 500,
     color: 'var(--text-tertiary)',
-    margin: 0,
-    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
   },
-  productName: {
-    fontSize: '17px',
-    color: 'var(--text-primary)',
-    margin: 0,
+  scoreValue: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '13px',
+    fontWeight: 600,
   },
-  productSub: {
-    fontSize: '12px',
-    color: 'var(--accent)',
-    margin: 0,
+  progressTrack: {
+    width: '100%',
+    height: '5px',
+    backgroundColor: 'var(--bg-subtle)',
+    borderRadius: '999px',
+    overflow: 'hidden',
   },
-ingredientRow: {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: '4px',
-  marginTop: '6px',
-},
+  progressFill: {
+    height: '100%',
+    borderRadius: '999px',
+    transition: 'width 600ms ease',
+  },
+  ingredientRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '5px',
+    marginTop: '4px',
+    paddingTop: '10px',
+    borderTop: '1px solid var(--border)',
+  },
+  pagination: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: '6px',
+    marginTop: '36px',
+    paddingBottom: '8px',
+  },
+  pageBtn: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '13px',
+    fontWeight: 500,
+    minWidth: '36px',
+    height: '36px',
+    padding: '0 10px',
+    borderRadius: '8px',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
+    color: 'var(--text-secondary)',
+    cursor: 'pointer',
+    transition: 'all 150ms',
+  },
+  pageBtnActive: {
+    backgroundColor: T.accent,
+    borderColor: T.accent,
+    color: '#FFFFFF',
+  },
+  pageBtnDisabled: {
+    opacity: 0.35,
+    cursor: 'not-allowed',
+  },
 };
 
 export default ProductDB;
