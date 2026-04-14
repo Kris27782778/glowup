@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 const STORAGE_KEY = 'app_settings';
 
 const DEFAULTS = {
-  theme: 'system',   // 'light' | 'dark' | 'system'
+  theme: 'light',    // 'light' | 'dark' | 'system'
   language: 'zh-TW', // 'zh-TW' | 'en'
 };
 
@@ -36,6 +36,7 @@ export function useSettings() {
     setSettings(prev => {
       const next = { ...prev, [key]: value };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      window.dispatchEvent(new CustomEvent('glow-settings', { detail: { key, value } }));
       return next;
     });
   }, []);

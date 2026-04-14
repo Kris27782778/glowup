@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useLang } from './hooks/useLang';
 
 const T = {
   bgInverse:   '#1C1917',
@@ -14,35 +15,34 @@ const LINKS = [
   { group: '帳號',   items: [{ label: '登入', to: '/login' }, { label: '註冊', to: '/register' }] },
 ];
 
+
 function Footer() {
+  const { t } = useLang();
   return (
     <footer style={styles.footer}>
       <div style={styles.inner}>
-        {/* 上半：Logo + 連結欄 */}
         <div style={styles.top}>
           <div style={styles.brand}>
             <Link to="/" style={styles.logo}>GLŌW</Link>
-            <p style={styles.tagline}>輔大美妝交流平台<br />清晰就是美</p>
+            <p style={styles.tagline}>{t('輔大美妝交流平台')}<br />{t('清晰就是美')}</p>
           </div>
           <div style={styles.linkGroups}>
             {LINKS.map(({ group, items }) => (
               <div key={group} style={styles.linkGroup}>
-                <p style={styles.groupTitle}>{group}</p>
+                <p style={styles.groupTitle}>{t(group)}</p>
                 {items.map(({ label, to }) => (
-                  <Link key={label} to={to} style={styles.footerLink} className="g-footer-link">{label}</Link>
+                  <Link key={label} to={to} style={styles.footerLink} className="g-footer-link">{t(label)}</Link>
                 ))}
               </div>
             ))}
           </div>
         </div>
 
-        {/* 分隔線 */}
         <div style={styles.divider} />
 
-        {/* 下半：版權 */}
         <div style={styles.bottom}>
-          <p style={styles.copyright}>© 2025 GLŌW · 輔仁大學</p>
-          <p style={styles.copyright}>以成分透明為核心，共建知識型美妝社群</p>
+          <p style={styles.copyright}>© 2025 GLŌW · {t('輔仁大學')}</p>
+          <p style={styles.copyright}>{t('以成分透明為核心，共建知識型美妝社群')}</p>
         </div>
       </div>
     </footer>

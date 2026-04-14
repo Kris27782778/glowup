@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useReveal } from './hooks/useReveal';
+import { useLang } from './hooks/useLang';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -80,7 +81,7 @@ const SKIN_LABELS = {
   normal: '中性肌', sensitive: '敏感性肌',
 };
 
-function getGreeting() {
+function getGreetingKey() {
   const h = new Date().getHours();
   if (h < 5)  return '夜深了';
   if (h < 12) return '早安';
@@ -111,14 +112,15 @@ function Hero() {
    ═══════════════════════════════════════ */
 function LoggedInHome({ user }) {
   const navigate = useNavigate();
+  const { t } = useLang();
   const [tab, setTab] = useState('latest');
   const [announceDismissed, setAnnounceDismissed] = useState(false);
   const [eventPop, setEventPop] = useState(false);
   const [eventPopDismissed, setEventPopDismissed] = useState(false);
   useReveal();
 
-  const greeting  = getGreeting();
-  const skinLabel = SKIN_LABELS[user.skin_type] || null;
+  const greeting  = t(getGreetingKey());
+  const skinLabel = SKIN_LABELS[user.skin_type] ? t(SKIN_LABELS[user.skin_type]) : null;
 
   /* 活動 pop：1.8 秒後浮現 */
   useEffect(() => {
@@ -141,7 +143,7 @@ function LoggedInHome({ user }) {
             {skinLabel && <span style={H.skinBadge}>{skinLabel}</span>}
           </div>
           <button style={H.postBtn} onClick={() => {}}>
-            + 發布貼文
+            {t('+ 發布貼文')}
           </button>
         </div>
       </div>
@@ -155,9 +157,9 @@ function LoggedInHome({ user }) {
           {/* 公告條 */}
           {!announceDismissed && (
             <div style={H.announce} className="g-fade-up gd-1">
-              <span style={H.announceBadge}>公告</span>
+              <span style={H.announceBadge}>{t('公告')}</span>
               <span style={H.announceText}>
-                保養品交換會 5/18 即將舉行，快來報名！
+                {t('保養品交換會 5/18 即將舉行，快來報名！')}
               </span>
               <button
                 style={H.announceClose}
@@ -173,14 +175,14 @@ function LoggedInHome({ user }) {
               { key: 'latest',    label: '最新動態' },
               { key: 'hot',       label: '熱門貼文' },
               { key: 'following', label: '追蹤中' },
-            ].map(t => (
+            ].map(item => (
               <button
-                key={t.key}
-                style={{ ...H.tabBtn, ...(tab === t.key ? H.tabActive : {}) }}
-                onClick={() => setTab(t.key)}
+                key={item.key}
+                style={{ ...H.tabBtn, ...(tab === item.key ? H.tabActive : {}) }}
+                onClick={() => setTab(item.key)}
               >
-                {t.label}
-                {tab === t.key && <span style={H.tabLine} />}
+                {t(item.label)}
+                {tab === item.key && <span style={H.tabLine} />}
               </button>
             ))}
           </div>
@@ -189,12 +191,12 @@ function LoggedInHome({ user }) {
           <div key={tab} className="g-tab-content">
             {tab === 'following' ? (
               <div style={H.emptyFeed}>
-                <p style={H.emptyTitle}>還沒有追蹤的用戶</p>
-                <p style={H.emptySub}>追蹤其他同學，在這裡看見他們的最新動態</p>
+                <p style={H.emptyTitle}>{t('還沒有追蹤的用戶')}</p>
+                <p style={H.emptySub}>{t('追蹤其他同學，在這裡看見他們的最新動態')}</p>
               </div>
             ) : (
               filteredPosts.map((post, i) => (
-                <PostCard key={post.id} post={post} idx={i} />
+                <PostCard key={post.id} post={post} idx={i} t={t} />
               ))
             )}
           </div>
@@ -205,21 +207,21 @@ function LoggedInHome({ user }) {
 
           {/* 近期活動 */}
           <div style={H.sideSection} className="g-reveal">
-            <p style={H.sideTitle}>近期活動</p>
+            <p style={H.sideTitle}>{t('近期活動')}</p>
             <div style={H.eventList}>
               {MOCK_EVENTS.map(ev => (
-                <EventCard key={ev.id} event={ev} />
+                <EventCard key={ev.id} event={ev} t={t} />
               ))}
             </div>
           </div>
 
           {/* 熱門標籤 */}
           <div style={H.sideSection} className="g-reveal delay-1">
-            <p style={H.sideTitle}>熱門標籤</p>
+            <p style={H.sideTitle}>{t('熱門標籤')}</p>
             <div style={H.tagCloud}>
               {MOCK_TAGS.map(tag => (
                 <button key={tag} style={H.tagChip} className="fchip">
-                  {tag}
+                  {t(tag)}
                 </button>
               ))}
             </div>
@@ -227,15 +229,15 @@ function LoggedInHome({ user }) {
 
           {/* 快速入口 */}
           <div style={H.sideSection} className="g-reveal delay-2">
-            <p style={H.sideTitle}>快速入口</p>
+            <p style={H.sideTitle}>{t('快速入口')}</p>
             <div style={H.quickLinks}>
               {[
                 { label: '成分資料庫', sub: '查詢保養成分', to: '/products' },
                 { label: '個人主頁',   sub: '管理我的帖文', to: '/dashboard' },
               ].map(l => (
                 <button key={l.label} style={H.quickLink} onClick={() => navigate(l.to)}>
-                  <span style={H.quickLabel}>{l.label}</span>
-                  <span style={H.quickSub}>{l.sub}</span>
+                  <span style={H.quickLabel}>{t(l.label)}</span>
+                  <span style={H.quickSub}>{t(l.sub)}</span>
                   <span style={H.quickArrow}>→</span>
                 </button>
               ))}
@@ -250,7 +252,7 @@ function LoggedInHome({ user }) {
         <div style={H.eventPopWrap}>
           <div style={H.eventPop} className="g-scale-in">
             <div style={H.eventPopHeader}>
-              <span style={H.eventPopBadge}>新活動</span>
+              <span style={H.eventPopBadge}>{t('新活動')}</span>
               <button
                 style={H.eventPopClose}
                 onClick={() => setEventPopDismissed(true)}
@@ -261,7 +263,7 @@ function LoggedInHome({ user }) {
             <p style={H.eventPopDate}>5 月 18 日（六）14:00</p>
             <p style={H.eventPopDesc}>帶一瓶來換一瓶，找到你的下一個愛用品！</p>
             <button style={H.eventPopCta} onClick={() => setEventPopDismissed(true)}>
-              了解詳情
+              {t('了解詳情')}
             </button>
           </div>
         </div>
@@ -272,7 +274,7 @@ function LoggedInHome({ user }) {
 }
 
 /* ── 貼文卡片 ── */
-function PostCard({ post, idx }) {
+function PostCard({ post, idx, t }) {
   return (
     <div style={{ ...H.postCard, animationDelay: `${idx * 70}ms` }} className="g-fade-up">
       <div style={H.postHeader}>
@@ -281,7 +283,7 @@ function PostCard({ post, idx }) {
           <span style={H.postAuthor}>{post.author}</span>
           <span style={H.postDept}>{post.dept} · {post.time}</span>
         </div>
-        {post.hot && <span style={H.hotBadge}>熱門</span>}
+        {post.hot && <span style={H.hotBadge}>{t('熱門')}</span>}
       </div>
       <span style={H.postTag}>{post.tag}</span>
       <h3 style={H.postTitle}>{post.title}</h3>
@@ -289,19 +291,19 @@ function PostCard({ post, idx }) {
       <div style={H.postFooter}>
         <button style={H.postStat}>♡ {post.likes}</button>
         <button style={H.postStat}>◎ {post.comments}</button>
-        <button style={H.postStatRight}>分享</button>
+        <button style={H.postStatRight}>{t('分享')}</button>
       </div>
     </div>
   );
 }
 
 /* ── 活動卡片 ── */
-function EventCard({ event }) {
+function EventCard({ event, t }) {
   return (
     <div style={{ ...H.eventCard, ...(event.urgent ? H.eventCardUrgent : {}) }}>
       <div style={H.eventCardTop}>
         <span style={{ ...H.eventBadge, ...(event.urgent ? H.eventBadgeUrgent : {}) }}>
-          {event.badge}
+          {t(event.badge)}
         </span>
         <span style={H.eventDate}>{event.date}</span>
       </div>
@@ -516,6 +518,7 @@ function InteractiveBg() {
 
 function LandingPage() {
   const navigate = useNavigate();
+  const { t } = useLang();
   useReveal();
 
   const [ingIdx,  setIngIdx]  = useState(0);
@@ -552,17 +555,17 @@ function LandingPage() {
         <InteractiveBg />
         <div style={L.heroInner}>
           <div style={L.heroLeft}>
-            <p style={L.heroEyebrow} className="g-fade-in gd-0">輔仁大學 · 美妝知識平台</p>
+            <p style={L.heroEyebrow} className="g-fade-in gd-0">{t('輔仁大學 · 美妝知識平台')}</p>
             <h1 style={L.heroTitle} className="g-fade-up gd-1">
-              成分透明，<br /><em>才是真正的</em><br />美妝自由
+              {t('成分透明，')}<br /><em>{t('才是真正的')}</em><br />{t('美妝自由')}
             </h1>
             <p style={L.heroDesc} className="g-fade-up gd-2">
-              GLŌW 是專為輔大學生打造的美妝知識平台。<br />
-              查成分、看評價、找同學討論，讓每一瓶都擦得安心。
+              {t('GLŌW 是專為輔大學生打造的美妝知識平台。')}<br />
+              {t('查成分、看評價、找同學討論，讓每一瓶都擦得安心。')}
             </p>
             <div style={L.heroCtas} className="g-fade-up gd-3">
-              <button style={L.ctaPrimary} onClick={() => navigate('/register')}>立即加入</button>
-              <button style={L.ctaGhost}  onClick={() => navigate('/products')}>探索成分庫 →</button>
+              <button style={L.ctaPrimary} onClick={() => navigate('/register')}>{t('立即加入')}</button>
+              <button style={L.ctaGhost}  onClick={() => navigate('/products')}>{t('探索成分庫 →')}</button>
             </div>
           </div>
 
@@ -570,7 +573,7 @@ function LandingPage() {
             <div style={L.heroCard} className="g-float">
               {/* 成分內容：淡入淡出 */}
               <div style={{ opacity: fading ? 0 : 1, transition: 'opacity 300ms ease' }}>
-                <p style={L.cardLabel}>成分介紹</p>
+                <p style={L.cardLabel}>{t('成分介紹')}</p>
                 <p style={L.cardIngredient}>{ing.name}</p>
                 <p style={L.cardEn}>{ing.en}</p>
                 {/* 安全評分 bar */}
@@ -583,7 +586,7 @@ function LandingPage() {
                       transition: 'width 700ms cubic-bezier(0.22,1,0.36,1)',
                     }} />
                   </div>
-                  <p style={L.safeScore}>安全評分 {ing.safeScore} / 100</p>
+                  <p style={L.safeScore}>{t('安全評分')} {ing.safeScore} / 100</p>
                 </div>
                 <div style={L.cardTags}>
                   {ing.tags.map(t => <span key={t} style={L.cardTag}>{t}</span>)}
@@ -622,15 +625,15 @@ function LandingPage() {
       <section style={L.features}>
         <div style={L.featuresHeader}>
           <p style={L.sectionEyebrow} className="g-reveal">WHAT WE OFFER</p>
-          <h2 style={L.sectionTitle} className="g-reveal delay-1">三個理由加入 GLŌW</h2>
+          <h2 style={L.sectionTitle} className="g-reveal delay-1">{t('三個理由加入 GLŌW')}</h2>
         </div>
         <div style={L.featureGrid} className="g-reveal delay-2">
           {FEATURES.map(f => (
             <div key={f.num} style={L.featureCard} className="g-feature-card" onClick={() => navigate(f.to)}>
               <p style={L.featureNum}>{f.num}</p>
-              <h3 style={L.featureTitle}>{f.title}</h3>
-              <p style={L.featureDesc}>{f.desc}</p>
-              <button style={L.featureCta} className="g-feature-cta">{f.cta} →</button>
+              <h3 style={L.featureTitle}>{t(f.title)}</h3>
+              <p style={L.featureDesc}>{t(f.desc)}</p>
+              <button style={L.featureCta} className="g-feature-cta">{t(f.cta)} →</button>
             </div>
           ))}
         </div>
@@ -641,19 +644,19 @@ function LandingPage() {
           <div style={L.topicsHeader}>
             <div>
               <p style={L.sectionEyebrow} className="g-reveal">TRENDING</p>
-              <h2 style={L.sectionTitleLight} className="g-reveal delay-1">熱門討論</h2>
+              <h2 style={L.sectionTitleLight} className="g-reveal delay-1">{t('熱門討論')}</h2>
             </div>
-            <button style={L.viewAllBtn} className="g-reveal delay-2" onClick={() => navigate('#')}>查看全部</button>
+            <button style={L.viewAllBtn} className="g-reveal delay-2" onClick={() => navigate('#')}>{t('查看全部')}</button>
           </div>
           <div style={L.topicList}>
             {SKIN_TOPICS.map((topic, i) => (
               <div key={i} style={L.topicItem} className={`g-topic-item g-reveal delay-${i + 1}`}>
                 <div style={L.topicLeft}>
-                  <span style={L.topicTag}>{topic.tag}</span>
+                  <span style={L.topicTag}>{t(topic.tag)}</span>
                   <p style={L.topicTitle} className="g-topic-title">{topic.title}</p>
                 </div>
                 <div style={L.topicRight}>
-                  <span style={L.topicReads}>{topic.reads} 閱讀</span>
+                  <span style={L.topicReads}>{topic.reads} {t('閱讀')}</span>
                   <span style={L.topicArrow} className="g-topic-arrow">→</span>
                 </div>
               </div>
@@ -665,11 +668,11 @@ function LandingPage() {
       <section style={L.ctaBanner}>
         <div style={L.ctaBannerInner} className="g-reveal">
           <p style={L.ctaBannerEyebrow}>JOIN GLŌW</p>
-          <h2 style={L.ctaBannerTitle}>用知識武裝你的<br />保養日常</h2>
-          <p style={L.ctaBannerSub}>免費加入，使用輔大校務帳號即可註冊</p>
+          <h2 style={L.ctaBannerTitle}>{t('用知識武裝你的')}<br />{t('保養日常')}</h2>
+          <p style={L.ctaBannerSub}>{t('免費加入，使用輔大校務帳號即可註冊')}</p>
           <div style={L.ctaBannerBtns}>
-            <button style={L.ctaBannerPrimary} onClick={() => navigate('/register')}>立即註冊</button>
-            <button style={L.ctaBannerGhost}   onClick={() => navigate('/login')}>已有帳號，登入</button>
+            <button style={L.ctaBannerPrimary} onClick={() => navigate('/register')}>{t('立即註冊')}</button>
+            <button style={L.ctaBannerGhost}   onClick={() => navigate('/login')}>{t('已有帳號，登入')}</button>
           </div>
         </div>
         <div style={L.ctaBannerDeco1} /><div style={L.ctaBannerDeco2} />
@@ -683,12 +686,12 @@ function LandingPage() {
    Styles — 登入後主頁
    ═══════════════════════════════════════ */
 const H = {
-  page: { paddingTop: '64px', backgroundColor: T.bgBase, minHeight: '100vh' },
+  page: { paddingTop: '64px', backgroundColor: 'var(--bg-base)', minHeight: '100vh' },
 
   /* 歡迎列 */
   welcomeBar: {
-    backgroundColor: T.bgInverse,
-    borderBottom: `1px solid rgba(255,255,255,0.06)`,
+    backgroundColor: '#1C1917',
+    borderBottom: '1px solid rgba(255,255,255,0.06)',
     padding: '0',
   },
   welcomeInner: {
@@ -768,14 +771,14 @@ const H = {
   announceText: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '13px',
-    color: T.textSecondary,
+    color: 'var(--text-secondary)',
     flex: 1,
   },
   announceClose: {
     background: 'none',
     border: 'none',
     fontSize: '13px',
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     cursor: 'pointer',
     padding: '0 4px',
     flexShrink: 0,
@@ -784,8 +787,8 @@ const H = {
   /* Tab */
   tabBar: {
     display: 'flex',
-    borderBottom: `1px solid ${T.border}`,
-    backgroundColor: T.bgSurface,
+    borderBottom: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
     borderRadius: '12px 12px 0 0',
     padding: '0 8px',
   },
@@ -797,20 +800,20 @@ const H = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
     fontWeight: 400,
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
   },
-  tabActive: { color: T.textPrimary, fontWeight: 500 },
+  tabActive: { color: 'var(--text-primary)', fontWeight: 500 },
   tabLine: {
     position: 'absolute', bottom: '-1px', left: '12px', right: '12px',
-    height: '2px', backgroundColor: T.accent, borderRadius: '999px',
+    height: '2px', backgroundColor: 'var(--accent)', borderRadius: '999px',
   },
 
   /* 貼文卡 */
   postCard: {
-    backgroundColor: T.bgSurface,
-    border: `1px solid ${T.border}`,
+    backgroundColor: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
     borderRadius: '0',
     padding: '24px 28px',
     display: 'flex',
@@ -823,7 +826,7 @@ const H = {
   postHeader: { display: 'flex', alignItems: 'center', gap: '10px' },
   postAvatar: {
     width: '36px', height: '36px', borderRadius: '50%',
-    backgroundColor: T.accent,
+    backgroundColor: 'var(--accent)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontFamily: '"Cormorant Garamond", serif',
     fontSize: '16px', color: '#fff', flexShrink: 0,
@@ -831,50 +834,50 @@ const H = {
   postMeta: { display: 'flex', flexDirection: 'column', gap: '1px', flex: 1 },
   postAuthor: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px', fontWeight: 500, color: T.textPrimary,
+    fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)',
   },
   postDept: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '11px', color: T.textTertiary,
+    fontSize: '11px', color: 'var(--text-tertiary)',
   },
   hotBadge: {
     fontFamily: '"DM Sans", sans-serif',
     fontSize: '10px', fontWeight: 600,
-    color: T.accentDark,
+    color: 'var(--accent)',
     backgroundColor: 'rgba(196,137,122,0.12)',
-    border: `1px solid rgba(196,137,122,0.2)`,
+    border: '1px solid rgba(196,137,122,0.2)',
     borderRadius: '4px', padding: '2px 7px', whiteSpace: 'nowrap',
   },
   postTag: {
     alignSelf: 'flex-start',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '11px', fontWeight: 500, letterSpacing: '0.05em',
-    color: T.accent,
+    color: 'var(--accent)',
     backgroundColor: 'rgba(196,137,122,0.08)',
-    border: `1px solid rgba(196,137,122,0.18)`,
+    border: '1px solid rgba(196,137,122,0.18)',
     borderRadius: '999px', padding: '2px 10px',
   },
   postTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '20px', fontWeight: 400, color: T.textPrimary,
+    fontSize: '20px', fontWeight: 400, color: 'var(--text-primary)',
     margin: 0, lineHeight: 1.35,
   },
   postExcerpt: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '14px', color: T.textSecondary,
+    fontSize: '14px', color: 'var(--text-secondary)',
     lineHeight: 1.65, margin: 0,
     display: '-webkit-box', WebkitLineClamp: 2,
     WebkitBoxOrient: 'vertical', overflow: 'hidden',
   },
   postFooter: {
     display: 'flex', alignItems: 'center', gap: '4px',
-    paddingTop: '8px', borderTop: `1px solid ${T.border}`,
+    paddingTop: '8px', borderTop: '1px solid var(--border)',
     marginTop: '4px',
   },
   postStat: {
     background: 'none', border: 'none', padding: '4px 10px',
     fontFamily: '"DM Sans", sans-serif',
-    fontSize: '12px', color: T.textTertiary, cursor: 'pointer',
+    fontSize: '12px', color: 'var(--text-tertiary)', cursor: 'pointer',
     borderRadius: '6px',
     transition: 'color 140ms, background-color 140ms',
   },
@@ -882,14 +885,14 @@ const H = {
     marginLeft: 'auto',
     background: 'none', border: 'none', padding: '4px 10px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '12px', color: T.textTertiary, cursor: 'pointer',
+    fontSize: '12px', color: 'var(--text-tertiary)', cursor: 'pointer',
     borderRadius: '6px',
   },
 
   /* Feed empty */
   emptyFeed: {
-    backgroundColor: T.bgSurface,
-    border: `1px solid ${T.border}`,
+    backgroundColor: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
     borderTop: 'none',
     borderRadius: '0 0 12px 12px',
     padding: '64px 40px',
@@ -897,17 +900,17 @@ const H = {
   },
   emptyTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '20px', fontWeight: 400, color: T.textPrimary, margin: 0,
+    fontSize: '20px', fontWeight: 400, color: 'var(--text-primary)', margin: 0,
   },
   emptySub: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px', color: T.textTertiary, margin: 0, textAlign: 'center',
+    fontSize: '13px', color: 'var(--text-tertiary)', margin: 0, textAlign: 'center',
   },
 
   /* Sidebar */
   sideSection: {
-    backgroundColor: T.bgSurface,
-    border: `1px solid ${T.border}`,
+    backgroundColor: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
     borderRadius: '12px',
     padding: '20px',
     display: 'flex', flexDirection: 'column', gap: '14px',
@@ -915,14 +918,14 @@ const H = {
   sideTitle: {
     fontFamily: '"DM Sans", sans-serif',
     fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em',
-    color: T.textTertiary, margin: 0, textTransform: 'uppercase',
+    color: 'var(--text-tertiary)', margin: 0, textTransform: 'uppercase',
   },
 
   /* 活動卡 */
   eventList: { display: 'flex', flexDirection: 'column', gap: '10px' },
   eventCard: {
-    backgroundColor: T.bgSubtle,
-    border: `1px solid ${T.border}`,
+    backgroundColor: 'var(--bg-subtle)',
+    border: '1px solid var(--border)',
     borderRadius: '10px', padding: '14px 16px',
     display: 'flex', flexDirection: 'column', gap: '4px',
     transition: 'transform 160ms, box-shadow 160ms',
@@ -930,39 +933,43 @@ const H = {
   },
   eventCardUrgent: {
     backgroundColor: 'rgba(196,137,122,0.08)',
-    border: `1px solid rgba(196,137,122,0.25)`,
+    border: '1px solid rgba(196,137,122,0.25)',
   },
   eventCardTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' },
   eventBadge: {
     fontFamily: '"DM Sans", sans-serif',
     fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
-    color: T.textSecondary,
-    backgroundColor: T.border,
+    color: 'var(--text-secondary)',
+    backgroundColor: 'var(--border)',
     borderRadius: '4px', padding: '2px 7px',
   },
-  eventBadgeUrgent: { color: T.accentDark, backgroundColor: 'rgba(196,137,122,0.15)' },
+  eventBadgeUrgent: { color: 'var(--accent)', backgroundColor: 'rgba(196,137,122,0.15)' },
   eventDate: {
     fontFamily: '"DM Sans", sans-serif',
-    fontSize: '11px', color: T.textTertiary, margin: 0,
+    fontSize: '11px', color: 'var(--text-tertiary)', margin: 0,
   },
   eventTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '16px', fontWeight: 400, color: T.textPrimary, margin: 0,
+    fontSize: '16px', fontWeight: 400, color: 'var(--text-primary)', margin: 0,
   },
   eventLocation: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '11px', color: T.accent, margin: 0,
+    fontSize: '11px', color: 'var(--accent)', margin: 0,
   },
   eventDesc: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '12px', color: T.textSecondary, lineHeight: 1.6, margin: 0,
+    fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0,
   },
 
   /* 標籤雲 */
   tagCloud: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
   tagChip: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '12px', color: T.textSecondary,
+    fontSize: '12px', color: 'var(--text-secondary)',
+    backgroundColor: 'var(--bg-subtle)',
+    border: '1px solid var(--border)',
+    borderRadius: '999px', padding: '4px 12px',
+    cursor: 'pointer', background: 'none',
   },
 
   /* 快速入口 */
@@ -970,20 +977,20 @@ const H = {
   quickLink: {
     display: 'flex', alignItems: 'center', gap: '8px',
     width: '100%', background: 'none',
-    border: `1px solid ${T.border}`,
+    border: '1px solid var(--border)',
     borderRadius: '8px', padding: '10px 14px',
     cursor: 'pointer', textAlign: 'left',
     transition: 'border-color 150ms, background-color 150ms',
   },
   quickLabel: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px', fontWeight: 500, color: T.textPrimary, flex: 1,
+    fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', flex: 1,
   },
   quickSub: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '11px', color: T.textTertiary,
+    fontSize: '11px', color: 'var(--text-tertiary)',
   },
-  quickArrow: { color: T.textTertiary, fontSize: '14px', flexShrink: 0 },
+  quickArrow: { color: 'var(--text-tertiary)', fontSize: '14px', flexShrink: 0 },
 
   /* 活動 Pop */
   eventPopWrap: {
@@ -1038,12 +1045,12 @@ const H = {
    Styles — 未登入首頁
    ═══════════════════════════════════════ */
 const L = {
-  page: { paddingTop: '64px', backgroundColor: T.bgBase, overflow: 'hidden' },
+  page: { paddingTop: '64px', backgroundColor: 'var(--bg-base)', overflow: 'hidden' },
   hero: {
     position: 'relative', minHeight: '600px',
     display: 'flex', alignItems: 'center',
     padding: '80px 64px', overflow: 'hidden',
-    background: `linear-gradient(160deg, ${T.bgSubtle} 0%, ${T.bgBase} 55%)`,
+    background: 'linear-gradient(160deg, var(--bg-subtle) 0%, var(--bg-base) 55%)',
   },
   heroInner: {
     position: 'relative', zIndex: 1,
@@ -1053,74 +1060,74 @@ const L = {
   heroLeft: { flex: '0 0 520px', display: 'flex', flexDirection: 'column', gap: '24px' },
   heroEyebrow: {
     fontFamily: '"DM Sans", sans-serif', fontSize: '11px', fontWeight: 500,
-    letterSpacing: '0.18em', color: T.accent, margin: 0, textTransform: 'uppercase',
+    letterSpacing: '0.18em', color: 'var(--accent)', margin: 0, textTransform: 'uppercase',
   },
   heroTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '64px', fontWeight: 300, lineHeight: 1.15, color: T.textPrimary, margin: 0,
+    fontSize: '64px', fontWeight: 300, lineHeight: 1.15, color: 'var(--text-primary)', margin: 0,
   },
   heroDesc: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '15px', color: T.textSecondary, lineHeight: 1.75, margin: 0,
+    fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.75, margin: 0,
   },
   heroCtas: { display: 'flex', gap: '12px', alignItems: 'center', marginTop: '8px' },
   ctaPrimary: {
-    height: '46px', padding: '0 32px', backgroundColor: T.bgInverse,
-    color: T.textInverse, border: 'none', borderRadius: '8px',
+    height: '46px', padding: '0 32px', backgroundColor: 'var(--bg-inverse)',
+    color: 'var(--text-inverse)', border: 'none', borderRadius: '8px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px', fontWeight: 500, cursor: 'pointer', letterSpacing: '0.06em',
   },
   ctaGhost: {
     height: '46px', padding: '0 24px', backgroundColor: 'transparent',
-    color: T.textSecondary, border: 'none',
+    color: 'var(--text-secondary)', border: 'none',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px', cursor: 'pointer',
   },
   heroRight: { flex: 1, position: 'relative', display: 'flex', justifyContent: 'center' },
   heroCard: {
-    backgroundColor: T.bgSurface, borderRadius: '16px',
-    border: `1px solid ${T.border}`, padding: '32px', width: '300px',
+    backgroundColor: 'var(--bg-surface)', borderRadius: '16px',
+    border: '1px solid var(--border)', padding: '32px', width: '300px',
     display: 'flex', flexDirection: 'column', gap: '12px',
     boxShadow: '0 4px 24px rgba(28,25,23,0.07)',
   },
   cardLabel: {
     fontFamily: '"DM Sans", sans-serif', fontSize: '10px', fontWeight: 500,
-    letterSpacing: '0.14em', color: T.accent, margin: 0, textTransform: 'uppercase',
+    letterSpacing: '0.14em', color: 'var(--accent)', margin: 0, textTransform: 'uppercase',
   },
   cardIngredient: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '36px', fontWeight: 400, color: T.textPrimary, margin: 0, lineHeight: 1,
+    fontSize: '36px', fontWeight: 400, color: 'var(--text-primary)', margin: 0, lineHeight: 1,
   },
   cardEn: {
     fontFamily: '"DM Sans", sans-serif', fontSize: '13px',
-    color: T.textTertiary, margin: '-6px 0 0 0', letterSpacing: '0.06em',
+    color: 'var(--text-tertiary)', margin: '-6px 0 0 0', letterSpacing: '0.06em',
   },
-  safeBar: { height: '6px', backgroundColor: T.bgSubtle, borderRadius: '999px', overflow: 'hidden', marginBottom: '4px' },
+  safeBar: { height: '6px', backgroundColor: 'var(--bg-subtle)', borderRadius: '999px', overflow: 'hidden', marginBottom: '4px' },
   safeBarFill: { height: '100%', borderRadius: '999px' },
   safeScore: {
     fontFamily: '"DM Sans", sans-serif', fontSize: '10px',
-    color: T.textTertiary, margin: '4px 0 0 0', letterSpacing: '0.04em',
+    color: 'var(--text-tertiary)', margin: '4px 0 0 0', letterSpacing: '0.04em',
   },
   dotRow: { display: 'flex', gap: '6px', alignItems: 'center', paddingTop: '4px' },
   dot: {
     width: '6px', height: '6px', borderRadius: '50%',
-    backgroundColor: T.border, border: 'none', padding: 0, cursor: 'pointer',
+    backgroundColor: 'var(--border)', border: 'none', padding: 0, cursor: 'pointer',
     transition: 'background-color 250ms, transform 250ms',
   },
-  dotActive: { backgroundColor: T.accent, transform: 'scale(1.3)' },
+  dotActive: { backgroundColor: 'var(--accent)', transform: 'scale(1.3)' },
   cardTags: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
   cardTag: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', fontSize: '11px',
-    color: T.textSecondary, backgroundColor: T.bgSubtle, borderRadius: '999px', padding: '3px 10px',
+    color: 'var(--text-secondary)', backgroundColor: 'var(--bg-subtle)', borderRadius: '999px', padding: '3px 10px',
   },
   cardDesc: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', fontSize: '13px',
-    color: T.textSecondary, lineHeight: 1.65, margin: '4px 0 0 0',
-    borderTop: `1px solid ${T.border}`, paddingTop: '12px',
+    color: 'var(--text-secondary)', lineHeight: 1.65, margin: '4px 0 0 0',
+    borderTop: '1px solid var(--border)', paddingTop: '12px',
   },
   floatCard: {
     position: 'absolute', bottom: '-16px', left: '-24px',
-    backgroundColor: T.bgInverse, borderRadius: '10px', padding: '10px 16px',
+    backgroundColor: '#1C1917', borderRadius: '10px', padding: '10px 16px',
     display: 'flex', alignItems: 'center', gap: '8px',
     boxShadow: '0 4px 16px rgba(28,25,23,0.15)',
   },
@@ -1148,39 +1155,39 @@ const L = {
   featuresHeader: { marginBottom: '56px' },
   sectionEyebrow: {
     fontFamily: '"DM Sans", sans-serif', fontSize: '11px', fontWeight: 500,
-    letterSpacing: '0.18em', color: T.accent, margin: '0 0 12px 0',
+    letterSpacing: '0.18em', color: 'var(--accent)', margin: '0 0 12px 0',
   },
   sectionTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '40px', fontWeight: 400, color: T.textPrimary, margin: 0, lineHeight: 1.2,
+    fontSize: '40px', fontWeight: 400, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2,
   },
   featureGrid: {
     display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px',
-    border: `1px solid ${T.border}`, borderRadius: '12px', overflow: 'hidden',
+    border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden',
   },
   featureCard: {
-    backgroundColor: T.bgSurface, padding: '48px 40px',
+    backgroundColor: 'var(--bg-surface)', padding: '48px 40px',
     display: 'flex', flexDirection: 'column', gap: '16px',
-    borderRight: `1px solid ${T.border}`,
+    borderRight: '1px solid var(--border)',
   },
   featureNum: {
     fontFamily: '"Cormorant Garamond", serif', fontSize: '48px', fontWeight: 300,
-    color: T.accentLight, margin: 0, lineHeight: 1,
+    color: 'var(--accent-light)', margin: 0, lineHeight: 1,
   },
   featureTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '24px', fontWeight: 400, color: T.textPrimary, margin: 0,
+    fontSize: '24px', fontWeight: 400, color: 'var(--text-primary)', margin: 0,
   },
   featureDesc: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '14px', color: T.textSecondary, lineHeight: 1.7, margin: 0, flex: 1,
+    fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0, flex: 1,
   },
   featureCta: {
     background: 'none', border: 'none', padding: 0,
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px', color: T.accent, cursor: 'pointer', fontWeight: 500, textAlign: 'left',
+    fontSize: '13px', color: 'var(--accent)', cursor: 'pointer', fontWeight: 500, textAlign: 'left',
   },
-  topics: { backgroundColor: T.bgInverse, padding: '80px 0' },
+  topics: { backgroundColor: '#1C1917', padding: '80px 0' },
   topicsInner: { maxWidth: '1200px', margin: '0 auto', padding: '0 64px' },
   topicsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' },
   sectionTitleLight: {
@@ -1214,8 +1221,8 @@ const L = {
   },
   topicArrow: { color: 'rgba(247,244,242,0.3)', fontSize: '16px' },
   ctaBanner: {
-    position: 'relative', backgroundColor: T.bgSubtle, padding: '96px 64px',
-    overflow: 'hidden', borderTop: `1px solid ${T.border}`,
+    position: 'relative', backgroundColor: 'var(--bg-subtle)', padding: '96px 64px',
+    overflow: 'hidden', borderTop: '1px solid var(--border)',
   },
   ctaBannerInner: {
     position: 'relative', zIndex: 1, maxWidth: '560px', margin: '0 auto',
@@ -1223,26 +1230,26 @@ const L = {
   },
   ctaBannerEyebrow: {
     fontFamily: '"DM Sans", sans-serif', fontSize: '11px', fontWeight: 500,
-    letterSpacing: '0.18em', color: T.accent, margin: 0,
+    letterSpacing: '0.18em', color: 'var(--accent)', margin: 0,
   },
   ctaBannerTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '52px', fontWeight: 300, color: T.textPrimary, lineHeight: 1.2, margin: 0,
+    fontSize: '52px', fontWeight: 300, color: 'var(--text-primary)', lineHeight: 1.2, margin: 0,
   },
   ctaBannerSub: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '15px', color: T.textSecondary, margin: 0,
+    fontSize: '15px', color: 'var(--text-secondary)', margin: 0,
   },
   ctaBannerBtns: { display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap', justifyContent: 'center' },
   ctaBannerPrimary: {
-    height: '46px', padding: '0 36px', backgroundColor: T.bgInverse,
-    color: T.textInverse, border: 'none', borderRadius: '8px',
+    height: '46px', padding: '0 36px', backgroundColor: 'var(--bg-inverse)',
+    color: 'var(--text-inverse)', border: 'none', borderRadius: '8px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px', fontWeight: 500, cursor: 'pointer', letterSpacing: '0.06em',
   },
   ctaBannerGhost: {
     height: '46px', padding: '0 28px', backgroundColor: 'transparent',
-    color: T.textSecondary, border: `1px solid ${T.border}`, borderRadius: '8px',
+    color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', fontSize: '14px', cursor: 'pointer',
   },
   ctaBannerDeco1: {

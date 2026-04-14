@@ -1,5 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import { useLang } from './hooks/useLang';
 import './animations.css';
 
 const T = {
@@ -13,10 +14,10 @@ const T = {
   danger:        '#C0504A',
 };
 
-const NAV_LINKS = [
-  { label: '社群討論', to: '#' },
-  { label: '產品資料庫', to: '/products' },
-  { label: '問答', to: '#' },
+const NAV_KEYS = [
+  { key: '社群討論',   to: '#' },
+  { key: '產品資料庫', to: '/products' },
+  { key: '問答',       to: '#' },
 ];
 
 function Navbar() {
@@ -56,6 +57,7 @@ function Navbar() {
     navigate('/', { state: { showSplash: true } });
   };
 
+  const { t } = useLang();
   const initial = user?.nickname?.[0]?.toUpperCase() || '?';
 
   return (
@@ -67,17 +69,17 @@ function Navbar() {
           <Link to="/" style={styles.logo}>GLŌW</Link>
           <div style={styles.divider} />
           <div style={styles.navLinks}>
-            {NAV_LINKS.map(({ label, to }) => (
+            {NAV_KEYS.map(({ key, to }) => (
               <Link
-                key={label}
+                key={key}
                 to={to}
                 className="g-nav-link"
                 style={{
                   ...styles.navLink,
-                  ...(location.pathname === to ? styles.navLinkActive : {}),
+                  ...(user && location.pathname === to ? styles.navLinkActive : {}),
                 }}
               >
-                {label}
+                {t(key)}
               </Link>
             ))}
           </div>
@@ -120,28 +122,28 @@ function Navbar() {
                     onClick={() => { navigate('/dashboard'); setMenuOpen(false); }}
                   >
                     <DropIcon type="person" />
-                    個人主頁
+                    {t('個人主頁')}
                   </button>
                   <button
                     style={styles.dropItem}
                     onClick={() => { navigate('/settings'); setMenuOpen(false); }}
                   >
                     <DropIcon type="settings" />
-                    帳號設定
+                    {t('帳號設定')}
                   </button>
 
                   <div style={styles.dropSeparator} />
 
                   <button style={{ ...styles.dropItem, ...styles.dropItemDanger }} onClick={handleLogout}>
-                    登出
+                    {t('登出')}
                   </button>
                 </div>
               )}
             </div>
           ) : (
             <div style={styles.authBtns}>
-              <Link to="/register" style={styles.registerBtn}>註冊</Link>
-              <Link to="/login"    style={styles.loginBtn}>登入</Link>
+              <Link to="/register" style={styles.registerBtn}>{t('註冊')}</Link>
+              <Link to="/login"    style={styles.loginBtn}>{t('登入')}</Link>
             </div>
           )}
         </div>

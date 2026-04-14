@@ -232,8 +232,8 @@ button:not(:disabled):active {
   transition: color 150ms, background-color 150ms !important;
 }
 .g-nav-link:hover {
-  color: #1C1917 !important;
-  background-color: rgba(28, 25, 23, 0.06) !important;
+  color: var(--text-primary) !important;
+  background-color: var(--bg-subtle) !important;
 }
 
 /* ── Dashboard tab content transition ── */

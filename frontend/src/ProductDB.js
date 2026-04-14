@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLang } from './hooks/useLang';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -22,6 +23,7 @@ const MAKEUP_ITEMS    = ['粉底液', '遮瑕', '防曬'];
 const SKINCARE_ITEMS  = ['化妝水', '乳液', '霜'];
 
 function ProductDB() {
+  const { t } = useLang();
   const [category,  setCategory]  = useState(null);
   const [skinType,  setSkinType]  = useState(null);
   const [effect,    setEffect]    = useState(null);
@@ -79,8 +81,8 @@ const fetchProducts = async () => {
       {/* 搜尋 Hero */}
       <div style={styles.searchHero}>
         <p style={styles.heroEyebrow}>INGREDIENT LIBRARY</p>
-        <h1 style={styles.heroTitle}>產品資料庫</h1>
-        <p style={styles.heroSub}>依膚質、功效找到真正適合你的產品</p>
+        <h1 style={styles.heroTitle}>{t('產品資料庫')}</h1>
+        <p style={styles.heroSub}>{t('依膚質、功效找到真正適合你的產品')}</p>
         <div style={{
           ...styles.searchBox,
           ...(searchFocus ? styles.searchBoxFocus : {}),
@@ -92,7 +94,7 @@ const fetchProducts = async () => {
           <input
             style={styles.searchInput}
             type="text"
-            placeholder="搜尋產品、成分、功效…"
+            placeholder={t('搜尋產品、成分、功效…')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             onFocus={() => setSearchFocus(true)}
@@ -107,7 +109,7 @@ const fetchProducts = async () => {
         <aside style={styles.sidebar}>
 
           <div style={styles.filterSection}>
-            <p style={styles.filterTitle}>探索領域</p>
+            <p style={styles.filterTitle}>{t('探索領域')}</p>
             <div style={styles.filterGroup}>
               {CATEGORIES.map(cat => (
                 <button
@@ -115,7 +117,7 @@ const fetchProducts = async () => {
                   style={{ ...styles.filterChip, ...(category === cat ? styles.filterChipActive : {}) }}
                   onClick={() => { setCategory(category === cat ? null : cat); setItem(null); }}
                 >
-                  {cat === '化妝品' ? '💄 ' : '🧴 '}{cat}
+                  {cat === '化妝品' ? '💄 ' : '🧴 '}{t(cat)}
                 </button>
               ))}
             </div>
@@ -124,7 +126,7 @@ const fetchProducts = async () => {
           <div style={styles.filterDivider} />
 
           <div style={styles.filterSection}>
-            <p style={styles.filterTitle}>適合膚質</p>
+            <p style={styles.filterTitle}>{t('適合膚質')}</p>
             <div style={styles.filterGroup}>
               {SKIN_TYPES.map(s => (
                 <button
@@ -132,7 +134,7 @@ const fetchProducts = async () => {
                   style={{ ...styles.filterChip, ...(skinType === s ? styles.filterChipActive : {}) }}
                   onClick={() => setSkinType(skinType === s ? null : s)}
                 >
-                  {s}
+                  {t(s)}
                 </button>
               ))}
             </div>
@@ -141,7 +143,7 @@ const fetchProducts = async () => {
           <div style={styles.filterDivider} />
 
           <div style={styles.filterSection}>
-            <p style={styles.filterTitle}>功效</p>
+            <p style={styles.filterTitle}>{t('功效')}</p>
             <div style={styles.filterGroup}>
              {(category === '化妝品' ? MAKEUP_EFFECTS : SKINCARE_EFFECTS).map(e => (
                 <button
@@ -149,7 +151,7 @@ const fetchProducts = async () => {
                   style={{ ...styles.filterChip, ...(effect === e ? styles.filterChipActive : {}) }}
                   onClick={() => setEffect(effect === e ? null : e)}
                 >
-                  {e}
+                  {t(e)}
                 </button>
               ))}
             </div>
@@ -159,7 +161,7 @@ const fetchProducts = async () => {
             <>
               <div style={styles.filterDivider} />
               <div style={styles.filterSection}>
-                <p style={styles.filterTitle}>品項</p>
+                <p style={styles.filterTitle}>{t('品項')}</p>
                 <div style={styles.filterGroup}>
                   {itemOptions.map(i => (
                     <button
@@ -167,7 +169,7 @@ const fetchProducts = async () => {
                       style={{ ...styles.filterChip, ...(item === i ? styles.filterChipActive : {}) }}
                       onClick={() => setItem(item === i ? null : i)}
                     >
-                      {i}
+                      {t(i)}
                     </button>
                   ))}
                 </div>
@@ -177,7 +179,7 @@ const fetchProducts = async () => {
 
           {hasFilter && (
             <button style={styles.clearBtn} onClick={clearAll}>
-              清除所有篩選
+              {t('清除所有篩選')}
             </button>
           )}
         </aside>
@@ -196,12 +198,12 @@ const fetchProducts = async () => {
               {/* 產品清單 */}
               {loading ? (
                 <div style={styles.emptyState}>
-                  <p style={styles.emptyTitle}>載入中...</p>
+                  <p style={styles.emptyTitle}>{t('載入中...')}</p>
                 </div>
               ) : products.length === 0 ? (
                 <div style={styles.emptyState}>
-                  <p style={styles.emptyTitle}>找不到符合條件的產品</p>
-                  <p style={styles.emptySub}>試試調整篩選條件</p>
+                  <p style={styles.emptyTitle}>{t('找不到符合條件的產品')}</p>
+                  <p style={styles.emptySub}>{t('試試調整篩選條件')}</p>
                 </div>
               ) : (
                 <div style={styles.productGrid}>
@@ -211,7 +213,7 @@ const fetchProducts = async () => {
                       <p style={styles.productName}>{p.name}</p>
                       <p style={styles.productSub}>{p.sub_category}</p>
                       {(skinType || effect) && (
-                      <p style={styles.productScore}>推薦分數：{p.score} 分</p>
+                      <p style={styles.productScore}>{t('推薦分數：')}{p.score}</p>
                       )}
                       <div style={styles.ingredientRow}>
                         {p.product_ingredients?.map(pi => (
@@ -227,8 +229,8 @@ const fetchProducts = async () => {
             </>
           ) : (
             <div style={styles.emptyState}>
-              <p style={styles.emptyTitle}>從左側設定篩選條件</p>
-              <p style={styles.emptySub}>選擇探索領域、膚質、功效，找到最適合你的產品</p>
+              <p style={styles.emptyTitle}>{t('從左側設定篩選條件')}</p>
+              <p style={styles.emptySub}>{t('選擇探索領域、膚質、功效，找到最適合你的產品')}</p>
             </div>
           )}
         </main>
@@ -240,15 +242,15 @@ const fetchProducts = async () => {
 const styles = {
   page: {
     paddingTop: '64px',
-    backgroundColor: T.bgBase,
+    backgroundColor: 'var(--bg-base)',
     minHeight: '100vh',
   },
   productScore: {
-  fontSize: '12px',
-  color: T.accent,
-  fontWeight: 'bold',
-  margin: 0,
-},
+    fontSize: '12px',
+    color: 'var(--accent)',
+    fontWeight: 'bold',
+    margin: 0,
+  },
   /* 搜尋 Hero */
   searchHero: {
     backgroundColor: T.bgInverse,
@@ -320,9 +322,9 @@ const styles = {
   sidebar: {
     width: '260px',
     flexShrink: 0,
-    backgroundColor: T.bgSurface,
+    backgroundColor: 'var(--bg-surface)',
     borderRadius: '12px',
-    border: `1px solid ${T.border}`,
+    border: '1px solid var(--border)',
     padding: '24px',
     display: 'flex',
     flexDirection: 'column',
@@ -341,7 +343,7 @@ const styles = {
     fontSize: '11px',
     fontWeight: 500,
     letterSpacing: '0.1em',
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     margin: 0,
     textTransform: 'uppercase',
   },
@@ -353,29 +355,29 @@ const styles = {
   filterChip: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '13px',
-    color: T.textSecondary,
-    backgroundColor: 'transparent',
-    border: `1px solid ${T.border}`,
+    color: 'var(--text-secondary)',
+    backgroundColor: 'var(--bg-subtle)',
+    border: '1px solid var(--border)',
     borderRadius: '999px',
     padding: '5px 12px',
     cursor: 'pointer',
     transition: 'all 150ms',
   },
   filterChipActive: {
-    backgroundColor: 'rgba(196,137,122,0.1)',
-    borderColor: T.accent,
-    color: T.accent,
+    backgroundColor: 'var(--accent)',
+    borderColor: 'var(--accent)',
+    color: '#FFFFFF',
     fontWeight: 500,
   },
   filterDivider: {
     height: '1px',
-    backgroundColor: T.border,
+    backgroundColor: 'var(--border)',
   },
   clearBtn: {
     marginTop: '16px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '12px',
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
@@ -398,16 +400,16 @@ const styles = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '12px',
     fontWeight: 500,
-    color: T.accent,
+    color: 'var(--accent)',
     backgroundColor: 'rgba(196,137,122,0.1)',
-    border: `1px solid rgba(196,137,122,0.25)`,
+    border: '1px solid rgba(196,137,122,0.25)',
     borderRadius: '999px',
     padding: '4px 12px',
   },
   comingSoon: {
-    backgroundColor: T.bgSurface,
+    backgroundColor: 'var(--bg-surface)',
     borderRadius: '12px',
-    border: `1px solid ${T.border}`,
+    border: '1px solid var(--border)',
     padding: '56px 40px',
     display: 'flex',
     flexDirection: 'column',
@@ -423,13 +425,13 @@ const styles = {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
     fontSize: '22px',
     fontWeight: 400,
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     margin: 0,
   },
   comingSoonSub: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     margin: 0,
   },
   conditionSummary: {
@@ -442,8 +444,8 @@ const styles = {
   conditionTag: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '12px',
-    color: T.textSecondary,
-    backgroundColor: T.bgSubtle,
+    color: 'var(--text-secondary)',
+    backgroundColor: 'var(--bg-subtle)',
     borderRadius: '999px',
     padding: '3px 10px',
   },
@@ -459,47 +461,47 @@ const styles = {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
     fontSize: '22px',
     fontWeight: 400,
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     margin: 0,
   },
   emptySub: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     margin: 0,
     textAlign: 'center',
   },
-   productGrid: {
+  productGrid: {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
   gap: '16px',
 },
-productCard: {
-  backgroundColor: T.bgSurface,
-  borderRadius: '12px',
-  border: `1px solid ${T.border}`,
-  padding: '20px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '6px',
-},
-productBrand: {
-  fontSize: '11px',
-  fontWeight: 500,
-  color: T.textTertiary,
-  margin: 0,
-  textTransform: 'uppercase',
-},
-productName: {
-  fontSize: '17px',
-  color: T.textPrimary,
-  margin: 0,
-},
-productSub: {
-  fontSize: '12px',
-  color: T.accent,
-  margin: 0,
-},
+  productCard: {
+    backgroundColor: 'var(--bg-surface)',
+    borderRadius: '12px',
+    border: '1px solid var(--border)',
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  productBrand: {
+    fontSize: '11px',
+    fontWeight: 500,
+    color: 'var(--text-tertiary)',
+    margin: 0,
+    textTransform: 'uppercase',
+  },
+  productName: {
+    fontSize: '17px',
+    color: 'var(--text-primary)',
+    margin: 0,
+  },
+  productSub: {
+    fontSize: '12px',
+    color: 'var(--accent)',
+    margin: 0,
+  },
 ingredientRow: {
   display: 'flex',
   flexWrap: 'wrap',

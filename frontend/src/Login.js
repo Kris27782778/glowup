@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useLang } from './hooks/useLang';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -16,7 +17,7 @@ const T = {
   border:        '#E5DDD9',
 };
 
-const FEATURES = [
+const FEATURE_KEYS = [
   '成分透明，每一瓶都清楚',
   '輔大同學的真實保養心得',
   '依膚質推薦適合你的產品',
@@ -31,6 +32,7 @@ function Login() {
   // 頁面載入時的 splash：'in' → 'exit' → 'done'
   const [splash, setSplash] = useState('in');
   const navigate = useNavigate();
+  const { t } = useLang();
 
   useEffect(() => {
     const t1 = setTimeout(() => setSplash('exit'), 2000);
@@ -39,7 +41,7 @@ function Login() {
   }, []);
 
   const handleLogin = async () => {
-    if (!studentId || !password) { setError('請填寫學號與密碼'); return; }
+    if (!studentId || !password) { setError(t('請填寫學號與密碼')); return; }
     setLoading(true); setError('');
     try {
       const res  = await fetch('http://localhost:5001/api/auth/login', {
@@ -105,16 +107,16 @@ function Login() {
             <h1 style={styles.logoText}>GLŌW</h1>
             <div style={styles.logoDivider} />
             <p style={styles.logoTagline}>
-              了解你擦在<br />臉上的一切
+              {t('了解你擦在')}<br />{t('臉上的一切')}
             </p>
           </div>
 
           {/* 特色列表 */}
           <div style={styles.featureList}>
-            {FEATURES.map((text, i) => (
+            {FEATURE_KEYS.map((key, i) => (
               <div key={i} style={styles.featureItem}>
                 <span style={styles.featureDot} />
-                <span style={styles.featureText}>{text}</span>
+                <span style={styles.featureText}>{t(key)}</span>
               </div>
             ))}
           </div>
@@ -131,18 +133,18 @@ function Login() {
           {/* 標題 */}
           <div style={styles.formHeader}>
             <p style={styles.eyebrow}>WELCOME BACK</p>
-            <h2 style={styles.formTitle}>登入</h2>
-            <p style={styles.formSub}>使用輔大校務帳號登入</p>
+            <h2 style={styles.formTitle}>{t('登入')}</h2>
+            <p style={styles.formSub}>{t('使用輔大校務帳號登入')}</p>
           </div>
 
           {/* 輸入欄 */}
           <div style={styles.fields}>
             <div style={styles.field}>
-              <label style={styles.label}>學號</label>
+              <label style={styles.label}>{t('學號')}</label>
               <input
                 style={inputStyle('id')}
                 type="text"
-                placeholder="請輸入學號"
+                placeholder={t('請輸入學號')}
                 value={studentId}
                 onChange={e => { setStudentId(e.target.value); setError(''); }}
                 onFocus={() => setFocusField('id')}
@@ -152,11 +154,11 @@ function Login() {
               />
             </div>
             <div style={styles.field}>
-              <label style={styles.label}>密碼</label>
+              <label style={styles.label}>{t('密碼')}</label>
               <input
                 style={inputStyle('pw')}
                 type="password"
-                placeholder="請輸入密碼"
+                placeholder={t('請輸入密碼')}
                 value={password}
                 onChange={e => { setPassword(e.target.value); setError(''); }}
                 onFocus={() => setFocusField('pw')}
@@ -180,24 +182,23 @@ function Login() {
             onClick={handleLogin}
             disabled={loading}
           >
-            {loading ? '登入中…' : '登入'}
+            {loading ? t('登入中…') : t('登入')}
           </button>
 
           {/* 分隔 */}
           <div style={styles.divider}>
             <div style={styles.dividerLine} />
-            <span style={styles.dividerText}>初次來訪？</span>
+            <span style={styles.dividerText}>{t('初次來訪？')}</span>
             <div style={styles.dividerLine} />
           </div>
 
           {/* 註冊 */}
           <Link to="/register" style={styles.registerBtn}>
-            建立帳號
+            {t('建立帳號')}
           </Link>
 
-          {/* 回首頁 */}
           <Link to="/" style={styles.homeLink}>
-            ← 回首頁
+            {t('← 回首頁')}
           </Link>
         </div>
       </div>
@@ -413,7 +414,7 @@ const styles = {
   /* ── 表單右側 ── */
   form: {
     flex: 1,
-    backgroundColor: T.bgBase,
+    backgroundColor: 'var(--bg-base)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -437,21 +438,21 @@ const styles = {
     fontSize: '11px',
     fontWeight: 500,
     letterSpacing: '0.16em',
-    color: T.accent,
+    color: 'var(--accent)',
     margin: 0,
   },
   formTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
     fontSize: '40px',
     fontWeight: 400,
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     margin: 0,
     lineHeight: 1.15,
   },
   formSub: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px',
-    color: T.textSecondary,
+    color: 'var(--text-secondary)',
     margin: 0,
   },
 
@@ -470,24 +471,24 @@ const styles = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '13px',
     fontWeight: 500,
-    color: T.textSecondary,
+    color: 'var(--text-secondary)',
   },
   input: {
     height: '44px',
     padding: '0 14px',
     borderRadius: '8px',
-    border: `1px solid ${T.border}`,
+    border: '1px solid var(--border)',
     fontSize: '14px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    color: T.textPrimary,
-    backgroundColor: T.bgSurface,
+    color: 'var(--text-primary)',
+    backgroundColor: 'var(--bg-surface)',
     outline: 'none',
     transition: 'border-color 150ms, box-shadow 150ms',
     boxSizing: 'border-box',
     width: '100%',
   },
   inputFocus: {
-    borderColor: T.accent,
+    borderColor: 'var(--accent)',
     boxShadow: '0 0 0 3px rgba(196,137,122,0.15)',
   },
   errorBox: {
@@ -503,8 +504,8 @@ const styles = {
   },
   loginBtn: {
     height: '44px',
-    backgroundColor: T.bgInverse,
-    color: T.textInverse,
+    backgroundColor: 'var(--bg-inverse)',
+    color: 'var(--text-inverse)',
     border: 'none',
     borderRadius: '8px',
     fontSize: '15px',
@@ -526,12 +527,12 @@ const styles = {
   dividerLine: {
     flex: 1,
     height: '1px',
-    backgroundColor: T.border,
+    backgroundColor: 'var(--border)',
   },
   dividerText: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '12px',
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     whiteSpace: 'nowrap',
   },
   registerBtn: {
@@ -539,11 +540,11 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '44px',
-    border: `1px solid ${T.border}`,
+    border: '1px solid var(--border)',
     borderRadius: '8px',
     fontSize: '14px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    color: T.textPrimary,
+    color: 'var(--text-primary)',
     backgroundColor: 'transparent',
     transition: 'background-color 150ms',
     fontWeight: 400,
@@ -552,7 +553,7 @@ const styles = {
     textAlign: 'center',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '13px',
-    color: T.textTertiary,
+    color: 'var(--text-tertiary)',
     transition: 'color 150ms',
   },
 };

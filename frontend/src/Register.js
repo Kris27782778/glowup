@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { COLLEGES, getDepts, getDivisions, getGrades } from './data/departments';
 import CustomSelect from './components/Select';
 import SkinQuiz from './components/SkinQuiz';
+import { useLang } from './hooks/useLang';
 
 const tokens = {
   bgBase: '#F7F4F2',
@@ -18,7 +19,7 @@ const tokens = {
 };
 
 const SKIN_TYPES = ['油肌', '乾肌', '敏感肌', '中性肌', '混合肌'];
-const STEPS = ['基本資料', '帳號設定', '電子郵件驗證', '膚質設定'];
+const STEP_KEYS = ['基本資料', '帳號設定', '電子郵件驗證', '膚質設定'];
 
 function getPasswordStrength(pw) {
   if (!pw) return 0;
@@ -31,7 +32,7 @@ function getPasswordStrength(pw) {
   return score; // 0–5
 }
 
-const PW_LEVELS = [
+const PW_LEVEL_KEYS = [
   { label: '請輸入密碼', color: tokens.border },
   { label: '非常弱', color: '#E05252' },
   { label: '弱', color: '#E09352' },
@@ -42,6 +43,7 @@ const PW_LEVELS = [
 
 function Register() {
   const navigate = useNavigate();
+  const { t } = useLang();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -232,7 +234,7 @@ function Register() {
               <p style={styles.decorLogo}>GLŌW</p>
               <div style={styles.decorDivider} />
               <p style={styles.decorTagline}>
-                了解你擦在<br />臉上的一切
+                {t('了解你擦在')}<br />{t('臉上的一切')}
               </p>
             </div>
             <p style={styles.decorFooter}>清晰就是美 · CLARITY IS BEAUTY</p>
@@ -245,8 +247,8 @@ function Register() {
             </div>
             <div style={styles.cardHeader}>
               <p style={styles.eyebrow}>REGISTRATION COMPLETE</p>
-              <h1 style={styles.title}>註冊成功！</h1>
-              <p style={styles.subtitle}>歡迎加入 GLŌW，以下是你的帳號資訊</p>
+              <h1 style={styles.title}>{t('註冊成功！')}</h1>
+              <p style={styles.subtitle}>{t('歡迎加入 GLŌW，以下是你的帳號資訊')}</p>
             </div>
             <div style={successStyles.infoCard}>
               {[
@@ -260,13 +262,13 @@ function Register() {
                   ...successStyles.infoRow,
                   ...(idx === arr.length - 1 ? { borderBottom: 'none' } : {}),
                 }}>
-                  <span style={successStyles.infoLabel}>{label}</span>
+                  <span style={successStyles.infoLabel}>{t(label)}</span>
                   <span style={successStyles.infoValue}>{value}</span>
                 </div>
               ))}
             </div>
             <button style={styles.btn} onClick={() => navigate('/')}>
-              進入 GLŌW
+              {t('進入 GLŌW')}
             </button>
           </div>
         </div>
@@ -296,8 +298,8 @@ function Register() {
 
           {/* 步驟進度 */}
           <div style={styles.stepList}>
-            <p style={styles.stepEyebrow}>建立帳號</p>
-            {STEPS.map((s, i) => (
+            <p style={styles.stepEyebrow}>{t('建立帳號')}</p>
+            {STEP_KEYS.map((s, i) => (
               <div key={s} style={styles.stepItem}>
                 <div style={{
                   ...styles.stepDot,
@@ -309,7 +311,7 @@ function Register() {
                 <span style={{
                   ...styles.stepLabel,
                   ...(i === step ? styles.stepLabelActive : {}),
-                }}>{s}</span>
+                }}>{t(s)}</span>
               </div>
             ))}
           </div>
@@ -324,13 +326,13 @@ function Register() {
         <div style={styles.card} className="g-scale-in gd-1">
           {/* Header */}
           <div style={styles.cardHeader}>
-            <p style={styles.eyebrow}>STEP {step + 1} / {STEPS.length}</p>
-            <h1 style={styles.title}>{STEPS[step]}</h1>
+            <p style={styles.eyebrow}>STEP {step + 1} / {STEP_KEYS.length}</p>
+            <h1 style={styles.title}>{t(STEP_KEYS[step])}</h1>
             <p style={styles.subtitle}>
-              {step === 0 && '告訴我們一些關於你的資訊'}
-              {step === 1 && '為你的學號設定登入密碼'}
+              {step === 0 && t('告訴我們一些關於你的資訊')}
+              {step === 1 && t('為你的學號設定登入密碼')}
               {step === 2 && `驗證碼已寄送至 ${form.email}@cloud.fju.edu.tw`}
-              {step === 3 && '回答 5 題，找出你的膚質類型'}
+              {step === 3 && t('回答 5 題，找出你的膚質類型')}
             </p>
           </div>
 
@@ -338,11 +340,11 @@ function Register() {
           {step === 0 && (
             <div style={styles.fieldGroup}>
               <div style={styles.field}>
-                <label style={styles.label}>暱稱</label>
+                <label style={styles.label}>{t('暱稱')}</label>
                 <input
                   style={inputStyle('nickname')}
                   type="text"
-                  placeholder="顯示在平台上的名字"
+                  placeholder={t('顯示在平台上的名字')}
                   value={form.nickname}
                   onChange={set('nickname')}
                   onFocus={() => setFocusField('nickname')}
@@ -352,45 +354,45 @@ function Register() {
 
               {/* 4 層系級選單 */}
               <div style={styles.field}>
-                <label style={styles.label}>學院</label>
+                <label style={styles.label}>{t('學院')}</label>
                 <CustomSelect
                   value={college}
                   onChange={handleCollegeChange}
                   options={COLLEGES}
-                  placeholder="請選擇學院"
+                  placeholder={t('請選擇學院')}
                 />
               </div>
 
               <div style={styles.field}>
-                <label style={{ ...styles.label, ...(!college ? styles.labelDisabled : {}) }}>科系</label>
+                <label style={{ ...styles.label, ...(!college ? styles.labelDisabled : {}) }}>{t('科系')}</label>
                 <CustomSelect
                   value={dept}
                   onChange={handleDeptChange}
                   options={depts}
-                  placeholder="請選擇科系"
+                  placeholder={t('請選擇科系')}
                   disabled={!college}
                 />
               </div>
 
               <div style={styles.twoCol}>
                 <div style={styles.field}>
-                  <label style={{ ...styles.label, ...(!dept ? styles.labelDisabled : {}) }}>部別</label>
+                  <label style={{ ...styles.label, ...(!dept ? styles.labelDisabled : {}) }}>{t('部別')}</label>
                   <CustomSelect
                     value={division}
                     onChange={handleDivisionChange}
                     options={divisions}
-                    placeholder="部別"
+                    placeholder={t('部別')}
                     disabled={!dept}
                   />
                 </div>
 
                 <div style={styles.field}>
-                  <label style={{ ...styles.label, ...(!division ? styles.labelDisabled : {}) }}>年級</label>
+                  <label style={{ ...styles.label, ...(!division ? styles.labelDisabled : {}) }}>{t('年級')}</label>
                   <CustomSelect
                     value={grade}
                     onChange={(val) => { setGrade(val); setError(''); }}
                     options={grades}
-                    placeholder="年級"
+                    placeholder={t('年級')}
                     disabled={!division}
                   />
                 </div>
@@ -399,7 +401,7 @@ function Register() {
               {/* 預覽 */}
               {departmentGrade && (
                 <div style={styles.previewBox}>
-                  <span style={styles.previewLabel}>系級預覽</span>
+                  <span style={styles.previewLabel}>{t('系級')}</span>
                   <span style={styles.previewValue}>{departmentGrade}</span>
                 </div>
               )}
@@ -413,7 +415,7 @@ function Register() {
                   <input
                     style={styles.emailInput}
                     type="text"
-                    placeholder="帳號"
+                    placeholder={t('帳號（@ 前方）')}
                     value={form.email}
                     onChange={set('email')}
                     onFocus={() => setFocusField('email')}
@@ -430,11 +432,11 @@ function Register() {
           {step === 1 && (
             <div style={styles.fieldGroup}>
               <div style={styles.previewBox}>
-                <span style={styles.previewLabel}>學號</span>
+                <span style={styles.previewLabel}>{t('學號')}</span>
                 <span style={styles.previewValue}>{form.email}</span>
               </div>
               <div style={styles.field}>
-                <label style={styles.label}>密碼</label>
+                <label style={styles.label}>{t('密碼')}</label>
                 <input
                   style={inputStyle('pw')}
                   type="password"
@@ -448,7 +450,7 @@ function Register() {
                 {/* 密碼強度進度條 */}
                 {(() => {
                   const score = getPasswordStrength(form.password);
-                  const level = PW_LEVELS[score];
+                  const level = PW_LEVEL_KEYS[score];
                   return (
                     <div style={pwStyles.wrap}>
                       <div style={pwStyles.barTrack}>
@@ -464,18 +466,18 @@ function Register() {
                         ))}
                       </div>
                       <span style={{ ...pwStyles.levelText, color: score === 0 ? tokens.textTertiary : level.color }}>
-                        {level.label}
+                        {t(level.label)}
                       </span>
                     </div>
                   );
                 })()}
               </div>
               <div style={styles.field}>
-                <label style={styles.label}>確認密碼</label>
+                <label style={styles.label}>{t('確認密碼')}</label>
                 <input
                   style={inputStyle('pw2')}
                   type="password"
-                  placeholder="再輸入一次密碼"
+                  placeholder={t('輸入相同密碼')}
                   value={form.passwordConfirm}
                   onChange={set('passwordConfirm')}
                   onFocus={() => setFocusField('pw2')}
@@ -492,7 +494,7 @@ function Register() {
               {/* 說明卡 */}
               <div style={verifyStyles.infoBox}>
                 <div style={verifyStyles.infoText}>
-                  <p style={verifyStyles.infoTitle}>請查收驗證信件</p>
+                  <p style={verifyStyles.infoTitle}>{t('請查收驗證信件') || '請查收驗證信件'}</p>
                   <p style={verifyStyles.infoEmail}>{form.email}@cloud.fju.edu.tw</p>
                 </div>
               </div>
@@ -521,12 +523,12 @@ function Register() {
 
               {/* 重新發送 */}
               <div style={verifyStyles.resendRow}>
-                <span style={verifyStyles.resendHint}>沒有收到信件？</span>
+                <span style={verifyStyles.resendHint}>{t('沒有收到信件？') || '沒有收到信件？'}</span>
                 {resendCooldown > 0 ? (
-                  <span style={verifyStyles.cooldownText}>{resendCooldown}s 後可重新發送</span>
+                  <span style={verifyStyles.cooldownText}>{resendCooldown}{t('秒後重新發送')}</span>
                 ) : (
                   <button style={verifyStyles.resendBtn} onClick={handleResend} type="button">
-                    重新發送
+                    {t('重新發送')}
                   </button>
                 )}
               </div>
@@ -563,18 +565,18 @@ function Register() {
                   onClick={() => { setStep(s => s - 1); setError(''); }}
                   type="button"
                 >
-                  返回
+                  {t('上一步')}
                 </button>
               )}
               <button style={{ ...styles.btn, flex: 1 }} onClick={handleNext} type="button">
-                {step === 2 ? '驗證並繼續' : '下一步'}
+                {step === 2 ? (t('驗證並繼續') || '驗證並繼續') : t('下一步')}
               </button>
             </div>
           )}
 
           <p style={styles.loginHint}>
-            已有帳號？{' '}
-            <Link to="/login" style={styles.loginLink}>登入</Link>
+            {t('已有帳號？') || '已有帳號？'}{' '}
+            <Link to="/login" style={styles.loginLink}>{t('登入')}</Link>
           </p>
         </div>
       </div>

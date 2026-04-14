@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReveal } from './hooks/useReveal';
 import SkinQuiz from './components/SkinQuiz';
+import { useLang } from './hooks/useLang';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -28,17 +29,11 @@ const SKIN_LABELS = {
   sensitive:  { label: '敏感性肌',     desc: '屏障較弱，選擇成分單純配方' },
 };
 
-const TABS = [
-  { label: '帖子' },
-  { label: '問答' },
-  { label: '收藏' },
-  { label: '成分筆記' },
-];
-
-const EMPTY_STATE = [
-  { title: '還沒有貼文',     sub: '分享你的保養心得，讓社群看見你的經驗' },
-  { title: '還沒有問答記錄', sub: '向社群提出你的保養疑問' },
-  { title: '收藏夾是空的',   sub: '收藏喜歡的貼文、成分與產品' },
+const TAB_KEYS   = ['帖子', '問答', '收藏', '成分筆記'];
+const EMPTY_KEYS = [
+  { title: '還沒有貼文',       sub: '分享你的保養心得，讓社群看見你的經驗' },
+  { title: '還沒有問答記錄',   sub: '向社群提出你的保養疑問' },
+  { title: '收藏夾是空的',     sub: '收藏喜歡的貼文、成分與產品' },
   { title: '成分筆記尚未建立', sub: '標記你用過的成分，記錄使用心得' },
 ];
 
@@ -48,6 +43,7 @@ function Dashboard() {
   const [showQuiz, setShowQuiz] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const navigate = useNavigate();
+  const { t } = useLang();
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -86,6 +82,7 @@ function Dashboard() {
           user={user}
           onSave={handleProfileSave}
           onClose={() => setShowEdit(false)}
+          t={t}
         />
       )}
 
@@ -153,19 +150,19 @@ function Dashboard() {
           {/* 膚質卡 */}
           {skinInfo ? (
             <div style={styles.skinCard} className="g-reveal delay-1">
-              <p style={styles.skinCardEyebrow}>我的膚質</p>
-              <p style={styles.skinCardTitle}>{skinInfo.label}</p>
-              <p style={styles.skinCardDesc}>{skinInfo.desc}</p>
+              <p style={styles.skinCardEyebrow}>{t('我的膚質')}</p>
+              <p style={styles.skinCardTitle}>{t(skinInfo.label)}</p>
+              <p style={styles.skinCardDesc}>{t(skinInfo.desc)}</p>
               <button style={styles.skinRetakeBtn} onClick={() => setShowQuiz(true)}>
-                重新測驗
+                {t('重新測驗')}
               </button>
             </div>
           ) : (
             <div style={styles.skinCardEmpty} className="g-reveal delay-1">
-              <p style={styles.skinCardEyebrow}>膚質尚未設定</p>
-              <p style={styles.skinCardEmptyDesc}>完成膚質測驗，獲得個人化推薦</p>
+              <p style={styles.skinCardEyebrow}>{t('膚質尚未設定')}</p>
+              <p style={styles.skinCardEmptyDesc}>{t('完成膚質測驗，獲得個人化推薦')}</p>
               <button style={styles.skinTakeBtn} onClick={() => setShowQuiz(true)}>
-                開始測驗
+                {t('開始測驗')}
               </button>
             </div>
           )}
@@ -177,9 +174,10 @@ function Dashboard() {
               { num: '0', label: '追蹤者' },
               { num: '0', label: '追蹤中' },
             ].map((s, i, arr) => (
+
               <div key={s.label} style={styles.statItem}>
                 <span style={styles.statNum}>{s.num}</span>
-                <span style={styles.statLabel}>{s.label}</span>
+                <span style={styles.statLabel}>{t(s.label)}</span>
                 {i < arr.length - 1 && <div style={styles.statDivider} />}
               </div>
             ))}
@@ -187,7 +185,7 @@ function Dashboard() {
 
           {/* 操作按鈕 */}
           <div style={styles.actions}>
-            <button style={styles.editBtn} onClick={() => setShowEdit(true)}>編輯個人資料</button>
+            <button style={styles.editBtn} onClick={() => setShowEdit(true)}>{t('編輯個人資料')}</button>
             <button
               style={styles.settingsBtn}
               onClick={() => navigate('/settings')}
@@ -197,13 +195,13 @@ function Dashboard() {
                 <path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M10.01 10.01l1.06 1.06M2.93 11.07l1.06-1.06M10.01 3.99l1.06-1.06"
                   stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
               </svg>
-              設定
+              {t('設定')}
             </button>
             <button
               style={styles.logoutBtn}
               onClick={() => { localStorage.removeItem('user'); navigate('/'); }}
             >
-              登出
+              {t('登出')}
             </button>
           </div>
 
@@ -214,13 +212,13 @@ function Dashboard() {
 
           {/* Tab 列 */}
           <div style={styles.tabBar}>
-            {TABS.map((t, i) => (
+            {TAB_KEYS.map((key, i) => (
               <button
-                key={t.label}
+                key={key}
                 style={{ ...styles.tabBtn, ...(tab === i ? styles.tabBtnActive : {}) }}
                 onClick={() => setTab(i)}
               >
-                {t.label}
+                {t(key)}
                 {tab === i && <span style={styles.tabLine} />}
               </button>
             ))}
@@ -230,8 +228,8 @@ function Dashboard() {
           <div style={styles.tabContent}>
             <div key={tab} className="g-tab-content">
               <EmptyState
-                title={EMPTY_STATE[tab].title}
-                sub={EMPTY_STATE[tab].sub}
+                title={t(EMPTY_KEYS[tab].title)}
+                sub={t(EMPTY_KEYS[tab].sub)}
               />
             </div>
           </div>
@@ -243,7 +241,7 @@ function Dashboard() {
 }
 
 // ── 編輯個人資料 Modal ──────────────────────────────────────
-function EditProfileModal({ user, onSave, onClose }) {
+function EditProfileModal({ user, onSave, onClose, t }) {
   const [nickname, setNickname] = useState(user.nickname || '');
   const [bio,      setBio]      = useState(user.bio      || '');
   const [error,    setError]    = useState('');
@@ -251,7 +249,7 @@ function EditProfileModal({ user, onSave, onClose }) {
   const initial = nickname?.[0]?.toUpperCase() || '?';
 
   const handleSave = () => {
-    if (!nickname.trim()) { setError('暱稱不能為空'); return; }
+    if (!nickname.trim()) { setError(t('暱稱不能為空')); return; }
     onSave({ nickname: nickname.trim(), bio: bio.trim() });
   };
 
@@ -269,15 +267,15 @@ function EditProfileModal({ user, onSave, onClose }) {
         {/* Header */}
         <div style={ep.header}>
           <p style={ep.eyebrow}>EDIT PROFILE</p>
-          <h2 style={ep.title}>編輯個人資料</h2>
+          <h2 style={ep.title}>{t('編輯個人資料')}</h2>
         </div>
 
         {/* 頭像預覽 */}
         <div style={ep.avatarRow}>
           <div style={ep.avatar}>{initial}</div>
           <div style={ep.avatarInfo}>
-            <p style={ep.avatarLabel}>個人頭像</p>
-            <p style={ep.avatarHint}>以暱稱首字母顯示</p>
+            <p style={ep.avatarLabel}>{t('個人頭像')}</p>
+            <p style={ep.avatarHint}>{t('以暱稱首字母顯示')}</p>
           </div>
         </div>
 
@@ -286,27 +284,27 @@ function EditProfileModal({ user, onSave, onClose }) {
 
           {/* 暱稱 */}
           <div style={ep.field}>
-            <label style={ep.label}>暱稱</label>
+            <label style={ep.label}>{t('暱稱')}</label>
             <input
               style={{ ...ep.input, ...(error ? ep.inputError : {}) }}
               value={nickname}
               onChange={e => { setNickname(e.target.value); setError(''); }}
               maxLength={20}
-              placeholder="輸入你的暱稱"
+              placeholder={t('輸入你的暱稱')}
             />
             {error && <p style={ep.errorMsg}>{error}</p>}
           </div>
 
           {/* 個人簡介 */}
           <div style={ep.field}>
-            <label style={ep.label}>個人簡介</label>
+            <label style={ep.label}>{t('個人簡介')}</label>
             <textarea
               style={ep.textarea}
               value={bio}
               onChange={e => setBio(e.target.value)}
               maxLength={120}
               rows={3}
-              placeholder="簡短介紹自己（選填）"
+              placeholder={t('簡短介紹自己（選填）')}
             />
             <p style={ep.charCount}>{bio.length} / 120</p>
           </div>
@@ -315,8 +313,8 @@ function EditProfileModal({ user, onSave, onClose }) {
           {(user.department_grade || user.email) && (
             <div style={ep.readonlyGroup}>
               {[
-                user.department_grade && { label: '系級',      value: user.department_grade },
-                user.email            && { label: '電子郵件',   value: user.email },
+                user.department_grade && { label: '系級',    value: user.department_grade },
+                user.email            && { label: '電子郵件', value: user.email },
               ].filter(Boolean).map((row, i, arr) => (
                 <div
                   key={row.label}
@@ -325,7 +323,7 @@ function EditProfileModal({ user, onSave, onClose }) {
                     ...(i < arr.length - 1 ? { borderBottom: '1px solid var(--border)' } : {}),
                   }}
                 >
-                  <span style={ep.readonlyLabel}>{row.label}</span>
+                  <span style={ep.readonlyLabel}>{t(row.label)}</span>
                   <span style={ep.readonlyValue}>{row.value}</span>
                 </div>
               ))}
@@ -336,8 +334,8 @@ function EditProfileModal({ user, onSave, onClose }) {
 
         {/* 操作 */}
         <div style={ep.actions}>
-          <button style={ep.cancelBtn} onClick={onClose}>取消</button>
-          <button style={ep.saveBtn} onClick={handleSave}>儲存變更</button>
+          <button style={ep.cancelBtn} onClick={onClose}>{t('取消')}</button>
+          <button style={ep.saveBtn} onClick={handleSave}>{t('儲存變更')}</button>
         </div>
 
       </div>
@@ -715,8 +713,8 @@ const styles = {
     width: '96px',
     height: '96px',
     borderRadius: '50%',
-    backgroundColor: T.accent,
-    border: '4px solid #FFFFFF',
+    backgroundColor: 'var(--accent)',
+    border: '4px solid var(--bg-surface)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',

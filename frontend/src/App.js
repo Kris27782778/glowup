@@ -8,8 +8,15 @@ import Register from './Register';
 import ProductDB from './ProductDB';
 import Dashboard from './Dashboard';
 import Settings from './Settings';
+import AuthGate from './components/AuthGate';
 import { applyTheme, getStoredSettings } from './hooks/useSettings';
 import './animations.css';
+
+function RequireAuth({ feature, children }) {
+  const user = localStorage.getItem('user');
+  if (!user) return <AuthGate feature={feature} />;
+  return children;
+}
 
 // Apply saved theme before first render
 applyTheme(getStoredSettings().theme);
@@ -86,9 +93,9 @@ function Layout() {
           <Route path="/"          element={<Hero />} />
           <Route path="/login"     element={<Login />} />
           <Route path="/register"  element={<Register />} />
-          <Route path="/products"  element={<ProductDB />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/settings"  element={<Settings />} />
+          <Route path="/products"  element={<RequireAuth feature="products"><ProductDB /></RequireAuth>} />
+          <Route path="/dashboard" element={<RequireAuth feature="dashboard"><Dashboard /></RequireAuth>} />
+          <Route path="/settings"  element={<RequireAuth feature="settings"><Settings /></RequireAuth>} />
         </Routes>
       </div>
       <Footer />
