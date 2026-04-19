@@ -140,53 +140,57 @@ export default function QA() {
   return (
     <div style={s.page}>
 
-      {/* ── Hero ── */}
+      {/* ── Hero (亮色 / 置中) ── */}
       <div style={s.hero}>
+        {/* 裝飾圓 */}
+        <div style={s.heroDeco1} />
+        <div style={s.heroDeco2} />
+
         <div style={s.heroInner}>
-          <div style={s.heroLeft}>
-            <p style={s.heroEyebrow}>Q &amp; A</p>
-            <h1 style={s.heroTitle}>{t('問答')}</h1>
-            <p style={s.heroSub}>
-              {t('向社群提出你的保養疑問，獲得同學的真實解答。') || '向社群提出你的保養疑問，獲得同學的真實解答。'}
-            </p>
+          <p style={s.heroEyebrow}>Q &amp; A</p>
+          <h1 style={s.heroTitle}>{t('問答')}</h1>
+          <p style={s.heroSub}>
+            {t('向社群提出你的保養疑問，獲得同學的真實解答。') || '向社群提出你的保養疑問，獲得同學的真實解答。'}
+          </p>
+
+          {/* 搜尋 + 提問 */}
+          <div style={s.searchRow}>
+            <div style={{ ...s.searchBox, ...(searchFocus ? s.searchBoxFocus : {}) }}>
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ flexShrink: 0 }}>
+                <circle cx="6.5" cy="6.5" r="4.5" stroke="rgba(247,244,242,0.45)" strokeWidth="1.4"/>
+                <path d="M10 10L13 13" stroke="rgba(247,244,242,0.45)" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+              <input
+                style={s.searchInput}
+                type="text"
+                placeholder={t('搜尋問題、成分、關鍵字…') || '搜尋問題、成分、關鍵字…'}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                onFocus={() => setSearchFocus(true)}
+                onBlur={() => setSearchFocus(false)}
+              />
+            </div>
+            <button style={s.askBtn}>
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+              {t('提出問題') || '提出問題'}
+            </button>
           </div>
+
+          {/* Stats 橫條 */}
           <div style={s.heroStats}>
             {[
               { num: '486',   label: t('個問題') || '個問題' },
               { num: '2,130', label: t('則回答') || '則回答' },
               { num: `${unsolvedCount}`, label: t('待解決') || '待解決' },
-            ].map(item => (
-              <div key={item.label} style={s.statItem}>
+            ].map((item, i, arr) => (
+              <div key={item.label} style={{ ...s.statItem, ...(i < arr.length - 1 ? s.statItemBorder : {}) }}>
                 <span style={s.statNum}>{item.num}</span>
                 <span style={s.statLabel}>{item.label}</span>
               </div>
             ))}
           </div>
-        </div>
-
-        {/* 搜尋列 */}
-        <div style={s.searchRow}>
-          <div style={{ ...s.searchBox, ...(searchFocus ? s.searchBoxFocus : {}) }}>
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ flexShrink: 0 }}>
-              <circle cx="6.5" cy="6.5" r="4.5" stroke="rgba(247,244,242,0.45)" strokeWidth="1.4"/>
-              <path d="M10 10L13 13" stroke="rgba(247,244,242,0.45)" strokeWidth="1.4" strokeLinecap="round"/>
-            </svg>
-            <input
-              style={s.searchInput}
-              type="text"
-              placeholder={t('搜尋問題、成分、關鍵字…') || '搜尋問題、成分、關鍵字…'}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onFocus={() => setSearchFocus(true)}
-              onBlur={() => setSearchFocus(false)}
-            />
-          </div>
-          <button style={s.askBtn}>
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-            </svg>
-            {t('提出問題') || '提出問題'}
-          </button>
         </div>
       </div>
 
@@ -196,17 +200,16 @@ export default function QA() {
         {/* ── Main ── */}
         <main style={s.main}>
 
-          {/* Tab 列 */}
+          {/* Tab 列（Segment control 樣式） */}
           <div style={s.tabRow}>
-            <div style={s.tabs}>
+            <div style={s.segmentGroup}>
               {TABS.map(tb => (
                 <button
                   key={tb.key}
-                  style={{ ...s.tab, ...(tab === tb.key ? s.tabActive : {}) }}
+                  style={{ ...s.segmentBtn, ...(tab === tb.key ? s.segmentBtnActive : {}) }}
                   onClick={() => setTab(tb.key)}
                 >
                   {tb.label}
-                  {tab === tb.key && <span style={s.tabLine} />}
                 </button>
               ))}
             </div>
@@ -334,61 +337,70 @@ export default function QA() {
 
 /* ─── 問題卡片（含三層回答展開） ───────────────────────── */
 function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
+  const answerTotal = (q.community?.length || 0) + (q.expert ? 1 : 0) + 1;
+  const statusColor = q.solved ? '#5A9E7A' : '#C4A35A';
+
   return (
     <div style={{ ...s.card, animationDelay: `${idx * 60}ms` }} className="g-fade-up">
 
-      {/* ── 問題標頭 ── */}
-      <div style={s.cardTop}>
-        <div style={s.authorRow}>
-          <div style={{ ...s.avatar, backgroundColor: q.authorColor }}>{q.initial}</div>
-          <div style={s.authorInfo}>
+      {/* ── 橫向主體：狀態條 + 內容 + 右側統計 ── */}
+      <div style={s.cardInner}>
+
+        {/* 左側狀態色條 */}
+        <div style={{ ...s.statusStrip, backgroundColor: statusColor }} />
+
+        {/* 中間：問題主要資訊 */}
+        <div style={s.cardContent}>
+          {/* 標籤 + 熱門 */}
+          <div style={s.cardTags}>
+            {q.tags.map(tag => (
+              <span key={tag} style={s.cardTag}>{t(tag) || tag}</span>
+            ))}
+            {q.hot && <span style={s.hotBadge}>{t('熱門') || '熱門'}</span>}
+          </div>
+
+          {/* 問題標題 */}
+          <h3 style={s.cardTitle}>{q.title}</h3>
+
+          {/* 作者列 */}
+          <div style={s.authorRow}>
+            <div style={{ ...s.avatar, backgroundColor: q.authorColor }}>{q.initial}</div>
             <span style={s.authorName}>{q.author}</span>
-            <span style={s.authorMeta}>{q.dept} · {q.time}</span>
+            <span style={s.authorDot}>·</span>
+            <span style={s.authorMeta}>{q.dept}</span>
+            <span style={s.authorDot}>·</span>
+            <span style={s.authorMeta}>{q.time}</span>
           </div>
         </div>
-        <div style={s.badges}>
-          {q.hot && <span style={s.hotBadge}>{t('熱門') || '熱門'}</span>}
+
+        {/* 右側：統計 + 操作 */}
+        <div style={s.cardSide}>
+          {/* 回答數泡泡 */}
+          <div style={{ ...s.answerBubble, borderColor: q.solved ? 'rgba(90,158,122,0.3)' : 'var(--border)' }}>
+            <span style={{ ...s.answerBubbleNum, color: statusColor }}>{answerTotal}</span>
+            <span style={s.answerBubbleLabel}>{t('則回答') || '則回答'}</span>
+          </div>
+
+          {/* 瀏覽數 */}
+          <span style={s.viewCount}>
+            <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
+              <ellipse cx="6.5" cy="6.5" rx="5.5" ry="3.5" stroke="var(--text-tertiary)" strokeWidth="1.2"/>
+              <circle cx="6.5" cy="6.5" r="1.5" fill="var(--text-tertiary)"/>
+            </svg>
+            {q.views}
+          </span>
+
+          {/* 狀態 badge */}
           <span style={{ ...s.statusBadge, ...(q.solved ? s.statusSolved : s.statusUnsolved) }}>
             {q.solved ? (t('已解決') || '已解決') : (t('待解決') || '待解決')}
           </span>
         </div>
       </div>
 
-      {/* 標籤 */}
-      <div style={s.cardTags}>
-        {q.tags.map(tag => (
-          <span key={tag} style={s.cardTag}>{t(tag) || tag}</span>
-        ))}
-      </div>
-
-      {/* 標題 + 摘要 */}
-      <h3 style={s.cardTitle}>{q.title}</h3>
-      <p style={s.cardExcerpt}>{q.excerpt}</p>
-
-      {/* 底部操作列 */}
+      {/* 展開按鈕 */}
       <div style={s.cardFooter}>
-        <div style={s.footerStats}>
-          <span style={{ ...s.answerCount, ...(q.solved ? s.answerCountSolved : {}) }}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M2 2h10a1 1 0 011 1v6a1 1 0 01-1 1H5l-3 2V3a1 1 0 011-1z"
-                stroke={q.solved ? 'var(--accent)' : 'var(--text-tertiary)'}
-                strokeWidth="1.3" strokeLinejoin="round"/>
-            </svg>
-            {(q.community?.length || 0) + (q.expert ? 1 : 0) + 1} {t('則回答') || '則回答'}
-          </span>
-          <span style={s.viewCount}>
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <ellipse cx="6.5" cy="6.5" rx="5.5" ry="3.5" stroke="var(--text-tertiary)" strokeWidth="1.2"/>
-              <circle cx="6.5" cy="6.5" r="1.5" fill="var(--text-tertiary)"/>
-            </svg>
-            {q.views}
-          </span>
-        </div>
         <button style={s.expandBtn} onClick={onToggle}>
-          {expanded
-            ? (t('收起回答') || '收起回答')
-            : (t('查看回答') || '查看回答')
-          }
+          {expanded ? (t('收起回答') || '收起回答') : (t('查看回答') || '查看回答')}
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
             style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }}>
             <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -540,60 +552,79 @@ const s = {
     minHeight: '100vh',
   },
 
-  /* Hero */
+  /* Hero — 深色置中 */
   hero: {
     backgroundColor: '#1C1917',
     borderBottom: '1px solid rgba(255,255,255,0.06)',
-    padding: '48px 40px 32px',
+    padding: '56px 40px 40px',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  heroDeco1: {
+    position: 'absolute',
+    width: '480px', height: '480px', borderRadius: '50%',
+    border: '1px solid rgba(196,137,122,0.08)',
+    top: '-200px', right: '-100px', pointerEvents: 'none',
+  },
+  heroDeco2: {
+    position: 'absolute',
+    width: '280px', height: '280px', borderRadius: '50%',
+    border: '1px solid rgba(196,137,122,0.06)',
+    bottom: '-120px', left: '8%', pointerEvents: 'none',
   },
   heroInner: {
-    maxWidth: '1100px',
+    maxWidth: '640px',
     margin: '0 auto',
     display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    gap: '32px',
-    flexWrap: 'wrap',
-  },
-  heroLeft: {
-    display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    alignItems: 'center',
+    gap: '16px',
+    position: 'relative',
+    zIndex: 1,
   },
   heroEyebrow: {
     fontFamily: '"DM Sans", sans-serif',
     fontSize: '10px',
     fontWeight: 500,
-    letterSpacing: '0.18em',
+    letterSpacing: '0.2em',
     color: 'var(--accent)',
     margin: 0,
   },
   heroTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '40px',
+    fontSize: '48px',
     fontWeight: 300,
     color: '#F7F4F2',
     margin: 0,
     letterSpacing: '0.04em',
+    textAlign: 'center',
   },
   heroSub: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px',
-    color: 'rgba(247,244,242,0.45)',
-    margin: 0,
-    maxWidth: '440px',
+    fontSize: '14px',
+    color: 'rgba(247,244,242,0.5)',
+    margin: '0 0 8px',
+    textAlign: 'center',
     lineHeight: 1.6,
   },
   heroStats: {
     display: 'flex',
-    gap: '32px',
-    paddingBottom: '4px',
+    gap: '0',
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    marginTop: '8px',
+    paddingTop: '20px',
+    width: '100%',
+    justifyContent: 'center',
   },
   statItem: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     gap: '2px',
+    padding: '0 32px',
+  },
+  statItemBorder: {
+    borderRight: '1px solid rgba(255,255,255,0.08)',
   },
   statNum: {
     fontFamily: '"Cormorant Garamond", serif',
@@ -610,19 +641,17 @@ const s = {
 
   /* Search row */
   searchRow: {
-    maxWidth: '1100px',
-    margin: '24px auto 0',
     display: 'flex',
-    gap: '12px',
+    gap: '10px',
     alignItems: 'center',
+    width: '100%',
   },
   searchBox: {
     flex: 1,
-    maxWidth: '480px',
-    height: '44px',
+    height: '48px',
     backgroundColor: 'rgba(247,244,242,0.07)',
     border: '1px solid rgba(247,244,242,0.12)',
-    borderRadius: '10px',
+    borderRadius: '12px',
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
@@ -639,24 +668,23 @@ const s = {
     border: 'none',
     outline: 'none',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px',
+    fontSize: '14px',
     color: '#F7F4F2',
   },
   askBtn: {
-    height: '44px',
-    padding: '0 20px',
+    height: '48px',
+    padding: '0 22px',
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
     backgroundColor: 'var(--accent)',
     color: '#FFFFFF',
     border: 'none',
-    borderRadius: '10px',
+    borderRadius: '12px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '13px',
     fontWeight: 500,
     cursor: 'pointer',
-    letterSpacing: '0.02em',
     whiteSpace: 'nowrap',
   },
 
@@ -686,33 +714,38 @@ const s = {
     top: '80px',
   },
 
-  /* Tabs */
+  /* Tabs — Segment control */
   tabRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottom: '1px solid var(--border)',
   },
-  tabs: { display: 'flex' },
-  tab: {
-    position: 'relative',
-    padding: '10px 16px',
-    background: 'none',
+  segmentGroup: {
+    display: 'flex',
+    backgroundColor: 'var(--bg-subtle)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    padding: '3px',
+    gap: '2px',
+  },
+  segmentBtn: {
+    padding: '6px 14px',
+    borderRadius: '7px',
     border: 'none',
+    background: 'none',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '14px',
+    fontSize: '13px',
+    fontWeight: 400,
     color: 'var(--text-tertiary)',
     cursor: 'pointer',
+    transition: 'all 150ms',
+    whiteSpace: 'nowrap',
   },
-  tabActive: { color: 'var(--text-primary)', fontWeight: 500 },
-  tabLine: {
-    position: 'absolute',
-    bottom: '-1px',
-    left: '16px',
-    right: '16px',
-    height: '2px',
-    backgroundColor: 'var(--accent)',
-    borderRadius: '2px 2px 0 0',
+  segmentBtnActive: {
+    backgroundColor: 'var(--bg-surface)',
+    color: 'var(--text-primary)',
+    fontWeight: 500,
+    boxShadow: '0 1px 4px rgba(28,25,23,0.08)',
   },
   postCount: {
     fontFamily: '"DM Sans", sans-serif',
@@ -745,94 +778,133 @@ const s = {
     backgroundColor: 'var(--bg-surface)',
     border: '1px solid var(--border)',
     borderRadius: '12px',
-    padding: '20px 24px',
+    overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
     transition: 'box-shadow 200ms',
   },
-  cardTop: {
+  cardInner: {
     display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '12px',
+    alignItems: 'stretch',
+    gap: '0',
   },
-  authorRow: { display: 'flex', alignItems: 'center', gap: '10px' },
+  statusStrip: {
+    width: '4px',
+    flexShrink: 0,
+    borderRadius: '0',
+  },
+  cardContent: {
+    flex: 1,
+    minWidth: 0,
+    padding: '18px 20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  cardSide: {
+    flexShrink: 0,
+    width: '96px',
+    borderLeft: '1px solid var(--border)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '16px 8px',
+    backgroundColor: 'var(--bg-base)',
+  },
+  answerBubble: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '2px',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    padding: '8px 12px',
+    backgroundColor: 'var(--bg-surface)',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  answerBubbleNum: {
+    fontFamily: '"Cormorant Garamond", serif',
+    fontSize: '22px',
+    fontWeight: 400,
+    lineHeight: 1,
+  },
+  answerBubbleLabel: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '10px',
+    color: 'var(--text-tertiary)',
+  },
+  cardFooter: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    padding: '10px 20px',
+    borderTop: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-base)',
+  },
+  authorRow: { display: 'flex', alignItems: 'center', gap: '6px' },
   avatar: {
-    width: '34px', height: '34px', borderRadius: '50%',
+    width: '20px', height: '20px', borderRadius: '50%',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontFamily: '"Cormorant Garamond", serif',
-    fontSize: '15px', color: '#FFFFFF', flexShrink: 0,
+    fontSize: '10px', color: '#FFFFFF', flexShrink: 0,
   },
-  authorInfo: { display: 'flex', flexDirection: 'column', gap: '1px' },
   authorName: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)',
+    fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)',
+  },
+  authorDot: {
+    fontSize: '10px',
+    color: 'var(--text-tertiary)',
   },
   authorMeta: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '11px', color: 'var(--text-tertiary)',
   },
-  badges: { display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 },
   hotBadge: {
     fontFamily: '"DM Sans", sans-serif',
-    fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
+    fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em',
     color: 'var(--accent)',
-    backgroundColor: 'rgba(196,137,122,0.12)',
+    backgroundColor: 'rgba(196,137,122,0.1)',
     border: '1px solid rgba(196,137,122,0.2)',
-    borderRadius: '999px', padding: '2px 8px',
+    borderRadius: '999px', padding: '1px 7px',
   },
   statusBadge: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '10px', fontWeight: 500,
-    borderRadius: '999px', padding: '2px 9px', letterSpacing: '0.03em',
+    borderRadius: '999px', padding: '2px 9px', letterSpacing: '0.02em',
+    textAlign: 'center',
   },
   statusSolved: {
     color: '#5A9E7A',
     backgroundColor: 'rgba(90,158,122,0.1)',
-    border: '1px solid rgba(90,158,122,0.2)',
+    border: '1px solid rgba(90,158,122,0.25)',
   },
   statusUnsolved: {
-    color: 'var(--text-tertiary)',
-    backgroundColor: 'var(--bg-subtle)',
-    border: '1px solid var(--border)',
+    color: '#B8902A',
+    backgroundColor: 'rgba(196,163,90,0.1)',
+    border: '1px solid rgba(196,163,90,0.25)',
   },
-  cardTags: { display: 'flex', gap: '6px', flexWrap: 'wrap' },
+  cardTags: { display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center' },
   cardTag: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '11px', color: 'var(--text-tertiary)',
     backgroundColor: 'var(--bg-subtle)',
     border: '1px solid var(--border)',
-    borderRadius: '999px', padding: '2px 8px',
+    borderRadius: '999px', padding: '1px 8px',
   },
   cardTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '20px', fontWeight: 400,
+    fontSize: '19px', fontWeight: 400,
     color: 'var(--text-primary)', margin: 0,
-    lineHeight: 1.35, letterSpacing: '0.01em',
+    lineHeight: 1.4, letterSpacing: '0.01em',
   },
-  cardExcerpt: {
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px', color: 'var(--text-secondary)', margin: 0,
-    lineHeight: 1.65,
-    display: '-webkit-box', WebkitLineClamp: 2,
-    WebkitBoxOrient: 'vertical', overflow: 'hidden',
-  },
-  cardFooter: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    paddingTop: '8px', borderTop: '1px solid var(--border)', marginTop: '2px',
-  },
-  footerStats: { display: 'flex', alignItems: 'center', gap: '14px' },
-  answerCount: {
-    display: 'flex', alignItems: 'center', gap: '5px',
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '12px', color: 'var(--text-tertiary)',
-  },
-  answerCountSolved: { color: 'var(--accent)' },
   viewCount: {
-    display: 'flex', alignItems: 'center', gap: '4px',
+    display: 'flex', alignItems: 'center', gap: '3px',
     fontFamily: '"DM Sans", sans-serif',
-    fontSize: '12px', color: 'var(--text-tertiary)',
+    fontSize: '11px', color: 'var(--text-tertiary)',
   },
   expandBtn: {
     display: 'flex', alignItems: 'center', gap: '5px',
@@ -847,12 +919,11 @@ const s = {
 
   /* ── Answer Panel ── */
   answerPanel: {
-    marginTop: '4px',
     display: 'flex',
     flexDirection: 'column',
     gap: '0px',
     borderTop: '1px solid var(--border)',
-    paddingTop: '16px',
+    padding: '20px 24px 20px',
   },
   tierBlock: {
     display: 'flex',
