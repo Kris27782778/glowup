@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useReveal } from './hooks/useReveal';
 import { useLang } from './hooks/useLang';
 
@@ -109,13 +109,26 @@ const TOP_ANSWERERS = [
 /* ─── 主元件 ─────────────────────────────────────────────── */
 export default function QA() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLang();
+  const [questions,   setQuestions]   = useState(MOCK_QUESTIONS);
   const [tab,         setTab]         = useState('all');
   const [activeTag,   setActiveTag]   = useState('全部');
   const [search,      setSearch]      = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
   const [expandedId,  setExpandedId]  = useState(null);
   useReveal();
+
+  /* 從 AskQuestion 頁面帶回的新問題 */
+  useEffect(() => {
+    const nq = location.state?.newQuestion;
+    if (nq) {
+      setQuestions(prev => [nq, ...prev]);
+      setTab('mine');
+      window.history.replaceState({}, '');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const TABS = [
     { key: 'all',      label: t('全部問題') || '全部問題' },
@@ -124,23 +137,24 @@ export default function QA() {
     { key: 'mine',     label: t('我的提問') || '我的提問' },
   ];
 
-  const filtered = MOCK_QUESTIONS
+  const filtered = questions
     .filter(q => {
       if (tab === 'solved')   return q.solved;
       if (tab === 'unsolved') return !q.solved;
+      if (tab === 'mine')     return q._mine === true;
       return true;
     })
     .filter(q => activeTag === '全部' || q.tags.includes(activeTag))
     .filter(q => !search || q.title.includes(search) || q.excerpt.includes(search));
 
-  const unsolvedCount = MOCK_QUESTIONS.filter(q => !q.solved).length;
+  const unsolvedCount = questions.filter(q => !q.solved).length;
 
   const handleToggle = (id) => setExpandedId(prev => prev === id ? null : id);
 
   return (
     <div style={s.page}>
 
-      {/* ── Hero (亮色 / 置中) ── */}
+      {/* ── Hero ── */}
       <div style={s.hero}>
         {/* 裝飾圓 */}
         <div style={s.heroDeco1} />
@@ -170,7 +184,7 @@ export default function QA() {
                 onBlur={() => setSearchFocus(false)}
               />
             </div>
-            <button style={s.askBtn}>
+            <button style={s.askBtn} onClick={() => navigate('/qa/ask')}>
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                 <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
               </svg>
@@ -513,6 +527,8 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
     </div>
   );
 }
+
+/* ─── Icons ─────────────────────────────────────────────── */
 
 /* ─── Icons ─────────────────────────────────────────────── */
 function AIIcon({ size = 14 }) {
