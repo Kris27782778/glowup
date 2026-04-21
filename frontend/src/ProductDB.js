@@ -33,7 +33,41 @@ function ProductDB() {
   const [products,    setProducts]    = useState([]);
   const [loading,     setLoading]     = useState(false);
   const [page,        setPage]        = useState(1);
+  const [favorites,   setFavorites]   = useState([]);
   const PAGE_SIZE = 10;
+
+  const currentUser = (() => {
+    try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
+  })();
+
+  useEffect(() => {
+    if (!currentUser?.user_id) return;
+    fetch(`http://localhost:5001/api/wishlist/${currentUser.user_id}`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setFavorites(data.map(w => w.product_id));
+      })
+      .catch(() => {});
+  }, []);
+
+  const toggleFavorite = async (productId) => {
+    if (!currentUser?.user_id) return;
+    const isFaved = favorites.includes(productId);
+    setFavorites(prev =>
+      isFaved ? prev.filter(id => id !== productId) : [...prev, productId]
+    );
+    try {
+      await fetch('http://localhost:5001/api/wishlist', {
+        method: isFaved ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: currentUser.user_id, product_id: productId }),
+      });
+    } catch {
+      setFavorites(prev =>
+        isFaved ? [...prev, productId] : prev.filter(id => id !== productId)
+      );
+    }
+  };
 
   const itemOptions = category === '化妝品' ? MAKEUP_ITEMS : SKINCARE_ITEMS;
   const hasFilter   = category || skinType || effect || item;
@@ -223,7 +257,7 @@ const fetchProducts = async () => {
                       const scorePct = isNaN(scoreNum) ? 0 : Math.min(100, Math.max(0, scoreNum * 10));
                       const scoreColor = scorePct >= 80 ? '#7BAF7B' : scorePct >= 50 ? T.accent : T.textTertiary;
                       return (
-                        <div key={p.product_id} style={styles.productCard}>
+                        <div key={p.product_id} style={{ ...styles.productCard, position: 'relative' }}>
                           {/* 品牌 + 品項 */}
                           <div style={styles.cardHeader}>
                             <span style={styles.productBrand}>{p.brand}</span>
@@ -262,6 +296,17 @@ const fetchProducts = async () => {
                               ))}
                             </div>
                           )}
+
+                          {/* 收藏愛心 */}
+                          <button
+                            style={styles.favoriteBtn}
+                            onClick={() => toggleFavorite(p.product_id)}
+                            title={favorites.includes(p.product_id) ? '取消收藏' : '加入收藏'}
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill={favorites.includes(p.product_id) ? T.accent : 'none'} stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                            </svg>
+                          </button>
                         </div>
                       );
                     })}
@@ -620,6 +665,22 @@ const styles = {
     height: '100%',
     borderRadius: '999px',
     transition: 'width 600ms ease',
+  },
+  favoriteBtn: {
+    position: 'absolute',
+    bottom: '16px',
+    right: '16px',
+    width: '34px',
+    height: '34px',
+    borderRadius: '50%',
+    border: `1px solid ${T.border}`,
+    backgroundColor: T.bgSurface,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    padding: 0,
+    transition: 'border-color 150ms, transform 150ms',
   },
   ingredientRow: {
     display: 'flex',

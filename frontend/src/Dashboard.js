@@ -38,17 +38,23 @@ const EMPTY_KEYS = [
 ];
 
 function Dashboard() {
-  const [user, setUser]       = useState(null);
-  const [tab,  setTab]        = useState(0);
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
+  const [user, setUser]           = useState(null);
+  const [tab,  setTab]            = useState(0);
+  const [showQuiz, setShowQuiz]   = useState(false);
+  const [showEdit, setShowEdit]   = useState(false);
+  const [wishlist, setWishlist]   = useState([]);
   const navigate = useNavigate();
   const { t } = useLang();
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
     if (!stored) { navigate('/login'); return; }
-    setUser(JSON.parse(stored));
+    const parsed = JSON.parse(stored);
+    setUser(parsed);
+    fetch(`http://localhost:5001/api/wishlist/${parsed.user_id}`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setWishlist(data); })
+      .catch(() => {});
   }, [navigate]);
 
   useReveal();
@@ -227,10 +233,44 @@ function Dashboard() {
           {/* 內容區：key 讓 tab 切換時重新掛載觸發動畫 */}
           <div style={styles.tabContent}>
             <div key={tab} className="g-tab-content">
-              <EmptyState
-                title={t(EMPTY_KEYS[tab].title)}
-                sub={t(EMPTY_KEYS[tab].sub)}
-              />
+              {tab === 2 ? (
+                wishlist.length === 0 ? (
+                  <EmptyState
+                    title={t(EMPTY_KEYS[2].title)}
+                    sub={t(EMPTY_KEYS[2].sub)}
+                  />
+                ) : (
+                  <div style={wishlistStyle.grid}>
+                    {wishlist.map(w => {
+                      const p = w.products;
+                      if (!p) return null;
+                      return (
+                        <div key={w.wishlist_id} style={wishlistStyle.card}>
+                          <div style={wishlistStyle.cardHeader}>
+                            <span style={wishlistStyle.brand}>{p.brand}</span>
+                            <span style={wishlistStyle.badge}>{p.sub_category}</span>
+                          </div>
+                          <p style={wishlistStyle.name}>{p.name}</p>
+                          {p.product_ingredients?.length > 0 && (
+                            <div style={wishlistStyle.tags}>
+                              {p.product_ingredients.slice(0, 4).map(pi => (
+                                <span key={pi.ingredient_id} style={wishlistStyle.tag}>
+                                  {pi.ingredients?.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                <EmptyState
+                  title={t(EMPTY_KEYS[tab].title)}
+                  sub={t(EMPTY_KEYS[tab].sub)}
+                />
+              )}
             </div>
           </div>
 
@@ -601,6 +641,71 @@ const emptyStyle = {
     textAlign: 'center',
     maxWidth: '320px',
     lineHeight: 1.6,
+  },
+};
+
+const wishlistStyle = {
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+    gap: '16px',
+    padding: '24px',
+  },
+  card: {
+    backgroundColor: 'var(--bg-subtle)',
+    borderRadius: '12px',
+    border: '1px solid var(--border)',
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  brand: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '11px',
+    fontWeight: 600,
+    letterSpacing: '0.08em',
+    color: 'var(--text-tertiary)',
+    textTransform: 'uppercase',
+  },
+  badge: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '11px',
+    fontWeight: 500,
+    color: 'var(--accent)',
+    backgroundColor: 'rgba(196,137,122,0.1)',
+    border: '1px solid rgba(196,137,122,0.2)',
+    borderRadius: '999px',
+    padding: '2px 10px',
+  },
+  name: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '17px',
+    fontWeight: 400,
+    color: 'var(--text-primary)',
+    margin: 0,
+    lineHeight: 1.4,
+  },
+  tags: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '5px',
+    marginTop: '4px',
+    paddingTop: '10px',
+    borderTop: '1px solid var(--border)',
+  },
+  tag: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px',
+    color: 'var(--text-secondary)',
+    backgroundColor: 'var(--bg-surface)',
+    borderRadius: '999px',
+    padding: '3px 10px',
   },
 };
 
