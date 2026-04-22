@@ -3,92 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useReveal } from './hooks/useReveal';
 import { useLang } from './hooks/useLang';
 
-/* ─── Mock data ─────────────────────────────────────────── */
-const MOCK_QUESTIONS = [
-  {
-    id: 1, initial: '陳', authorColor: '#9E8A7A',
-    author: '陳柔安', dept: '護理學系', time: '1 小時前',
-    tags: ['成分討論', '敏感肌'],
-    title: '乳酸和杏仁酸可以交替使用嗎？濃度怎麼配？',
-    excerpt: '我目前有一瓶 8% 乳酸和一瓶 6% 杏仁酸，想了解這兩種果酸交替使用的邏輯，晚上用完之後早上要加強保濕嗎？',
-    views: 312, solved: true, hot: true,
-    aiAnswer: '乳酸（Lactic Acid）與杏仁酸（Mandelic Acid）均屬 AHA，但分子量與滲透速率不同。杏仁酸分子較大，刺激性低，適合敏感肌入門；乳酸滲透較深，保濕效果也更佳。\n\n交替使用的邏輯：建議以「週一三五用杏仁酸、週二四六用乳酸」的輪替方式，避免每日使用同一種酸造成累積刺激。用後的早晨需加強保濕並確實防曬（SPF 30+），因為 AHA 會提升光敏感性。若發現泛紅刺痛，立即暫停並回歸基礎保養 3–5 天。',
-    expert: { initial: '王', color: '#7A8A9E', name: '王思涵', badge: '化學系・成分達人', answer: '補充一點：乳酸的保濕效果源自其本身就是 NMF（天然保濕因子）的成分之一。如果你的主要需求是去角質兼保濕，晚上可以只用乳酸，不一定需要輪替。杏仁酸比較適合有在處理粉刺或毛孔問題的情況。', likes: 31 },
-    community: [
-      { initial: '林', color: '#C4897A', name: '林小羽', dept: '化妝品系', time: '45 分鐘前', text: '我之前也在糾結這個！最後選擇週間用杏仁酸、週末只做保濕不用酸，皮膚反而穩很多，供參考。', likes: 12 },
-      { initial: '吳', color: '#9A7AA0', name: '吳宜庭', dept: '生物科技學系', time: '2 小時前', text: '同樣敏感肌，我的經驗是不管哪種酸用完一定要搭凡士林封層，乾燥感會好很多。', likes: 8 },
-    ],
-  },
-  {
-    id: 2, initial: '王', authorColor: '#7A8A9E',
-    author: '王思涵', dept: '化學系', time: '3 小時前',
-    tags: ['抗老', '成分討論'],
-    title: 'A 醇初學者從多少濃度開始？搭配什麼保濕品比較不刺激？',
-    excerpt: '想嘗試視黃醇但超怕刺激，看過很多說法都不太一樣，想問有實際用過的人從哪個濃度入門，怎麼搭配保養步驟比較安全。',
-    views: 589, solved: false, hot: true,
-    aiAnswer: '視黃醇（Retinol）建議初學者從 0.025%–0.05% 開始，每週使用 2 次，持續 4 週若無不適再增加頻率。「三明治法」是目前公認最能降低刺激性的用法：先塗保濕品（薄薄一層），再塗視黃醇，最後再加一層保濕鎖住。\n\n搭配建議：避免同一晚使用酸類（AHA/BHA）或維生素 C；白天務必使用 SPF 50+ 防曬。初期可能出現脫屑、泛紅屬正常「維 A 反應期」，通常 4–6 週後皮膚會自行調適。',
-    expert: { initial: '黃', color: '#A08060', name: '黃品蓁', badge: '化妝品系・配方研究', answer: '補充一個不常被提到的點：視黃醇在光線下會加速降解，所以一定要儲存在避光容器裡，並且只在夜間使用。便宜但包裝不避光的產品，效果打折很多。另外，如果你的保濕品含有 niacinamide，跟 A 醇搭配反而可以有效減緩初期刺激。', likes: 47 },
-    community: [
-      { initial: '陳', color: '#9E8A7A', name: '陳柔安', dept: '護理學系', time: '1 小時前', text: '我從 0.025% 開始用，三明治法真的有效！第一個月有點乾，但現在膚況穩很多，毛孔也細緻了。', likes: 19 },
-      { initial: '張', color: '#8A9E7A', name: '張宇軒', dept: '資訊管理學系', time: '2 小時前', text: 'The Ordinary 0.2% 入門款很多人推薦，但我覺得它乳狀質地比較難推開，換成 0.1% 膠囊型的反而好操作很多。', likes: 14 },
-    ],
-  },
-  {
-    id: 3, initial: '林', authorColor: '#C4897A',
-    author: '林小羽', dept: '化妝品系', time: '5 小時前',
-    tags: ['油性肌', '保濕'],
-    title: '油性肌夏天還需要用乳液嗎？還是只擦化妝水就夠了？',
-    excerpt: '夏天臉超油，擦完乳液更悶，但又擔心不擦會缺水，想知道油性肌的最簡保養到底應該幾個步驟。',
-    views: 187, solved: false, hot: false,
-    aiAnswer: '皮脂與水分是兩個獨立的系統，油性肌不代表不缺水。夏天建議改用「無油保濕精華」取代乳液，成分看 glycerin（甘油）、hyaluronic acid（玻尿酸）、panthenol（泛醇）等，比傳統乳液輕薄許多。\n\n最簡保養流程（夏季油肌版）：溫和胺基酸洗面乳 → 化妝水（含水、甘油） → 輕薄保濕精華 → 防曬。乳液不是必備，但保濕精華仍建議保留，避免皮膚因缺水反而分泌更多皮脂。',
-    expert: { initial: '吳', color: '#9A7AA0', name: '吳宜庭', badge: '生物科技學系・成分研究', answer: '油性肌夏天最常犯的錯是「過度清潔」，以為洗越乾淨越好，其實反而刺激更多皮脂分泌。建議早上只用清水或很溫和的潔顏泡，不需要每次洗臉都用洗面乳。', likes: 23 },
-    community: [
-      { initial: '黃', color: '#A08060', name: '黃品蓁', dept: '化妝品系', time: '3 小時前', text: '我油肌夏天只用化妝水（含 glycerin）+ 防曬，省掉精華和乳液，反而比較清爽不出油。', likes: 31 },
-    ],
-  },
-  {
-    id: 4, initial: '張', authorColor: '#8A9E7A',
-    author: '張宇軒', dept: '資訊管理學系', time: '昨天',
-    tags: ['防曬推薦', '混合性肌'],
-    title: '混合肌用物理防曬還是化學防曬比較合適？',
-    excerpt: '試過幾款化學防曬都覺得油油的，物理防曬又容易卡粉，想知道有沒有混合肌適合的選擇重點可以參考。',
-    views: 423, solved: true, hot: false,
-    aiAnswer: '物理防曬（氧化鋅/二氧化鈦）成膜感較重，容易泛白卡粉，但對敏感肌較溫和；化學防曬質地輕薄，但部分成分（如 Avobenzone）可能刺激敏感部位。混合肌的最佳解通常是「混合型配方」——同時含物理與化學防曬劑，兼顧輕薄與安全性。\n\n選購重點：尋找標示「Oil-Free」或「Sebum Control」的化學防曬；或選用奈米氧化鋅比例高的物理防曬，泛白感已大幅改善。PA++++ + SPF 50+ 為戶外日常首選。',
-    expert: { initial: '林', color: '#C4897A', name: '林小羽', badge: '化妝品系・彩妝研究', answer: '混合肌分區保養的邏輯也可以用在防曬：T 區用控油化學防曬（輕薄不悶），兩頰用物理防曬（保護敏感部位）。雖然麻煩，但這樣體驗確實最好。', likes: 18 },
-    community: [
-      { initial: '陳', color: '#9E8A7A', name: '陳柔安', dept: '護理學系', time: '昨天', text: '我後來改用韓系水感防曬（含化學+物理混合），一點都不悶，而且上妝服貼很多，混合肌推薦！', likes: 27 },
-      { initial: '吳', color: '#9A7AA0', name: '吳宜庭', dept: '生物科技學系', time: '昨天', text: '記得補擦的時候可以用防曬噴霧或蜜粉型防曬，不用全部洗掉重來，方便很多。', likes: 9 },
-    ],
-  },
-  {
-    id: 5, initial: '黃', authorColor: '#A08060',
-    author: '黃品蓁', dept: '化妝品系', time: '2 天前',
-    tags: ['屏障修護', '敏感肌'],
-    title: '過度清潔造成屏障受損，修復期間要停用所有活性成分嗎？',
-    excerpt: '上個月換了洗臉機，臉開始乾癢脫皮。想問修護期間煙醯胺、神經醯胺還能用嗎？還是全部停掉？',
-    views: 754, solved: true, hot: true,
-    aiAnswer: '屏障受損期間的保養原則是「最小刺激，最大修復」。需要立即停用的成分：AHA/BHA/視黃醇/高濃度維生素 C 等活性成分。可以繼續使用的有益成分：神經醯胺（Ceramide）、膽固醇（Cholesterol）、脂肪酸三合一配方是修復屏障的黃金組合；菸鹼醯胺低濃度（2-5%）溫和版亦可保留。\n\n建議流程：只用胺基酸潔顏（早上可省略用洗面乳）→ 含神經醯胺的修護霜 → 凡士林或乳木果油封層。一般 2–4 週可見明顯改善。',
-    expert: { initial: '王', color: '#7A8A9E', name: '王思涵', badge: '化學系・成分達人', answer: '另外提醒：洗臉機的刷頭會物理摩擦，即便換回正常洗法，屏障修復期仍要避免使用任何去角質工具或磨砂膏。日曬也是屏障最大的敵人，修護期間建議特別留意防曬。', likes: 52 },
-    community: [
-      { initial: '林', color: '#C4897A', name: '林小羽', dept: '化妝品系', time: '2 天前', text: '我遇過一樣情況，停掉所有東西只用 CeraVe 修護霜 + 凡士林，兩週後好了大半，真的不需要很複雜。', likes: 44 },
-      { initial: '陳', color: '#9E8A7A', name: '陳柔安', dept: '護理學系', time: '2 天前', text: '護理學系課有教過，屏障修復跟腸黏膜修復類似，最重要是停止傷害，讓細胞自然重建，別急著加東西。', likes: 38 },
-    ],
-  },
-  {
-    id: 6, initial: '吳', authorColor: '#9A7AA0',
-    author: '吳宜庭', dept: '生物科技學系', time: '3 天前',
-    tags: ['成分討論', '保濕'],
-    title: '玻尿酸塗完反而更乾？用法或濃度哪裡出問題？',
-    excerpt: '不管先濕後乾還是乾著直接塗，感覺到最後都更乾燥。是分子量的問題還是我步驟有問題？',
-    views: 891, solved: true, hot: false,
-    aiAnswer: '玻尿酸（Hyaluronic Acid）是雙向吸濕劑——在濕度充足的環境從外界吸水；但在乾燥環境中反而會從皮膚深層「抽水」到表面蒸發，造成更乾的感受。這就是「越擦越乾」的根本原因。\n\n解決方式：①塗完玻尿酸必須立刻用保濕霜/乳液封住，避免水分蒸散；②選擇多分子量配方（大+中+小分子），同時補充表面與深層水分；③在環境濕度低於 60% 時，單獨使用高分子玻尿酸效果有限，建議搭配 glycerin 或 panthenol 提升吸濕效率。',
-    expert: { initial: '黃', color: '#A08060', name: '黃品蓁', badge: '化妝品系・配方研究', answer: '再補充：市售「玻尿酸精華」很多其實主要成分是水和甘油，玻尿酸含量極低（0.01% 以下也算有添加）。如果你買的產品第一成分是水，第二是 glycerin，效果主要來自甘油而非玻尿酸，但其實甘油的吸濕效果反而更穩定。', likes: 61 },
-    community: [
-      { initial: '張', color: '#8A9E7A', name: '張宇軒', dept: '資訊管理學系', time: '3 天前', text: '我之前也有這個問題，後來理解原理之後就改先噴化妝水讓臉有點濕，馬上塗玻尿酸精華，再立刻加乳液，完全解決了。', likes: 29 },
-      { initial: '林', color: '#C4897A', name: '林小羽', dept: '化妝品系', time: '3 天前', text: '住宿舍冬天超乾，我都直接加濕器開著用，玻尿酸效果差很多，環境濕度真的很重要。', likes: 17 },
-    ],
-  },
-];
+
 
 const ALL_TAGS = ['全部', '成分討論', '油性肌', '敏感肌', '混合性肌', '保濕', '防曬推薦', '抗老', '屏障修護'];
 
@@ -111,13 +26,42 @@ export default function QA() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLang();
-  const [questions,   setQuestions]   = useState(MOCK_QUESTIONS);
+  const [questions,   setQuestions]   = useState([]);
   const [tab,         setTab]         = useState('all');
   const [activeTag,   setActiveTag]   = useState('全部');
   const [search,      setSearch]      = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
   const [expandedId,  setExpandedId]  = useState(null);
   useReveal();
+
+  /* 頁面載入時從後端拿問題 */
+  useEffect(() => {
+    fetch('http://localhost:5001/api/questions')
+      .then(r => r.json())
+      .then(data => {
+        // 把後端格式轉成畫面需要的格式
+        const formatted = data.map(q => ({
+          id: q.question_id,
+          title: q.title,
+          excerpt: q.detail,
+          tags: q.tags || [],
+          solved: q.solved,
+          views: q.views,
+          hot: false,
+          initial: '?',
+          authorColor: '#9E8A7A',
+          author: '使用者',
+          dept: '',
+          time: new Date(q.created_at).toLocaleDateString('zh-TW'),
+          aiAnswer: '',
+          expert: null,
+          community: [],
+          _mine: false,
+        }));
+        setQuestions(formatted);
+      })
+      .catch(err => console.error('載入問題失敗', err));
+  }, []);
 
   /* 從 AskQuestion 頁面帶回的新問題 */
   useEffect(() => {
@@ -146,8 +90,6 @@ export default function QA() {
     })
     .filter(q => activeTag === '全部' || q.tags.includes(activeTag))
     .filter(q => !search || q.title.includes(search) || q.excerpt.includes(search));
-
-  const unsolvedCount = questions.filter(q => !q.solved).length;
 
   const handleToggle = (id) => setExpandedId(prev => prev === id ? null : id);
 
@@ -192,19 +134,6 @@ export default function QA() {
             </button>
           </div>
 
-          {/* Stats 橫條 */}
-          <div style={s.heroStats}>
-            {[
-              { num: '486',   label: t('個問題') || '個問題' },
-              { num: '2,130', label: t('則回答') || '則回答' },
-              { num: `${unsolvedCount}`, label: t('待解決') || '待解決' },
-            ].map((item, i, arr) => (
-              <div key={item.label} style={{ ...s.statItem, ...(i < arr.length - 1 ? s.statItemBorder : {}) }}>
-                <span style={s.statNum}>{item.num}</span>
-                <span style={s.statLabel}>{item.label}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -395,19 +324,6 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
             <span style={s.answerBubbleLabel}>{t('則回答') || '則回答'}</span>
           </div>
 
-          {/* 瀏覽數 */}
-          <span style={s.viewCount}>
-            <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
-              <ellipse cx="6.5" cy="6.5" rx="5.5" ry="3.5" stroke="var(--text-tertiary)" strokeWidth="1.2"/>
-              <circle cx="6.5" cy="6.5" r="1.5" fill="var(--text-tertiary)"/>
-            </svg>
-            {q.views}
-          </span>
-
-          {/* 狀態 badge */}
-          <span style={{ ...s.statusBadge, ...(q.solved ? s.statusSolved : s.statusUnsolved) }}>
-            {q.solved ? (t('已解決') || '已解決') : (t('待解決') || '待解決')}
-          </span>
         </div>
       </div>
 

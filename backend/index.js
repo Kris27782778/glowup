@@ -7,8 +7,9 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const pool = require('./config/db');
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
-const wishlistRoutes = require('./routes/wishlist');
-const adminRoutes = require('./routes/admin');
+const wishlistRoutes  = require('./routes/wishlist');
+const adminRoutes     = require('./routes/admin');
+const questionRoutes  = require('./routes/questions');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -19,8 +20,9 @@ app.use(express.json());
 // 路由
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/wishlist', wishlistRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/wishlist',   wishlistRoutes);
+app.use('/api/admin',     adminRoutes);
+app.use('/api/questions', questionRoutes);
 
 // 測試路由
 app.get('/', (req, res) => {
