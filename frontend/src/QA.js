@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useReveal } from './hooks/useReveal';
 import { useLang } from './hooks/useLang';
+import API_BASE from './config';
 
 
 
@@ -39,10 +40,11 @@ export default function QA() {
     const stored = localStorage.getItem('user');
     const currentUser = stored ? JSON.parse(stored) : null;
 
-    fetch('http://localhost:5001/api/questions')
+    fetch(`${API_BASE}/api/questions`)
       .then(r => r.json())
       .then(data => {
-        const formatted = data.map(q => ({
+        const COLORS = ['#C4897A','#9E8A7A','#7BAF7B','#7AAFC4','#C4B07A','#9B7AC4'];
+        const formatted = data.map((q, i) => ({
           id: q.question_id,
           title: q.title,
           excerpt: q.detail,
@@ -50,10 +52,10 @@ export default function QA() {
           solved: q.solved,
           views: q.views,
           hot: false,
-          initial: '?',
-          authorColor: '#9E8A7A',
-          author: '使用者',
-          dept: '',
+          initial: q.users?.nickname?.[0]?.toUpperCase() || '?',
+          authorColor: COLORS[i % COLORS.length],
+          author: q.users?.nickname || '匿名用戶',
+          dept: q.users?.department_grade || '',
           time: new Date(q.created_at).toLocaleDateString('zh-TW'),
           aiAnswer: '',
           expert: null,
@@ -285,14 +287,15 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
 
   useEffect(() => {
     if (!expanded) return;
-    fetch(`http://localhost:5001/api/questions/${q.id}/answers`)
+    fetch(`${API_BASE}/api/questions/${q.id}/answers`)
       .then(r => r.json())
       .then(data => {
-        setAnswers(data.map(a => ({
-          initial: '?',
-          color:   '#C4897A',
-          name:    '使用者',
-          dept:    '',
+        const COLORS = ['#C4897A','#9E8A7A','#7BAF7B','#7AAFC4','#C4B07A','#9B7AC4'];
+        setAnswers(data.map((a, i) => ({
+          initial: a.users?.nickname?.[0]?.toUpperCase() || '?',
+          color:   COLORS[i % COLORS.length],
+          name:    a.users?.nickname || '匿名用戶',
+          dept:    a.users?.department_grade || '',
           time:    new Date(a.created_at).toLocaleDateString('zh-TW'),
           text:    a.content,
           likes:   0,
@@ -311,7 +314,7 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
     const cu = stored ? JSON.parse(stored) : null;
     setReplySubmitting(true);
     try {
-      const res = await fetch(`http://localhost:5001/api/questions/${q.id}/answers`, {
+      const res = await fetch(`${API_BASE}/api/questions/${q.id}/answers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: cu?.user_id, content: replyText.trim() }),

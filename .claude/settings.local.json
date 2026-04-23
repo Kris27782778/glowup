@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node -e \"require\\('dotenv'\\).config\\({path:'.env'}\\); console.log\\('PORT:', process.env.PORT\\);\")"
+      "Bash(node -e \"require\\('dotenv'\\).config\\({path:'.env'}\\); console.log\\('PORT:', process.env.PORT\\);\")",
+      "Bash(npx eslint:*)"
     ]
   }
 }
