@@ -295,31 +295,44 @@ export default function AskQuestion() {
             </section>
 
             {/* 匿名選項 */}
-            <section style={{ ...s.section, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px' }}>
-              <div>
-                <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-main)', fontWeight: 500 }}>匿名發問</p>
-                <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'rgba(247,244,242,0.45)' }}>
-                  {anonymous ? '其他用戶將無法看到你的名字' : '顯示你的暱稱與系級'}
-                </p>
+            <section style={s.section}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={s.sectionHeader}>
+                  {/* 遮罩圖示 */}
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M8 2C5.5 2 3 3.5 2 6c-.4 1-.4 3 0 4 1 2.5 3.5 4 6 4s5-1.5 6-4c.4-1 .4-3 0-4C13 3.5 10.5 2 8 2z"
+                      stroke="var(--text-tertiary)" strokeWidth="1.2"/>
+                    <circle cx="5.5" cy="7.5" r="1.2" fill="var(--text-tertiary)"/>
+                    <circle cx="10.5" cy="7.5" r="1.2" fill="var(--text-tertiary)"/>
+                    <path d="M5.5 10.5c.7.8 1.3 1 2.5 1s1.8-.2 2.5-1" stroke="var(--text-tertiary)" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                  <h2 style={s.sectionTitle}>匿名發問</h2>
+                </div>
+                {/* Toggle 開關 */}
+                <button
+                  onClick={() => setAnonymous(p => !p)}
+                  style={{
+                    width: '44px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                    backgroundColor: anonymous ? 'var(--accent)' : 'rgba(255,255,255,0.12)',
+                    position: 'relative', transition: 'background 250ms ease', flexShrink: 0,
+                  }}
+                  aria-label="匿名切換"
+                >
+                  <span style={{
+                    position: 'absolute', top: '3px',
+                    left: anonymous ? '23px' : '3px',
+                    width: '18px', height: '18px', borderRadius: '50%',
+                    backgroundColor: '#fff',
+                    transition: 'left 250ms ease',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
+                  }} />
+                </button>
               </div>
-              <button
-                onClick={() => setAnonymous(p => !p)}
-                style={{
-                  width: '44px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                  backgroundColor: anonymous ? '#C4897A' : 'rgba(255,255,255,0.12)',
-                  position: 'relative', transition: 'background 250ms ease', flexShrink: 0,
-                }}
-                aria-label="匿名切換"
-              >
-                <span style={{
-                  position: 'absolute', top: '3px',
-                  left: anonymous ? '23px' : '3px',
-                  width: '18px', height: '18px', borderRadius: '50%',
-                  backgroundColor: '#fff',
-                  transition: 'left 250ms ease',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                }} />
-              </button>
+              <p style={s.sectionHint}>
+                {anonymous
+                  ? '其他用戶將看不到你的名字，問題將以「匿名用戶」顯示'
+                  : '開啟後隱藏你的暱稱與系級，適合敏感或私人的保養問題'}
+              </p>
             </section>
 
             {/* 提交 */}
