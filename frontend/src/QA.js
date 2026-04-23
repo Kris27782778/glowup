@@ -39,6 +39,7 @@ export default function QA() {
   useEffect(() => {
     const stored = localStorage.getItem('user');
     const currentUser = stored ? JSON.parse(stored) : null;
+    const anonIds = JSON.parse(localStorage.getItem('anon_question_ids') || '[]');
 
     fetch(`${API_BASE}/api/questions`)
       .then(r => r.json())
@@ -60,7 +61,8 @@ export default function QA() {
           aiAnswer: '',
           expert: null,
           community: [],
-          _mine: currentUser && String(q.user_id) === String(currentUser.user_id),
+          _mine: (currentUser && String(q.user_id) === String(currentUser.user_id)) ||
+                 anonIds.includes(q.question_id),
         }));
         setQuestions(formatted);
       })

@@ -127,8 +127,17 @@ export default function AskQuestion() {
         }),
       });
       const data = await res.json();
+      const qid = data.question?.question_id || Date.now();
+
+      // 匿名問題：把 ID 存到 localStorage，讓 QA 頁面回來後還能認出是自己的
+      if (anonymous && data.question?.question_id) {
+        const stored = JSON.parse(localStorage.getItem('anon_question_ids') || '[]');
+        stored.push(data.question.question_id);
+        localStorage.setItem('anon_question_ids', JSON.stringify(stored));
+      }
+
       const newQuestion = {
-        id: data.question?.question_id || Date.now(),
+        id: qid,
         initial: anonymous ? '匿' : (currentUser?.nickname?.[0]?.toUpperCase() || '我'),
         authorColor: '#C4897A',
         author: anonymous ? '匿名用戶' : (currentUser?.nickname || '匿名'),
