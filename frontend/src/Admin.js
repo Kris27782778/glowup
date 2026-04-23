@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const API = 'http://localhost:5001/api/admin';
+const API = '/api/admin';
 const ADMIN_KEY = 'glowadmin2026';
 
 const C = {

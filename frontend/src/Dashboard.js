@@ -51,7 +51,7 @@ function Dashboard() {
     if (!stored) { navigate('/login'); return; }
     const parsed = JSON.parse(stored);
     setUser(parsed);
-    fetch(`http://localhost:5001/api/wishlist/${parsed.user_id}`)
+    fetch(`/api/wishlist/${parsed.user_id}`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setWishlist(data); })
       .catch(() => {});
@@ -65,7 +65,7 @@ function Dashboard() {
     setUser(updated);
     setShowQuiz(false);
     try {
-      await fetch('http://localhost:5001/api/auth/profile', {
+      await fetch('/api/auth/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.user_id, skin_type: skinKey }),
@@ -79,7 +79,7 @@ function Dashboard() {
     setUser(updated);
     setShowEdit(false);
     try {
-      await fetch('http://localhost:5001/api/auth/profile', {
+      await fetch('/api/auth/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.user_id, ...patch }),

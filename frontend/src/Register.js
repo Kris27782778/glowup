@@ -141,7 +141,7 @@ function Register() {
   const fullEmail = `${form.email}@cloud.fju.edu.tw`;
 
   const sendVerification = async () => {
-    const res = await fetch('http://localhost:5001/api/auth/send-verification', {
+    const res = await fetch('/api/auth/send-verification', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: fullEmail }),
@@ -206,7 +206,7 @@ function Register() {
       setLoading(true);
       try {
         const otp = otpDigits.join('');
-        const res = await fetch('http://localhost:5001/api/auth/verify-otp', {
+        const res = await fetch('/api/auth/verify-otp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: fullEmail, otp }),
@@ -237,7 +237,7 @@ function Register() {
         department_grade: departmentGrade,
         skin_type: skinTypeKey || '',
       };
-      const response = await fetch('http://localhost:5001/api/auth/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -245,7 +245,7 @@ function Register() {
       const data = await response.json();
       if (response.ok) {
         // 自動登入
-        const loginRes = await fetch('http://localhost:5001/api/auth/login', {
+        const loginRes = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ student_id: form.email, password: form.password }),
