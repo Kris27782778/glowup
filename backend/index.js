@@ -7,8 +7,10 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const pool = require('./config/db');
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
-const wishlistRoutes = require('./routes/wishlist');
-
+const wishlistRoutes  = require('./routes/wishlist');
+const adminRoutes     = require('./routes/admin');
+const questionRoutes  = require('./routes/questions');
+const answerRoutes = require('./routes/answers');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
@@ -18,8 +20,10 @@ app.use(express.json());
 // 路由
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/wishlist', wishlistRoutes);
-
+app.use('/api/wishlist',   wishlistRoutes);
+app.use('/api/admin',     adminRoutes);
+app.use('/api/questions', questionRoutes);
+app.use('/api/questions/:id/answers', answerRoutes);
 // 測試路由
 app.get('/', (req, res) => {
   res.json({ message: 'Glow Up 後端啟動成功 🌸' });

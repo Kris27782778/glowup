@@ -120,8 +120,8 @@ export function getDivisions(college, dept) {
 export function getGrades(division, dept) {
   if (!division) return [];
   if (division === '博士班') return ['博一', '博二', '博三', '博四以上'];
-  if (division === '碩士班' || division === '碩士在職專班') return ['碩一', '碩二', '碩三'];
+  if (division === '碩士班' || division === '碩士在職專班') return ['碩一', '碩二', '碩三', '其他'];
   // 醫學系六年制
-  if (dept === '醫學系（六年制）') return ['大一', '大二', '大三', '大四', '大五', '大六'];
-  return ['大一', '大二', '大三', '大四'];
+  if (dept === '醫學系（六年制）') return ['大一', '大二', '大三', '大四', '大五', '大六', '其他'];
+  return ['大一', '大二', '大三', '大四', '其他'];
 }

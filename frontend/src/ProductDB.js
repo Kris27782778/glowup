@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLang } from './hooks/useLang';
+import API_BASE from './config';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -42,7 +43,7 @@ function ProductDB() {
 
   useEffect(() => {
     if (!currentUser?.user_id) return;
-    fetch(`http://localhost:5001/api/wishlist/${currentUser.user_id}`)
+    fetch(`${API_BASE}/api/wishlist/${currentUser.user_id}`)
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) setFavorites(data.map(w => w.product_id));
@@ -57,7 +58,7 @@ function ProductDB() {
       isFaved ? prev.filter(id => id !== productId) : [...prev, productId]
     );
     try {
-      await fetch('http://localhost:5001/api/wishlist', {
+      await fetch(API_BASE + '/api/wishlist', {
         method: isFaved ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: currentUser.user_id, product_id: productId }),
@@ -99,7 +100,7 @@ const fetchProducts = async () => {
     if (skinType)  params.append('skin_type', skinType);   // ← 新增
     if (effect)    params.append('effect', effect);         // ← 新增
 
-    const res  = await fetch(`http://localhost:5001/api/products?${params}`);
+    const res  = await fetch(`${API_BASE}/api/products?${params}`);
     const data = await res.json();
     setProducts(Array.isArray(data) ? data : []);
   } catch (err) {
