@@ -127,14 +127,18 @@ function calcResult(score) {
  * onSkip()                        — 跳過整個測驗
  */
 function SkinQuiz({ onComplete, onSkip }) {
-  const [qIndex, setQIndex] = useState(0);         // 目前題號 0~4，5 = 結果頁
-  const [selected, setSelected] = useState([]);    // 本題已選的 option index[]
-  const [totalScore, setTotalScore] = useState({}); // 累計分數
-  const [result, setResult] = useState(null);       // 計算結果 key
-  const [allSkipped, setAllSkipped] = useState(true); // 是否所有題都略過
+  const [qIndex,   setQIndex]   = useState(0);  // 目前題號 0~4，5 = 結果頁
+  const [selected, setSelected] = useState([]); // 本題已選的 option index[]
+  const [result,   setResult]   = useState(null);
+
+  // 記錄每題已提交的選擇，用於回上一題還原與計算分數
+  const [history, setHistory] = useState([]); // [{ selected: number[] }]
 
   const isResult = qIndex === QUESTIONS.length;
   const question = QUESTIONS[qIndex];
+
+  // 所有題都略過 → 視為跳過
+  const allSkipped = history.every(h => h.selected.length === 0);
 
   const toggleOption = (i) => {
     setSelected(prev =>
@@ -143,19 +147,21 @@ function SkinQuiz({ onComplete, onSkip }) {
   };
 
   const handleNext = () => {
-    // 累計本題分數
-    const newScore = { ...totalScore };
-    selected.forEach(i => {
-      Object.entries(question.options[i].score).forEach(([k, v]) => {
-        newScore[k] = (newScore[k] || 0) + v;
-      });
-    });
-    if (selected.length > 0) setAllSkipped(false);
-    setTotalScore(newScore);
+    const newHistory = [...history, { selected }];
+    setHistory(newHistory);
     setSelected([]);
 
     if (qIndex === QUESTIONS.length - 1) {
-      setResult(calcResult(newScore));
+      // 最後一題，計算結果
+      const finalScore = newHistory.reduce((acc, { selected: sel }, hi) => {
+        sel.forEach(i => {
+          Object.entries(QUESTIONS[hi].options[i].score).forEach(([k, v]) => {
+            acc[k] = (acc[k] || 0) + v;
+          });
+        });
+        return acc;
+      }, {});
+      setResult(calcResult(finalScore));
       setQIndex(QUESTIONS.length);
     } else {
       setQIndex(i => i + 1);
@@ -163,21 +169,39 @@ function SkinQuiz({ onComplete, onSkip }) {
   };
 
   const handleSkipQuestion = () => {
+    const newHistory = [...history, { selected: [] }];
+    setHistory(newHistory);
     setSelected([]);
+
     if (qIndex === QUESTIONS.length - 1) {
-      setResult(calcResult(totalScore));
+      const finalScore = newHistory.reduce((acc, { selected: sel }, hi) => {
+        sel.forEach(i => {
+          Object.entries(QUESTIONS[hi].options[i].score).forEach(([k, v]) => {
+            acc[k] = (acc[k] || 0) + v;
+          });
+        });
+        return acc;
+      }, {});
+      setResult(calcResult(finalScore));
       setQIndex(QUESTIONS.length);
     } else {
       setQIndex(i => i + 1);
     }
   };
 
+  const handleBack = () => {
+    if (qIndex === 0) return;
+    const prev = history[history.length - 1];
+    setHistory(h => h.slice(0, -1));
+    setSelected(prev?.selected || []);
+    setQIndex(i => i - 1);
+  };
+
   const handleRetake = () => {
     setQIndex(0);
     setSelected([]);
-    setTotalScore({});
+    setHistory([]);
     setResult(null);
-    setAllSkipped(true);
   };
 
   const handleConfirm = () => {
@@ -252,13 +276,6 @@ function SkinQuiz({ onComplete, onSkip }) {
               style={{ ...styles.option, ...(active ? styles.optionActive : {}) }}
               onClick={() => toggleOption(i)}
             >
-              <div style={styles.optionCheck}>
-                {active && (
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </div>
               <div style={styles.optionContent}>
                 <span style={{ ...styles.optionText, ...(active ? styles.optionTextActive : {}) }}>
                   {opt.text}
@@ -272,11 +289,12 @@ function SkinQuiz({ onComplete, onSkip }) {
 
       {/* 操作 */}
       <div style={styles.quizActions}>
-        <button
-          type="button"
-          style={styles.skipBtn}
-          onClick={handleSkipQuestion}
-        >
+        {qIndex > 0 && (
+          <button type="button" style={styles.backBtn} onClick={handleBack}>
+            ← 上一題
+          </button>
+        )}
+        <button type="button" style={styles.skipBtn} onClick={handleSkipQuestion}>
           略過此題
         </button>
         <button
@@ -360,7 +378,6 @@ const styles = {
   option: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
     padding: '14px',
     borderRadius: '10px',
     border: `1px solid ${tokens.border}`,
@@ -372,18 +389,6 @@ const styles = {
   optionActive: {
     border: `1.5px solid ${tokens.accent}`,
     backgroundColor: 'rgba(196,137,122,0.05)',
-  },
-  optionCheck: {
-    width: '18px',
-    height: '18px',
-    borderRadius: '5px',
-    border: `1.5px solid ${tokens.border}`,
-    backgroundColor: 'transparent',
-    flexShrink: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 150ms',
   },
   optionContent: {
     display: 'flex',
@@ -409,6 +414,18 @@ const styles = {
   quizActions: {
     display: 'flex',
     gap: '10px',
+  },
+  backBtn: {
+    height: '40px',
+    padding: '0 14px',
+    backgroundColor: 'transparent',
+    border: `1px solid ${tokens.border}`,
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    color: tokens.textTertiary,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
   },
   skipBtn: {
     height: '40px',

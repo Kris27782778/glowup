@@ -244,14 +244,20 @@ function Register() {
       });
       const data = await response.json();
       if (response.ok) {
-        setRegisteredInfo({
-          nickname: form.nickname,
-          studentId: form.email,
-          email: `${form.email}@cloud.fju.edu.tw`,
-          departmentGrade,
-          skinType: skinTypeKey || '（未設定）',
+        // 自動登入
+        const loginRes = await fetch('http://localhost:5001/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: form.email, password: form.password }),
         });
-        setSuccess(true);
+        const loginData = await loginRes.json();
+        if (loginRes.ok) {
+          localStorage.setItem('user', JSON.stringify(loginData.user));
+          navigate('/', { state: { showSplash: true } });
+        } else {
+          // 登入失敗時退回登入頁（極少發生）
+          navigate('/login');
+        }
       } else {
         setError(data.error || '註冊失敗，請稍後再試');
         setStep(1); // 退回帳號頁顯示錯誤
