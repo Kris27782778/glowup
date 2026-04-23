@@ -3,16 +3,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useLang } from './hooks/useLang';
 import './animations.css';
 
-const T = {
-  bg:            '#FFFFFF',
-  bgBorder:      '#E5DDD9',
-  accent:        '#C4897A',
-  accentLight:   'rgba(196,137,122,0.1)',
-  textPrimary:   '#1C1917',
-  textSecondary: '#6B5E58',
-  textTertiary:  '#A89990',
-  danger:        '#C0504A',
-};
 
 const NAV_KEYS = [
   { key: '社群討論',   to: '/community' },
@@ -87,6 +77,14 @@ function Navbar() {
 
         {/* ── 右側：登入狀態 ── */}
         <div style={styles.right}>
+          {user && (
+            <button
+              style={styles.postBtn}
+              onClick={() => navigate('/community')}
+            >
+              + {t('發布貼文')}
+            </button>
+          )}
           {user ? (
             <div style={styles.userMenu} ref={menuRef}>
               {/* 觸發按鈕 */}
@@ -250,6 +248,20 @@ const styles = {
   right: {
     display: 'flex',
     alignItems: 'center',
+    gap: '10px',
+  },
+  postBtn: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: 'var(--accent)',
+    background: 'transparent',
+    border: '1px solid var(--accent)',
+    borderRadius: '7px',
+    padding: '6px 14px',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    transition: 'background-color 150ms, color 150ms',
   },
 
   /* 未登入 */

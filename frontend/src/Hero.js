@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useReveal } from './hooks/useReveal';
 import { useLang } from './hooks/useLang';
 
@@ -75,19 +75,255 @@ const MOCK_EVENTS = [
 
 const MOCK_TAGS = ['保濕', '控油', '敏感肌', '成分討論', '防曬推薦', '乳液評比', '抗老', '屏障修護', '早安水'];
 
-const SKIN_LABELS = {
-  oily: '油性肌', dry: '乾性肌', combo: '混合性肌',
-  combo_dry: '混合性肌・偏乾', combo_oily: '混合性肌・偏油',
-  normal: '中性肌', sensitive: '敏感性肌',
-};
 
-function getGreetingKey() {
-  const h = new Date().getHours();
-  if (h < 5)  return '夜深了';
-  if (h < 12) return '早安';
-  if (h < 17) return '午安';
-  return '晚安';
+/* ── 輪播資料 ── */
+const BANNER_SLIDES = [
+  {
+    id: 1,
+    tag: '限時活動',
+    tagColor: '#C4897A',
+    title: '保養品交換會',
+    sub: '5 月 18 日（六）14:00・學生活動中心 B1',
+    desc: '帶一件你不再使用的好品，換一件新驚喜。免費參加，名額有限。',
+    cta: '立即報名',
+    ctaColor: '#C4897A',
+    bg: 'linear-gradient(135deg, #1C1917 0%, #2D2218 60%, #3A2820 100%)',
+    accentBlob: 'rgba(196,137,122,0.18)',
+  },
+  {
+    id: 2,
+    tag: '新功能上線',
+    tagColor: '#7BAF7B',
+    title: '問答模組全新升級',
+    sub: '提出問題・獲得同學解答・AI 相似問題偵測',
+    desc: '有保養疑問嗎？現在就去問答區發問，讓輔大同學一起幫你解惑。',
+    cta: '前往問答',
+    ctaColor: '#7BAF7B',
+    bg: 'linear-gradient(135deg, #111A11 0%, #182418 60%, #1E2E1E 100%)',
+    accentBlob: 'rgba(123,175,123,0.18)',
+  },
+  {
+    id: 3,
+    tag: '本週精選',
+    tagColor: '#7AAFC4',
+    title: '油肌保養完整攻略',
+    sub: '精選 12 篇社群心得・成分解析・推薦清單',
+    desc: '由社群版主整理，涵蓋清潔、控油、保濕到防曬的全步驟建議。',
+    cta: '查看精選',
+    ctaColor: '#7AAFC4',
+    bg: 'linear-gradient(135deg, #0F1620 0%, #162030 60%, #1A2A3A 100%)',
+    accentBlob: 'rgba(122,175,196,0.18)',
+  },
+  {
+    id: 4,
+    tag: '成分資料庫',
+    tagColor: '#C4B07A',
+    title: '150+ 款產品已收錄',
+    sub: '依膚質・功效・成分篩選你的理想保養品',
+    desc: '從化妝水到防曬，每款產品都有成分解析。現在就找到適合你的那一瓶。',
+    cta: '瀏覽產品',
+    ctaColor: '#C4B07A',
+    bg: 'linear-gradient(135deg, #1A1608 0%, #272010 60%, #302A14 100%)',
+    accentBlob: 'rgba(196,176,122,0.18)',
+  },
+];
+
+function BannerCarousel() {
+  const [idx, setIdx]       = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [animDir, setAnimDir] = useState('next'); // 'next' | 'prev'
+  const [animating, setAnimating] = useState(false);
+  const timerRef = useRef(null);
+
+  const goTo = (next, dir = 'next') => {
+    if (animating) return;
+    setAnimDir(dir);
+    setAnimating(true);
+    setTimeout(() => {
+      setIdx(next);
+      setAnimating(false);
+    }, 350);
+  };
+
+  const navigate_slide = useCallback((dir) => {
+    const next = dir === 'next'
+      ? (idx + 1) % BANNER_SLIDES.length
+      : (idx - 1 + BANNER_SLIDES.length) % BANNER_SLIDES.length;
+    goTo(next, dir);
+  }, [idx, animating]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (paused) return;
+    timerRef.current = setInterval(() => navigate_slide('next'), 5000);
+    return () => clearInterval(timerRef.current);
+  }, [paused, navigate_slide]);
+
+  const slide = BANNER_SLIDES[idx];
+
+  return (
+    <div
+      style={{ position: 'relative', width: '100%', overflow: 'hidden', borderRadius: '16px',
+        margin: '0 0 28px', userSelect: 'none', flexShrink: 0 }}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {/* 卡片本體 */}
+      <div style={{
+        background: slide.bg,
+        borderRadius: '16px',
+        padding: '36px 44px',
+        minHeight: '160px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '24px',
+        position: 'relative',
+        overflow: 'hidden',
+        opacity: animating ? 0 : 1,
+        transform: animating
+          ? `translateX(${animDir === 'next' ? '-24px' : '24px'})`
+          : 'translateX(0)',
+        transition: 'opacity 350ms ease, transform 350ms ease, background 400ms ease',
+      }}>
+        {/* 裝飾光暈 */}
+        <div style={{
+          position: 'absolute', right: '-60px', top: '-60px',
+          width: '280px', height: '280px', borderRadius: '50%',
+          background: slide.accentBlob, pointerEvents: 'none',
+          filter: 'blur(40px)',
+          transition: 'background 400ms',
+        }} />
+        <div style={{
+          position: 'absolute', left: '30%', bottom: '-80px',
+          width: '200px', height: '200px', borderRadius: '50%',
+          background: slide.accentBlob, pointerEvents: 'none',
+          filter: 'blur(60px)', opacity: 0.6,
+          transition: 'background 400ms',
+        }} />
+
+        {/* 文字區 */}
+        <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
+          <span style={{
+            display: 'inline-block',
+            padding: '3px 12px',
+            borderRadius: '999px',
+            background: `${slide.tagColor}22`,
+            color: slide.tagColor,
+            fontSize: '11px', fontWeight: 600,
+            letterSpacing: '0.08em',
+            fontFamily: '"DM Sans", sans-serif',
+            marginBottom: '12px',
+            border: `1px solid ${slide.tagColor}44`,
+          }}>
+            {slide.tag}
+          </span>
+          <h2 style={{
+            margin: '0 0 6px',
+            fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+            fontSize: '26px', fontWeight: 400,
+            color: '#F7F4F2', lineHeight: 1.2, letterSpacing: '0.02em',
+          }}>
+            {slide.title}
+          </h2>
+          <p style={{
+            margin: '0 0 6px',
+            fontSize: '12px', color: 'rgba(247,244,242,0.55)',
+            fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+            letterSpacing: '0.02em',
+          }}>
+            {slide.sub}
+          </p>
+          <p style={{
+            margin: '0 0 20px',
+            fontSize: '13px', color: 'rgba(247,244,242,0.75)',
+            fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+            lineHeight: 1.6, maxWidth: '480px',
+          }}>
+            {slide.desc}
+          </p>
+          <button style={{
+            padding: '8px 22px',
+            borderRadius: '8px',
+            border: `1px solid ${slide.ctaColor}`,
+            background: 'transparent',
+            color: slide.ctaColor,
+            fontSize: '13px', fontWeight: 500,
+            fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+            cursor: 'pointer',
+            transition: 'all 180ms',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.background = slide.ctaColor; e.currentTarget.style.color = '#1C1917'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = slide.ctaColor; }}
+          >
+            {slide.cta} →
+          </button>
+        </div>
+
+        {/* 幻燈片序號裝飾 */}
+        <div style={{
+          position: 'relative', zIndex: 1, flexShrink: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px',
+        }}>
+          <span style={{
+            fontFamily: '"Cormorant Garamond", serif',
+            fontSize: '64px', fontWeight: 300, lineHeight: 1,
+            color: 'rgba(247,244,242,0.08)',
+            letterSpacing: '-0.02em',
+          }}>
+            {String(idx + 1).padStart(2, '0')}
+          </span>
+        </div>
+      </div>
+
+      {/* 控制列：點 + 箭頭 */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 4px 0',
+      }}>
+        {/* 點指示器 */}
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          {BANNER_SLIDES.map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => goTo(i, i > idx ? 'next' : 'prev')}
+              style={{
+                border: 'none', padding: 0, cursor: 'pointer',
+                width: i === idx ? '24px' : '6px',
+                height: '6px', borderRadius: '999px',
+                background: i === idx ? slide.ctaColor : T.border,
+                transition: 'all 300ms cubic-bezier(0.16,1,0.3,1)',
+              }}
+            />
+          ))}
+        </div>
+
+        {/* 上 / 下一張 */}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {[{ dir: 'prev', icon: '←' }, { dir: 'next', icon: '→' }].map(({ dir, icon }) => (
+            <button
+              key={dir}
+              onClick={() => navigate_slide(dir)}
+              style={{
+                width: '30px', height: '30px', borderRadius: '50%',
+                border: `1px solid ${T.border}`,
+                background: 'transparent',
+                color: T.textTertiary,
+                fontSize: '14px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 150ms',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = slide.ctaColor; e.currentTarget.style.color = slide.ctaColor; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.textTertiary; }}
+            >
+              {icon}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
+
 
 /* ═══════════════════════════════════════
    主元件：依登入狀態切換畫面
@@ -119,9 +355,6 @@ function LoggedInHome({ user }) {
   const [eventPopDismissed, setEventPopDismissed] = useState(false);
   useReveal();
 
-  const greeting  = t(getGreetingKey());
-  const skinLabel = SKIN_LABELS[user.skin_type] ? t(SKIN_LABELS[user.skin_type]) : null;
-
   /* 活動 pop：1.8 秒後浮現 */
   useEffect(() => {
     const t = setTimeout(() => setEventPop(true), 1800);
@@ -135,17 +368,10 @@ function LoggedInHome({ user }) {
   return (
     <div style={H.page}>
 
-      {/* ── 歡迎列 ── */}
-      <div style={H.welcomeBar} className="g-fade-in gd-0">
-        <div style={H.welcomeInner}>
-          <div style={H.welcomeLeft}>
-            <span style={H.greetText}>{greeting}，{user.nickname}</span>
-            {skinLabel && <span style={H.skinBadge}>{skinLabel}</span>}
-          </div>
-          <button style={H.postBtn} onClick={() => {}}>
-            {t('+ 發布貼文')}
-          </button>
-        </div>
+      {/* ── 輪播 Banner ── */}
+      <div style={{ maxWidth: '860px', margin: '0 auto', padding: '0 24px', width: '100%', boxSizing: 'border-box' }}
+        className="g-fade-up gd-1">
+        <BannerCarousel />
       </div>
 
       {/* ── 主體 ── */}
@@ -686,7 +912,7 @@ function LandingPage() {
    Styles — 登入後主頁
    ═══════════════════════════════════════ */
 const H = {
-  page: { paddingTop: '64px', backgroundColor: 'var(--bg-base)', minHeight: '100vh' },
+  page: { paddingTop: '96px', backgroundColor: 'var(--bg-base)', minHeight: '100vh' },
 
   /* 歡迎列 */
   welcomeBar: {
