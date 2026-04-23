@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
   try {
     let query = supabase
       .from('questions')
-      .select('question_id, user_id, title, detail, tags, solved, views, created_at, users(nickname, department_grade)')
+      .select('question_id, user_id, is_anonymous, title, detail, tags, solved, views, created_at, users(nickname, department_grade)')
       .order('created_at', { ascending: false });
 
     if (user_id) query = query.eq('user_id', user_id);
@@ -28,14 +28,14 @@ router.get('/', async (req, res) => {
 
 // POST /api/questions — 新增問題
 router.post('/', async (req, res) => {
-  const { user_id, title, detail, tags } = req.body;
+  const { user_id, title, detail, tags, is_anonymous } = req.body;
   if (!title || !detail) {
     return res.status(400).json({ error: '標題與說明為必填' });
   }
   try {
     const { data, error } = await supabase
       .from('questions')
-      .insert({ user_id: user_id || null, title, detail, tags: tags || [] })
+      .insert({ user_id: user_id || null, title, detail, tags: tags || [], is_anonymous: !!is_anonymous })
       .select()
       .single();
 

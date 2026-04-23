@@ -57,7 +57,7 @@ function Dashboard() {
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setWishlist(data); })
       .catch(() => {});
-    fetch(`http://localhost:5001/api/questions?user_id=${parsed.user_id}`)
+    fetch(`${API_BASE}/api/questions?user_id=${parsed.user_id}`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setMyQuestions(data); })
       .catch(() => {});
@@ -280,7 +280,20 @@ function Dashboard() {
                     {myQuestions.map(q => (
                       <div key={q.question_id} style={wishlistStyle.card}>
                         <div style={wishlistStyle.cardHeader}>
-                          <span style={wishlistStyle.brand}>{new Date(q.created_at).toLocaleDateString('zh-TW')}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={wishlistStyle.brand}>{new Date(q.created_at).toLocaleDateString('zh-TW')}</span>
+                            {q.is_anonymous && (
+                              <span style={{
+                                fontSize: '10px', fontWeight: 500,
+                                color: T.accent,
+                                backgroundColor: 'rgba(196,137,122,0.12)',
+                                border: '1px solid rgba(196,137,122,0.25)',
+                                borderRadius: '999px',
+                                padding: '1px 7px',
+                                letterSpacing: '0.02em',
+                              }}>匿名</span>
+                            )}
+                          </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <button
                               style={wishlistStyle.deleteBtn}
@@ -288,7 +301,7 @@ function Dashboard() {
                               onClick={async () => {
                                 if (!window.confirm('確定要刪除這個問題嗎？')) return;
                                 try {
-                                  const res = await fetch(`http://localhost:5001/api/questions/${q.question_id}`, {
+                                  const res = await fetch(`${API_BASE}/api/questions/${q.question_id}`, {
                                     method: 'DELETE',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ user_id: user.user_id }),

@@ -39,7 +39,6 @@ export default function QA() {
   useEffect(() => {
     const stored = localStorage.getItem('user');
     const currentUser = stored ? JSON.parse(stored) : null;
-    const anonIds = JSON.parse(localStorage.getItem('anon_question_ids') || '[]');
 
     fetch(`${API_BASE}/api/questions`)
       .then(r => r.json())
@@ -53,16 +52,16 @@ export default function QA() {
           solved: q.solved,
           views: q.views,
           hot: false,
-          initial: q.users?.nickname?.[0]?.toUpperCase() || '?',
+          is_anonymous: q.is_anonymous,
+          initial: q.is_anonymous ? '匿' : (q.users?.nickname?.[0]?.toUpperCase() || '?'),
           authorColor: COLORS[i % COLORS.length],
-          author: q.users?.nickname || '匿名用戶',
-          dept: q.users?.department_grade || '',
+          author: q.is_anonymous ? '匿名用戶' : (q.users?.nickname || '匿名用戶'),
+          dept: q.is_anonymous ? '' : (q.users?.department_grade || ''),
           time: new Date(q.created_at).toLocaleDateString('zh-TW'),
           aiAnswer: '',
           expert: null,
           community: [],
-          _mine: (currentUser && String(q.user_id) === String(currentUser.user_id)) ||
-                 anonIds.includes(q.question_id),
+          _mine: currentUser && String(q.user_id) === String(currentUser.user_id),
         }));
         setQuestions(formatted);
       })
