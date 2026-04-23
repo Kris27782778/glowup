@@ -23,7 +23,16 @@ router.get('/', async (req, res) => {
 
     const { data, error } = await query;
     if (error) return res.status(400).json({ error: error.message });
-    res.json(data);
+
+    // 匿名問題：遮蔽公開列表的用戶資料（個人頁 include_anonymous=true 時保留）
+    const masked = (data || []).map(q => {
+      if (q.is_anonymous && include_anonymous !== 'true') {
+        return { ...q, user_id: null, users: null };
+      }
+      return q;
+    });
+
+    res.json(masked);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: '查詢失敗' });

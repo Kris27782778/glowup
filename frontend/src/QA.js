@@ -40,7 +40,6 @@ export default function QA() {
     const stored = localStorage.getItem('user');
     const currentUser = stored ? JSON.parse(stored) : null;
 
-    // 先注入剛發布的新問題（state 帶來的），避免 fetch 覆蓋它
     const nq = location.state?.newQuestion;
     if (nq) {
       setQuestions([nq]);
@@ -48,19 +47,27 @@ export default function QA() {
       window.history.replaceState({}, '');
     }
 
-    fetch(`${API_BASE}/api/questions`)
-      .then(r => r.json())
-      .then(data => {
+    // 同時拉公開問題 + 使用者自己的問題（含匿名）
+    const publicFetch = fetch(`${API_BASE}/api/questions`).then(r => r.json());
+    const mineFetch = currentUser?.user_id
+      ? fetch(`${API_BASE}/api/questions?user_id=${currentUser.user_id}&include_anonymous=true`).then(r => r.json())
+      : Promise.resolve([]);
+
+    Promise.all([publicFetch, mineFetch])
+      .then(([publicData, mineData]) => {
         const COLORS = ['#C4897A','#9E8A7A','#7BAF7B','#7AAFC4','#C4B07A','#9B7AC4'];
-        const formatted = data.map((q, i) => ({
+        // 建立「我自己的問題 ID」集合（包含匿名）
+        const myIds = new Set((Array.isArray(mineData) ? mineData : []).map(q => q.question_id));
+
+        const formatted = (Array.isArray(publicData) ? publicData : []).map((q, i) => ({
           id: q.question_id,
+          is_anonymous: q.is_anonymous,
           title: q.title,
           excerpt: q.detail,
           tags: q.tags || [],
           solved: q.solved,
           views: q.views,
           hot: false,
-          is_anonymous: q.is_anonymous,
           initial: q.is_anonymous ? '匿' : (q.users?.nickname?.[0]?.toUpperCase() || '?'),
           authorColor: COLORS[i % COLORS.length],
           author: q.is_anonymous ? '匿名用戶' : (q.users?.nickname || '匿名用戶'),
@@ -69,9 +76,8 @@ export default function QA() {
           aiAnswer: '',
           expert: null,
           community: [],
-          _mine: currentUser && String(q.user_id) === String(currentUser.user_id),
+          _mine: myIds.has(q.question_id),
         }));
-        // 用後端資料替換（後端已包含新問題，且 is_anonymous 欄位是準確的）
         setQuestions(formatted);
       })
       .catch(err => console.error('載入問題失敗', err));
