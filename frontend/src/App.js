@@ -12,6 +12,7 @@ import AuthGate from './components/AuthGate';
 import Community from './Community';
 import QA from './QA';
 import AskQuestion from './AskQuestion';
+import Admin from './Admin';
 import { applyTheme, getStoredSettings } from './hooks/useSettings';
 import './animations.css';
 
@@ -120,7 +121,10 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Layout />
+      <Routes>
+        <Route path="/admin/*" element={<Admin />} />
+        <Route path="/*"       element={<Layout />} />
+      </Routes>
     </BrowserRouter>
   );
 }
