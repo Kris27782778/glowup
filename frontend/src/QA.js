@@ -283,6 +283,7 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
   const [answers,        setAnswers]        = useState([]);
   const [showReplyForm,  setShowReplyForm]  = useState(false);
   const [replyText,      setReplyText]      = useState('');
+  const [replyAnon,      setReplyAnon]      = useState(false);
   const [replySubmitting, setReplySubmitting] = useState(false);
 
   useEffect(() => {
@@ -317,14 +318,14 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
       const res = await fetch(`${API_BASE}/api/questions/${q.id}/answers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: cu?.user_id, content: replyText.trim() }),
+        body: JSON.stringify({ user_id: replyAnon ? null : (cu?.user_id || null), content: replyText.trim() }),
       });
       if (res.ok) {
         setAnswers(prev => [...prev, {
-          initial: cu?.nickname?.[0]?.toUpperCase() || '?',
+          initial: replyAnon ? '匿' : (cu?.nickname?.[0]?.toUpperCase() || '?'),
           color:   '#C4897A',
-          name:    cu?.nickname || '匿名',
-          dept:    cu?.department_grade || '',
+          name:    replyAnon ? '匿名用戶' : (cu?.nickname || '匿名'),
+          dept:    replyAnon ? '' : (cu?.department_grade || ''),
           time:    '剛剛',
           text:    replyText.trim(),
           likes:   0,
@@ -496,10 +497,33 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
                     rows={3}
                     autoFocus
                   />
+                  {/* 匿名回覆切換 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0 4px' }}>
+                    <button
+                      onClick={() => setReplyAnon(p => !p)}
+                      style={{
+                        width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                        backgroundColor: replyAnon ? '#C4897A' : 'rgba(255,255,255,0.12)',
+                        position: 'relative', transition: 'background 250ms ease', flexShrink: 0,
+                      }}
+                      aria-label="匿名回覆"
+                    >
+                      <span style={{
+                        position: 'absolute', top: '2px',
+                        left: replyAnon ? '18px' : '2px',
+                        width: '16px', height: '16px', borderRadius: '50%',
+                        backgroundColor: '#fff', transition: 'left 250ms ease',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                      }} />
+                    </button>
+                    <span style={{ fontSize: '12px', color: replyAnon ? '#C4897A' : 'rgba(247,244,242,0.45)' }}>
+                      {replyAnon ? '匿名回覆' : '顯示身份回覆'}
+                    </span>
+                  </div>
                   <div style={s.replyFormActions}>
                     <button
                       style={s.replyCancelBtn}
-                      onClick={() => { setShowReplyForm(false); setReplyText(''); }}
+                      onClick={() => { setShowReplyForm(false); setReplyText(''); setReplyAnon(false); }}
                     >
                       取消
                     </button>

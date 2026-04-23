@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from './hooks/useLang';
+import API_BASE from './config';
 
 /* ─── 相似問題比對資料庫（同 QA.js mock data）─── */
 const SIMILAR_POOL = [
@@ -77,6 +78,7 @@ export default function AskQuestion() {
   const [title,       setTitle]       = useState('');
   const [detail,      setDetail]      = useState('');
   const [selTags,     setSelTags]     = useState([]);
+  const [anonymous,   setAnonymous]   = useState(false);
   const [errors,      setErrors]      = useState({});
   const [similar,     setSimilar]     = useState([]);
   const [aiLoading,   setAiLoading]   = useState(false);
@@ -114,11 +116,11 @@ export default function AskQuestion() {
     if (Object.keys(e).length) { setErrors(e); return; }
     setSubmitted(true);
     try {
-      const res = await fetch('http://localhost:5001/api/questions', {
+      const res = await fetch(`${API_BASE}/api/questions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: currentUser?.user_id || null,
+          user_id: anonymous ? null : (currentUser?.user_id || null),
           title: title.trim(),
           detail: detail.trim(),
           tags: selTags,
@@ -127,10 +129,10 @@ export default function AskQuestion() {
       const data = await res.json();
       const newQuestion = {
         id: data.question?.question_id || Date.now(),
-        initial: currentUser?.nickname?.[0]?.toUpperCase() || '我',
+        initial: anonymous ? '匿' : (currentUser?.nickname?.[0]?.toUpperCase() || '我'),
         authorColor: '#C4897A',
-        author: currentUser?.nickname || '匿名',
-        dept: currentUser?.department_grade || '',
+        author: anonymous ? '匿名用戶' : (currentUser?.nickname || '匿名'),
+        dept: anonymous ? '' : (currentUser?.department_grade || ''),
         time: '剛剛',
         tags: selTags,
         title: title.trim(),
@@ -290,6 +292,34 @@ export default function AskQuestion() {
                 })}
               </div>
               {errors.tags && <p style={s.errorMsg}>{errors.tags}</p>}
+            </section>
+
+            {/* 匿名選項 */}
+            <section style={{ ...s.section, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px' }}>
+              <div>
+                <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-main)', fontWeight: 500 }}>匿名發問</p>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'rgba(247,244,242,0.45)' }}>
+                  {anonymous ? '其他用戶將無法看到你的名字' : '顯示你的暱稱與系級'}
+                </p>
+              </div>
+              <button
+                onClick={() => setAnonymous(p => !p)}
+                style={{
+                  width: '44px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                  backgroundColor: anonymous ? '#C4897A' : 'rgba(255,255,255,0.12)',
+                  position: 'relative', transition: 'background 250ms ease', flexShrink: 0,
+                }}
+                aria-label="匿名切換"
+              >
+                <span style={{
+                  position: 'absolute', top: '3px',
+                  left: anonymous ? '23px' : '3px',
+                  width: '18px', height: '18px', borderRadius: '50%',
+                  backgroundColor: '#fff',
+                  transition: 'left 250ms ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                }} />
+              </button>
             </section>
 
             {/* 提交 */}
