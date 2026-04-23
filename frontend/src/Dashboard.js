@@ -73,6 +73,22 @@ function Dashboard() {
     setShowEdit(false);
   };
 
+  const handleRemoveFavorite = async (wishlistId, productId) => {
+    setWishlist(prev => prev.filter(w => w.wishlist_id !== wishlistId));
+    try {
+      await fetch('http://localhost:5001/api/wishlist', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.user_id, product_id: productId }),
+      });
+    } catch {
+      fetch(`http://localhost:5001/api/wishlist/${user.user_id}`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setWishlist(data); })
+        .catch(() => {});
+    }
+  };
+
   if (!user) return null;
 
   const initial  = user.nickname?.[0]?.toUpperCase() || '?';
@@ -248,7 +264,18 @@ function Dashboard() {
                         <div key={w.wishlist_id} style={wishlistStyle.card}>
                           <div style={wishlistStyle.cardHeader}>
                             <span style={wishlistStyle.brand}>{p.brand}</span>
-                            <span style={wishlistStyle.badge}>{p.sub_category}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={wishlistStyle.badge}>{p.sub_category}</span>
+                              <button
+                                onClick={() => handleRemoveFavorite(w.wishlist_id, p.product_id)}
+                                title="取消收藏"
+                                style={wishlistStyle.heartBtn}
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill={T.accent} stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                              </button>
+                            </div>
                           </div>
                           <p style={wishlistStyle.name}>{p.name}</p>
                           {p.product_ingredients?.length > 0 && (
@@ -706,6 +733,16 @@ const wishlistStyle = {
     backgroundColor: 'var(--bg-surface)',
     borderRadius: '999px',
     padding: '3px 10px',
+  },
+  heartBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '2px',
+    display: 'flex',
+    alignItems: 'center',
+    opacity: 0.85,
+    transition: 'opacity 0.15s',
   },
 };
 
