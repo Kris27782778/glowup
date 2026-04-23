@@ -57,7 +57,7 @@ function Dashboard() {
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setWishlist(data); })
       .catch(() => {});
-    fetch(`${API_BASE}/api/questions?user_id=${parsed.user_id}`)
+    fetch(`${API_BASE}/api/questions?user_id=${parsed.user_id}&include_anonymous=true`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setMyQuestions(data); })
       .catch(() => {});

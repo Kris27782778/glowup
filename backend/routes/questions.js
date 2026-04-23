@@ -4,14 +4,18 @@ const supabase = require('../config/supabase');
 
 // GET /api/questions — 取問題列表（支援 tag / search / solved 篩選）
 router.get('/', async (req, res) => {
-  const { tag, search, solved, user_id } = req.query;
+  const { tag, search, solved, user_id, include_anonymous } = req.query;
   try {
     let query = supabase
       .from('questions')
       .select('question_id, user_id, is_anonymous, title, detail, tags, solved, views, created_at, users(nickname, department_grade)')
       .order('created_at', { ascending: false });
 
-    if (user_id) query = query.eq('user_id', user_id);
+    if (user_id) {
+      query = query.eq('user_id', user_id);
+      // 查別人的問題時排除匿名，只有本人（include_anonymous=true）才能看到自己的匿名問題
+      if (include_anonymous !== 'true') query = query.eq('is_anonymous', false);
+    }
     if (solved === 'true')  query = query.eq('solved', true);
     if (solved === 'false') query = query.eq('solved', false);
     if (tag)    query = query.contains('tags', [tag]);
