@@ -59,18 +59,32 @@ function Dashboard() {
 
   useReveal();
 
-  const handleQuizComplete = (skinKey) => {
+  const handleQuizComplete = async (skinKey) => {
     const updated = { ...user, skin_type: skinKey };
     localStorage.setItem('user', JSON.stringify(updated));
     setUser(updated);
     setShowQuiz(false);
+    try {
+      await fetch('http://localhost:5001/api/auth/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.user_id, skin_type: skinKey }),
+      });
+    } catch { /* 靜默失敗，localStorage 已先更新 */ }
   };
 
-  const handleProfileSave = (patch) => {
+  const handleProfileSave = async (patch) => {
     const updated = { ...user, ...patch };
     localStorage.setItem('user', JSON.stringify(updated));
     setUser(updated);
     setShowEdit(false);
+    try {
+      await fetch('http://localhost:5001/api/auth/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.user_id, ...patch }),
+      });
+    } catch { /* 靜默失敗 */ }
   };
 
   if (!user) return null;

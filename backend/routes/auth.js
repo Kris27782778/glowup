@@ -116,6 +116,36 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// ── 更新個人資料 PATCH /api/auth/profile ──────────────────────────
+router.patch('/profile', async (req, res) => {
+  const { user_id, skin_type, nickname } = req.body;
+  if (!user_id) return res.status(400).json({ error: '缺少 user_id' });
+
+  try {
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    if (skin_type !== undefined) { fields.push(`skin_type = $${idx++}`); values.push(skin_type); }
+    if (nickname  !== undefined) { fields.push(`nickname  = $${idx++}`); values.push(nickname);  }
+
+    if (fields.length === 0) return res.status(400).json({ error: '沒有需要更新的欄位' });
+
+    values.push(user_id);
+    const result = await pool.query(
+      `UPDATE users SET ${fields.join(', ')} WHERE user_id = $${idx} RETURNING
+         user_id, student_id, nickname, department_grade, email, skin_type`,
+      values
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: '找不到使用者' });
+    res.json({ message: '更新成功', user: result.rows[0] });
+  } catch (err) {
+    console.error('[profile]', err.message);
+    res.status(500).json({ error: '更新失敗' });
+  }
+});
+
 // ── 登入 POST /api/auth/login ─────────────────────────────────────
 router.post('/login', async (req, res) => {
   const { student_id, password } = req.body;
