@@ -138,13 +138,28 @@ function Register() {
     otpRefs.current[Math.min(pasted.length, 5)]?.focus();
   };
 
-  const handleResend = () => {
-    startCooldown();
-    setOtpDigits(Array(6).fill(''));
+  const fullEmail = `${form.email}@cloud.fju.edu.tw`;
+
+  const sendVerification = async () => {
+    const res = await fetch('http://localhost:5001/api/auth/send-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: fullEmail }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '驗證碼寄送失敗');
+  };
+
+  const handleResend = async () => {
     setError('');
-    otpRefs.current[0]?.focus();
-    // TODO: 後端串接後在此呼叫重新發送 API
-    // await fetch('http://localhost:5001/api/auth/send-verification', { ... })
+    setOtpDigits(Array(6).fill(''));
+    try {
+      await sendVerification();
+      startCooldown();
+      otpRefs.current[0]?.focus();
+    } catch (e) {
+      setError(e.message);
+    }
   };
 
   const validateStep = () => {
@@ -163,16 +178,50 @@ function Register() {
     }
     if (step === 2) {
       if (otpDigits.some(d => d === '')) return '請輸入完整的 6 位驗證碼';
-      // TODO: 後端串接後在此呼叫驗證 API，目前前端僅檢查格式
     }
-    // step 3 由 SkinQuiz 元件自行處理，無需外層驗證
     return null;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const err = validateStep();
     if (err) { setError(err); return; }
     setError('');
+
+    // 步驟 1 → 2：寄送驗證碼
+    if (step === 1) {
+      setLoading(true);
+      try {
+        await sendVerification();
+        setStep(2);
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // 步驟 2 → 3：驗證 OTP
+    if (step === 2) {
+      setLoading(true);
+      try {
+        const otp = otpDigits.join('');
+        const res = await fetch('http://localhost:5001/api/auth/verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: fullEmail, otp }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setError(data.error || '驗證失敗'); return; }
+        setStep(3);
+      } catch {
+        setError('無法連接伺服器，請稍後再試');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     setStep(s => s + 1);
   };
 
