@@ -43,7 +43,8 @@ function Dashboard() {
   const [tab,  setTab]            = useState(0);
   const [showQuiz, setShowQuiz]   = useState(false);
   const [showEdit, setShowEdit]   = useState(false);
-  const [wishlist, setWishlist]   = useState([]);
+  const [wishlist,     setWishlist]     = useState([]);
+  const [myQuestions,  setMyQuestions]  = useState([]);
   const navigate = useNavigate();
   const { t } = useLang();
 
@@ -55,6 +56,10 @@ function Dashboard() {
     fetch(`${API_BASE}/api/wishlist/${parsed.user_id}`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setWishlist(data); })
+      .catch(() => {});
+    fetch(`http://localhost:5001/api/questions?user_id=${parsed.user_id}`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setMyQuestions(data); })
       .catch(() => {});
   }, [navigate]);
 
@@ -248,7 +253,56 @@ function Dashboard() {
           {/* 內容區：key 讓 tab 切換時重新掛載觸發動畫 */}
           <div style={styles.tabContent}>
             <div key={tab} className="g-tab-content">
-              {tab === 2 ? (
+              {tab === 1 ? (
+                myQuestions.length === 0 ? (
+                  <EmptyState
+                    title={t(EMPTY_KEYS[1].title)}
+                    sub={t(EMPTY_KEYS[1].sub)}
+                  />
+                ) : (
+                  <div style={wishlistStyle.grid}>
+                    {myQuestions.map(q => (
+                      <div key={q.question_id} style={wishlistStyle.card}>
+                        <div style={wishlistStyle.cardHeader}>
+                          <span style={wishlistStyle.brand}>{new Date(q.created_at).toLocaleDateString('zh-TW')}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                              style={wishlistStyle.deleteBtn}
+                              title="刪除問題"
+                              onClick={async () => {
+                                if (!window.confirm('確定要刪除這個問題嗎？')) return;
+                                try {
+                                  const res = await fetch(`http://localhost:5001/api/questions/${q.question_id}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ user_id: user.user_id }),
+                                  });
+                                  const data = await res.json();
+                                  if (res.ok) {
+                                    setMyQuestions(prev => prev.filter(x => x.question_id !== q.question_id));
+                                  } else {
+                                    alert(data.error || '刪除失敗');
+                                  }
+                                } catch {
+                                  alert('刪除失敗，請確認後端是否啟動');
+                                }
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                        <p style={wishlistStyle.name}>{q.title}</p>
+                        <div style={wishlistStyle.tags}>
+                          {(q.tags || []).map(tag => (
+                            <span key={tag} style={wishlistStyle.tag}>{tag}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : tab === 2 ? (
                 wishlist.length === 0 ? (
                   <EmptyState
                     title={t(EMPTY_KEYS[2].title)}
@@ -721,6 +775,21 @@ const wishlistStyle = {
     backgroundColor: 'var(--bg-surface)',
     borderRadius: '999px',
     padding: '3px 10px',
+  },
+  deleteBtn: {
+    width: '22px',
+    height: '22px',
+    borderRadius: '50%',
+    border: '1px solid rgba(192,80,74,0.3)',
+    backgroundColor: 'rgba(192,80,74,0.06)',
+    color: '#C0504A',
+    fontSize: '11px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+    flexShrink: 0,
   },
 };
 

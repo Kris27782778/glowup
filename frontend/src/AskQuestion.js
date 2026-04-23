@@ -109,29 +109,46 @@ export default function AskQuestion() {
     return e;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
     setSubmitted(true);
-    const newQuestion = {
-      id: Date.now(),
-      initial: currentUser?.nickname?.[0]?.toUpperCase() || '我',
-      authorColor: '#C4897A',
-      author: currentUser?.nickname || '匿名',
-      dept: currentUser?.department_grade || '',
-      time: '剛剛',
-      tags: selTags,
-      title: title.trim(),
-      excerpt: detail.trim(),
-      views: 0,
-      solved: false,
-      hot: false,
-      aiAnswer: '',
-      expert: null,
-      community: [],
-      _mine: true,
-    };
-    setTimeout(() => navigate('/qa', { state: { newQuestion } }), 2000);
+    try {
+      const res = await fetch('http://localhost:5001/api/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: currentUser?.user_id || null,
+          title: title.trim(),
+          detail: detail.trim(),
+          tags: selTags,
+        }),
+      });
+      const data = await res.json();
+      const newQuestion = {
+        id: data.question?.question_id || Date.now(),
+        initial: currentUser?.nickname?.[0]?.toUpperCase() || '我',
+        authorColor: '#C4897A',
+        author: currentUser?.nickname || '匿名',
+        dept: currentUser?.department_grade || '',
+        time: '剛剛',
+        tags: selTags,
+        title: title.trim(),
+        excerpt: detail.trim(),
+        views: 0,
+        solved: false,
+        hot: false,
+        aiAnswer: '',
+        expert: null,
+        community: [],
+        _mine: true,
+      };
+      setTimeout(() => navigate('/qa', { state: { newQuestion } }), 2000);
+    } catch (err) {
+      console.error('提問失敗', err);
+      setSubmitted(false);
+      setErrors({ title: '提交失敗，請確認後端伺服器是否啟動' });
+    }
   };
 
   return (
