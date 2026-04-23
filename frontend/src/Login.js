@@ -134,7 +134,7 @@ function Login() {
           <div style={styles.formHeader}>
             <p style={styles.eyebrow}>WELCOME BACK</p>
             <h2 style={styles.formTitle}>{t('登入')}</h2>
-            <p style={styles.formSub}>{t('使用輔大校務帳號登入')}</p>
+            <p style={styles.formSub}>{t('使用輔大電子郵件帳號登入')}</p>
           </div>
 
           {/* 輸入欄 */}

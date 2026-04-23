@@ -73,19 +73,16 @@ function GlobalSplash({ onDone }) {
 }
 
 function Layout() {
-  const { pathname, state } = useLocation();
-  const [showSplash, setShowSplash] = useState(false);
-  const [mountKey,   setMountKey]   = useState(0);
-  const prevState = useRef(null);
+  const { pathname } = useLocation();
+  const [mountKey, setMountKey] = useState(0);
+  const prevPath = useRef(null);
 
   useEffect(() => {
-    // 只在 state 物件真正變動（不是同一個參照）時才觸發
-    if (state?.showSplash && state !== prevState.current) {
-      prevState.current = state;
-      setMountKey(k => k + 1); // 強制子路由重新掛載（讓 Hero 重讀 localStorage）
-      setShowSplash(true);
+    if (prevPath.current !== null && prevPath.current !== pathname) {
+      setMountKey(k => k + 1);
     }
-  }, [pathname, state]);
+    prevPath.current = pathname;
+  }, [pathname]);
 
   return (
     <>
@@ -105,12 +102,22 @@ function Layout() {
         </Routes>
       </div>
       <Footer />
-      {showSplash && <GlobalSplash onDone={() => setShowSplash(false)} />}
     </>
   );
 }
 
 function App() {
+  const [splashDone, setSplashDone] = useState(false);
+
+  const handleSplashDone = () => {
+    setSplashDone(true);
+    window.scrollTo(0, 0);
+  };
+
+  if (!splashDone) {
+    return <GlobalSplash onDone={handleSplashDone} />;
+  }
+
   return (
     <BrowserRouter>
       <Layout />
