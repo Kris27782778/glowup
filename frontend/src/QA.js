@@ -36,10 +36,12 @@ export default function QA() {
 
   /* 頁面載入時從後端拿問題 */
   useEffect(() => {
+    const stored = localStorage.getItem('user');
+    const currentUser = stored ? JSON.parse(stored) : null;
+
     fetch('http://localhost:5001/api/questions')
       .then(r => r.json())
       .then(data => {
-        // 把後端格式轉成畫面需要的格式
         const formatted = data.map(q => ({
           id: q.question_id,
           title: q.title,
@@ -56,7 +58,7 @@ export default function QA() {
           aiAnswer: '',
           expert: null,
           community: [],
-          _mine: false,
+          _mine: currentUser && String(q.user_id) === String(currentUser.user_id),
         }));
         setQuestions(formatted);
       })
@@ -75,17 +77,13 @@ export default function QA() {
   }, []);
 
   const TABS = [
-    { key: 'all',      label: t('全部問題') || '全部問題' },
-    { key: 'unsolved', label: t('未解決') || '未解決' },
-    { key: 'solved',   label: t('已解決') || '已解決' },
-    { key: 'mine',     label: t('我的提問') || '我的提問' },
+    { key: 'all',  label: t('全部問題') || '全部問題' },
+    { key: 'mine', label: t('我的提問') || '我的提問' },
   ];
 
   const filtered = questions
     .filter(q => {
-      if (tab === 'solved')   return q.solved;
-      if (tab === 'unsolved') return !q.solved;
-      if (tab === 'mine')     return q._mine === true;
+      if (tab === 'mine') return q._mine === true;
       return true;
     })
     .filter(q => activeTag === '全部' || q.tags.includes(activeTag))
@@ -280,8 +278,61 @@ export default function QA() {
 
 /* ─── 問題卡片（含三層回答展開） ───────────────────────── */
 function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
-  const answerTotal = (q.community?.length || 0) + (q.expert ? 1 : 0) + 1;
+  const [answers,        setAnswers]        = useState([]);
+  const [showReplyForm,  setShowReplyForm]  = useState(false);
+  const [replyText,      setReplyText]      = useState('');
+  const [replySubmitting, setReplySubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!expanded) return;
+    fetch(`http://localhost:5001/api/questions/${q.id}/answers`)
+      .then(r => r.json())
+      .then(data => {
+        setAnswers(data.map(a => ({
+          initial: '?',
+          color:   '#C4897A',
+          name:    '使用者',
+          dept:    '',
+          time:    new Date(a.created_at).toLocaleDateString('zh-TW'),
+          text:    a.content,
+          likes:   0,
+        })));
+      })
+      .catch(() => {});
+  }, [expanded, q.id]);
+
+  const allReplies  = answers;
+  const answerTotal = allReplies.length + (q.expert ? 1 : 0) + 1;
   const statusColor = q.solved ? '#5A9E7A' : '#C4A35A';
+
+  const handleReplySubmit = async () => {
+    if (!replyText.trim()) return;
+    const stored = localStorage.getItem('user');
+    const cu = stored ? JSON.parse(stored) : null;
+    setReplySubmitting(true);
+    try {
+      const res = await fetch(`http://localhost:5001/api/questions/${q.id}/answers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: cu?.user_id, content: replyText.trim() }),
+      });
+      if (res.ok) {
+        setAnswers(prev => [...prev, {
+          initial: cu?.nickname?.[0]?.toUpperCase() || '?',
+          color:   '#C4897A',
+          name:    cu?.nickname || '匿名',
+          dept:    cu?.department_grade || '',
+          time:    '剛剛',
+          text:    replyText.trim(),
+          likes:   0,
+        }]);
+        setReplyText('');
+        setShowReplyForm(false);
+      }
+    } finally {
+      setReplySubmitting(false);
+    }
+  };
 
   return (
     <div style={{ ...s.card, animationDelay: `${idx * 60}ms` }} className="g-fade-up">
@@ -316,26 +367,20 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
           </div>
         </div>
 
-        {/* 右側：統計 + 操作 */}
+        {/* 右側：回答數泡泡 + 查看回答 */}
         <div style={s.cardSide}>
-          {/* 回答數泡泡 */}
           <div style={{ ...s.answerBubble, borderColor: q.solved ? 'rgba(90,158,122,0.3)' : 'var(--border)' }}>
             <span style={{ ...s.answerBubbleNum, color: statusColor }}>{answerTotal}</span>
             <span style={s.answerBubbleLabel}>{t('則回答') || '則回答'}</span>
           </div>
-
+          <button style={s.expandBtn} onClick={onToggle}>
+            {expanded ? (t('收起') || '收起') : (t('查看回答') || '查看回答')}
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+              style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }}>
+              <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         </div>
-      </div>
-
-      {/* 展開按鈕 */}
-      <div style={s.cardFooter}>
-        <button style={s.expandBtn} onClick={onToggle}>
-          {expanded ? (t('收起回答') || '收起回答') : (t('查看回答') || '查看回答')}
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
-            style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }}>
-            <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
       </div>
 
       {/* ── 三層回答展開區 ── */}
@@ -354,9 +399,12 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
             <div style={s.tierBodyAI}>
               <div style={s.aiGlow} />
               <p style={s.tierText}>
-                {q.aiAnswer.split('\n\n').map((para, i) => (
-                  <span key={i}>{para}{i < q.aiAnswer.split('\n\n').length - 1 && <><br /><br /></>}</span>
-                ))}
+                {q.aiAnswer
+                  ? q.aiAnswer.split('\n\n').map((para, i, arr) => (
+                      <span key={i}>{para}{i < arr.length - 1 && <><br /><br /></>}</span>
+                    ))
+                  : <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>AI 回覆功能即將上線</span>
+                }
               </p>
             </div>
           </div>
@@ -400,44 +448,78 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
           )}
 
           {/* ── Tier 3：社群回答 ── */}
-          {q.community && q.community.length > 0 && (
-            <div style={s.tierBlock}>
-              <div style={s.tierHeader}>
-                <div style={s.tierBadgeCommunity}>
-                  <CommunityIcon size={12} />
-                  <span>{t('社群回答') || '社群回答'}</span>
-                </div>
-                <span style={s.tierHeaderLabel}>{q.community.length} {t('則') || '則'}</span>
+          <div style={s.tierBlock}>
+            <div style={s.tierHeader}>
+              <div style={s.tierBadgeCommunity}>
+                <CommunityIcon size={12} />
+                <span>{t('社群回答') || '社群回答'}</span>
               </div>
-              <div style={s.tierBodyCommunity}>
-                {q.community.map((c, i) => (
-                  <div key={i} style={{ ...s.communityAnswer, ...(i < q.community.length - 1 ? s.communityAnswerBorder : {}) }}>
-                    <div style={s.communityAuthorRow}>
-                      <div style={{ ...s.communityAvatar, backgroundColor: c.color }}>{c.initial}</div>
-                      <div style={s.communityAuthorInfo}>
-                        <span style={s.communityName}>{c.name}</span>
-                        <span style={s.communityMeta}>{c.dept} · {c.time}</span>
-                      </div>
-                      <button style={s.likeBtn}>
-                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                          <path d="M6.5 11S1 7.5 1 4a2.5 2.5 0 015-0 2.5 2.5 0 015 0C11 7.5 6.5 11 6.5 11z"
-                            stroke="var(--text-tertiary)" strokeWidth="1.2" strokeLinejoin="round"/>
-                        </svg>
-                        {c.likes}
-                      </button>
+              <span style={s.tierHeaderLabel}>{allReplies.length} {t('則') || '則'}</span>
+            </div>
+            <div style={s.tierBodyCommunity}>
+
+              {/* 現有回覆列表 */}
+              {allReplies.length === 0 && !showReplyForm && (
+                <p style={s.noReplyHint}>尚無社群回答，成為第一個回覆的人</p>
+              )}
+              {allReplies.map((c, i) => (
+                <div key={i} style={{ ...s.communityAnswer, ...(i < allReplies.length - 1 ? s.communityAnswerBorder : {}) }}>
+                  <div style={s.communityAuthorRow}>
+                    <div style={{ ...s.communityAvatar, backgroundColor: c.color }}>{c.initial}</div>
+                    <div style={s.communityAuthorInfo}>
+                      <span style={s.communityName}>{c.name}</span>
+                      <span style={s.communityMeta}>{c.dept}{c.dept && ' · '}{c.time}</span>
                     </div>
-                    <p style={s.communityText}>{c.text}</p>
+                    <button style={s.likeBtn}>
+                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                        <path d="M6.5 11S1 7.5 1 4a2.5 2.5 0 015-0 2.5 2.5 0 015 0C11 7.5 6.5 11 6.5 11z"
+                          stroke="var(--text-tertiary)" strokeWidth="1.2" strokeLinejoin="round"/>
+                      </svg>
+                      {c.likes}
+                    </button>
                   </div>
-                ))}
-                <button style={s.replyBtn}>
+                  <p style={s.communityText}>{c.text}</p>
+                </div>
+              ))}
+
+              {/* 回覆表單 */}
+              {showReplyForm ? (
+                <div style={s.replyForm}>
+                  <textarea
+                    style={s.replyTextarea}
+                    placeholder="分享你的保養經驗或建議…"
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    rows={3}
+                    autoFocus
+                  />
+                  <div style={s.replyFormActions}>
+                    <button
+                      style={s.replyCancelBtn}
+                      onClick={() => { setShowReplyForm(false); setReplyText(''); }}
+                    >
+                      取消
+                    </button>
+                    <button
+                      style={{ ...s.replySubmitBtn, opacity: replyText.trim() ? 1 : 0.45 }}
+                      onClick={handleReplySubmit}
+                      disabled={!replyText.trim() || replySubmitting}
+                    >
+                      送出回覆
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button style={s.replyBtn} onClick={() => setShowReplyForm(true)}>
                   <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                     <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                   </svg>
                   {t('回答此問題') || '回答此問題'}
                 </button>
-              </div>
+              )}
             </div>
-          )}
+          </div>
+
         </div>
       )}
     </div>
@@ -839,14 +921,16 @@ const s = {
     fontSize: '11px', color: 'var(--text-tertiary)',
   },
   expandBtn: {
-    display: 'flex', alignItems: 'center', gap: '5px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+    width: '100%',
     background: 'none',
     border: '1px solid var(--border)',
     borderRadius: '6px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '12px', color: 'var(--text-secondary)',
-    cursor: 'pointer', padding: '5px 12px',
+    fontSize: '11px', color: 'var(--text-secondary)',
+    cursor: 'pointer', padding: '5px 6px',
     transition: 'border-color 150ms',
+    whiteSpace: 'nowrap',
   },
 
   /* ── Answer Panel ── */
@@ -1013,6 +1097,11 @@ const s = {
     fontSize: '13px', color: 'var(--text-secondary)',
     lineHeight: 1.65, margin: 0,
   },
+  noReplyHint: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px', color: 'var(--text-tertiary)',
+    textAlign: 'left', padding: '16px 18px 8px', margin: 0,
+  },
   replyBtn: {
     display: 'flex', alignItems: 'center', gap: '6px',
     margin: '10px 18px 14px',
@@ -1025,6 +1114,55 @@ const s = {
     cursor: 'pointer',
     alignSelf: 'flex-start',
     transition: 'border-color 150ms, color 150ms',
+  },
+  replyForm: {
+    margin: '8px 18px 14px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  replyTextarea: {
+    width: '100%',
+    padding: '12px 14px',
+    borderRadius: '10px',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: 'var(--text-primary)',
+    lineHeight: 1.65,
+    resize: 'vertical',
+    outline: 'none',
+    boxSizing: 'border-box',
+  },
+  replyFormActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '8px',
+  },
+  replyCancelBtn: {
+    height: '34px',
+    padding: '0 16px',
+    backgroundColor: 'transparent',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px',
+    color: 'var(--text-secondary)',
+    cursor: 'pointer',
+  },
+  replySubmitBtn: {
+    height: '34px',
+    padding: '0 18px',
+    backgroundColor: 'var(--accent)',
+    border: 'none',
+    borderRadius: '8px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px',
+    fontWeight: 500,
+    color: '#FFFFFF',
+    cursor: 'pointer',
+    transition: 'opacity 150ms',
   },
 
   /* Tier list (sidebar) */
