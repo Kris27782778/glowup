@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
   try {
     let query = supabase
       .from('questions')
-      .select('question_id, user_id, title, detail, tags, solved, views, created_at')
+      .select('question_id, user_id, title, detail, tags, solved, views, created_at, users(nickname, department_grade)')
       .order('created_at', { ascending: false });
 
     if (user_id) query = query.eq('user_id', user_id);
