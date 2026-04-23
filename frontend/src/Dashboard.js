@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import API_BASE from './config';
 import { useReveal } from './hooks/useReveal';
 import SkinQuiz from './components/SkinQuiz';
 import { useLang } from './hooks/useLang';
@@ -42,7 +43,8 @@ function Dashboard() {
   const [tab,  setTab]            = useState(0);
   const [showQuiz, setShowQuiz]   = useState(false);
   const [showEdit, setShowEdit]   = useState(false);
-  const [wishlist, setWishlist]   = useState([]);
+  const [wishlist,     setWishlist]     = useState([]);
+  const [myQuestions,  setMyQuestions]  = useState([]);
   const navigate = useNavigate();
   const { t } = useLang();
 
@@ -51,9 +53,13 @@ function Dashboard() {
     if (!stored) { navigate('/login'); return; }
     const parsed = JSON.parse(stored);
     setUser(parsed);
-    fetch(`http://localhost:5001/api/wishlist/${parsed.user_id}`)
+    fetch(`${API_BASE}/api/wishlist/${parsed.user_id}`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setWishlist(data); })
+      .catch(() => {});
+    fetch(`http://localhost:5001/api/questions?user_id=${parsed.user_id}`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setMyQuestions(data); })
       .catch(() => {});
   }, [navigate]);
 
@@ -65,7 +71,7 @@ function Dashboard() {
     setUser(updated);
     setShowQuiz(false);
     try {
-      await fetch('http://localhost:5001/api/auth/profile', {
+      await fetch(API_BASE + '/api/auth/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.user_id, skin_type: skinKey }),
@@ -79,12 +85,28 @@ function Dashboard() {
     setUser(updated);
     setShowEdit(false);
     try {
-      await fetch('http://localhost:5001/api/auth/profile', {
+      await fetch(API_BASE + '/api/auth/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.user_id, ...patch }),
       });
     } catch { /* 靜默失敗 */ }
+  };
+
+  const handleRemoveFavorite = async (wishlistId, productId) => {
+    setWishlist(prev => prev.filter(w => w.wishlist_id !== wishlistId));
+    try {
+      await fetch(`${API_BASE}/api/wishlist`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.user_id, product_id: productId }),
+      });
+    } catch {
+      fetch(`${API_BASE}/api/wishlist/${user.user_id}`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setWishlist(data); })
+        .catch(() => {});
+    }
   };
 
   if (!user) return null;
@@ -247,7 +269,56 @@ function Dashboard() {
           {/* 內容區：key 讓 tab 切換時重新掛載觸發動畫 */}
           <div style={styles.tabContent}>
             <div key={tab} className="g-tab-content">
-              {tab === 2 ? (
+              {tab === 1 ? (
+                myQuestions.length === 0 ? (
+                  <EmptyState
+                    title={t(EMPTY_KEYS[1].title)}
+                    sub={t(EMPTY_KEYS[1].sub)}
+                  />
+                ) : (
+                  <div style={wishlistStyle.grid}>
+                    {myQuestions.map(q => (
+                      <div key={q.question_id} style={wishlistStyle.card}>
+                        <div style={wishlistStyle.cardHeader}>
+                          <span style={wishlistStyle.brand}>{new Date(q.created_at).toLocaleDateString('zh-TW')}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                              style={wishlistStyle.deleteBtn}
+                              title="刪除問題"
+                              onClick={async () => {
+                                if (!window.confirm('確定要刪除這個問題嗎？')) return;
+                                try {
+                                  const res = await fetch(`http://localhost:5001/api/questions/${q.question_id}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ user_id: user.user_id }),
+                                  });
+                                  const data = await res.json();
+                                  if (res.ok) {
+                                    setMyQuestions(prev => prev.filter(x => x.question_id !== q.question_id));
+                                  } else {
+                                    alert(data.error || '刪除失敗');
+                                  }
+                                } catch {
+                                  alert('刪除失敗，請確認後端是否啟動');
+                                }
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                        <p style={wishlistStyle.name}>{q.title}</p>
+                        <div style={wishlistStyle.tags}>
+                          {(q.tags || []).map(tag => (
+                            <span key={tag} style={wishlistStyle.tag}>{tag}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : tab === 2 ? (
                 wishlist.length === 0 ? (
                   <EmptyState
                     title={t(EMPTY_KEYS[2].title)}
@@ -262,7 +333,18 @@ function Dashboard() {
                         <div key={w.wishlist_id} style={wishlistStyle.card}>
                           <div style={wishlistStyle.cardHeader}>
                             <span style={wishlistStyle.brand}>{p.brand}</span>
-                            <span style={wishlistStyle.badge}>{p.sub_category}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={wishlistStyle.badge}>{p.sub_category}</span>
+                              <button
+                                onClick={() => handleRemoveFavorite(w.wishlist_id, p.product_id)}
+                                title="取消收藏"
+                                style={wishlistStyle.heartBtn}
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill={T.accent} stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                              </button>
+                            </div>
                           </div>
                           <p style={wishlistStyle.name}>{p.name}</p>
                           {p.product_ingredients?.length > 0 && (
@@ -720,6 +802,30 @@ const wishlistStyle = {
     backgroundColor: 'var(--bg-surface)',
     borderRadius: '999px',
     padding: '3px 10px',
+  },
+  heartBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '2px',
+    display: 'flex',
+    alignItems: 'center',
+    opacity: 0.85,
+  },
+  deleteBtn: {
+    width: '22px',
+    height: '22px',
+    borderRadius: '50%',
+    border: '1px solid rgba(192,80,74,0.3)',
+    backgroundColor: 'rgba(192,80,74,0.06)',
+    color: '#C0504A',
+    fontSize: '11px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+    flexShrink: 0,
   },
 };
 

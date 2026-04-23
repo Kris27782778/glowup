@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl -s http://localhost:5001/api/auth/login -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"student_id\\\\\":\\\\\"test\\\\\",\\\\\"password\\\\\":\\\\\"test\\\\\"}\")"
+      "Bash(node -e \"require\\('dotenv'\\).config\\({path:'.env'}\\); console.log\\('PORT:', process.env.PORT\\);\")",
+      "Bash(npx eslint:*)"
     ]
   }
 }

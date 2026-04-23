@@ -1,3 +1,4 @@
+import API_BASE from "./config";
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useLang } from './hooks/useLang';
@@ -44,7 +45,7 @@ function Login() {
     if (!studentId || !password) { setError(t('請填寫學號與密碼')); return; }
     setLoading(true); setError('');
     try {
-      const res  = await fetch('http://localhost:5001/api/auth/login', {
+      const res  = await fetch(API_BASE + '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ student_id: studentId, password }),

@@ -2,93 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useReveal } from './hooks/useReveal';
 import { useLang } from './hooks/useLang';
+import API_BASE from './config';
 
-/* ─── Mock data ─────────────────────────────────────────── */
-const MOCK_QUESTIONS = [
-  {
-    id: 1, initial: '陳', authorColor: '#9E8A7A',
-    author: '陳柔安', dept: '護理學系', time: '1 小時前',
-    tags: ['成分討論', '敏感肌'],
-    title: '乳酸和杏仁酸可以交替使用嗎？濃度怎麼配？',
-    excerpt: '我目前有一瓶 8% 乳酸和一瓶 6% 杏仁酸，想了解這兩種果酸交替使用的邏輯，晚上用完之後早上要加強保濕嗎？',
-    views: 312, solved: true, hot: true,
-    aiAnswer: '乳酸（Lactic Acid）與杏仁酸（Mandelic Acid）均屬 AHA，但分子量與滲透速率不同。杏仁酸分子較大，刺激性低，適合敏感肌入門；乳酸滲透較深，保濕效果也更佳。\n\n交替使用的邏輯：建議以「週一三五用杏仁酸、週二四六用乳酸」的輪替方式，避免每日使用同一種酸造成累積刺激。用後的早晨需加強保濕並確實防曬（SPF 30+），因為 AHA 會提升光敏感性。若發現泛紅刺痛，立即暫停並回歸基礎保養 3–5 天。',
-    expert: { initial: '王', color: '#7A8A9E', name: '王思涵', badge: '化學系・成分達人', answer: '補充一點：乳酸的保濕效果源自其本身就是 NMF（天然保濕因子）的成分之一。如果你的主要需求是去角質兼保濕，晚上可以只用乳酸，不一定需要輪替。杏仁酸比較適合有在處理粉刺或毛孔問題的情況。', likes: 31 },
-    community: [
-      { initial: '林', color: '#C4897A', name: '林小羽', dept: '化妝品系', time: '45 分鐘前', text: '我之前也在糾結這個！最後選擇週間用杏仁酸、週末只做保濕不用酸，皮膚反而穩很多，供參考。', likes: 12 },
-      { initial: '吳', color: '#9A7AA0', name: '吳宜庭', dept: '生物科技學系', time: '2 小時前', text: '同樣敏感肌，我的經驗是不管哪種酸用完一定要搭凡士林封層，乾燥感會好很多。', likes: 8 },
-    ],
-  },
-  {
-    id: 2, initial: '王', authorColor: '#7A8A9E',
-    author: '王思涵', dept: '化學系', time: '3 小時前',
-    tags: ['抗老', '成分討論'],
-    title: 'A 醇初學者從多少濃度開始？搭配什麼保濕品比較不刺激？',
-    excerpt: '想嘗試視黃醇但超怕刺激，看過很多說法都不太一樣，想問有實際用過的人從哪個濃度入門，怎麼搭配保養步驟比較安全。',
-    views: 589, solved: false, hot: true,
-    aiAnswer: '視黃醇（Retinol）建議初學者從 0.025%–0.05% 開始，每週使用 2 次，持續 4 週若無不適再增加頻率。「三明治法」是目前公認最能降低刺激性的用法：先塗保濕品（薄薄一層），再塗視黃醇，最後再加一層保濕鎖住。\n\n搭配建議：避免同一晚使用酸類（AHA/BHA）或維生素 C；白天務必使用 SPF 50+ 防曬。初期可能出現脫屑、泛紅屬正常「維 A 反應期」，通常 4–6 週後皮膚會自行調適。',
-    expert: { initial: '黃', color: '#A08060', name: '黃品蓁', badge: '化妝品系・配方研究', answer: '補充一個不常被提到的點：視黃醇在光線下會加速降解，所以一定要儲存在避光容器裡，並且只在夜間使用。便宜但包裝不避光的產品，效果打折很多。另外，如果你的保濕品含有 niacinamide，跟 A 醇搭配反而可以有效減緩初期刺激。', likes: 47 },
-    community: [
-      { initial: '陳', color: '#9E8A7A', name: '陳柔安', dept: '護理學系', time: '1 小時前', text: '我從 0.025% 開始用，三明治法真的有效！第一個月有點乾，但現在膚況穩很多，毛孔也細緻了。', likes: 19 },
-      { initial: '張', color: '#8A9E7A', name: '張宇軒', dept: '資訊管理學系', time: '2 小時前', text: 'The Ordinary 0.2% 入門款很多人推薦，但我覺得它乳狀質地比較難推開，換成 0.1% 膠囊型的反而好操作很多。', likes: 14 },
-    ],
-  },
-  {
-    id: 3, initial: '林', authorColor: '#C4897A',
-    author: '林小羽', dept: '化妝品系', time: '5 小時前',
-    tags: ['油性肌', '保濕'],
-    title: '油性肌夏天還需要用乳液嗎？還是只擦化妝水就夠了？',
-    excerpt: '夏天臉超油，擦完乳液更悶，但又擔心不擦會缺水，想知道油性肌的最簡保養到底應該幾個步驟。',
-    views: 187, solved: false, hot: false,
-    aiAnswer: '皮脂與水分是兩個獨立的系統，油性肌不代表不缺水。夏天建議改用「無油保濕精華」取代乳液，成分看 glycerin（甘油）、hyaluronic acid（玻尿酸）、panthenol（泛醇）等，比傳統乳液輕薄許多。\n\n最簡保養流程（夏季油肌版）：溫和胺基酸洗面乳 → 化妝水（含水、甘油） → 輕薄保濕精華 → 防曬。乳液不是必備，但保濕精華仍建議保留，避免皮膚因缺水反而分泌更多皮脂。',
-    expert: { initial: '吳', color: '#9A7AA0', name: '吳宜庭', badge: '生物科技學系・成分研究', answer: '油性肌夏天最常犯的錯是「過度清潔」，以為洗越乾淨越好，其實反而刺激更多皮脂分泌。建議早上只用清水或很溫和的潔顏泡，不需要每次洗臉都用洗面乳。', likes: 23 },
-    community: [
-      { initial: '黃', color: '#A08060', name: '黃品蓁', dept: '化妝品系', time: '3 小時前', text: '我油肌夏天只用化妝水（含 glycerin）+ 防曬，省掉精華和乳液，反而比較清爽不出油。', likes: 31 },
-    ],
-  },
-  {
-    id: 4, initial: '張', authorColor: '#8A9E7A',
-    author: '張宇軒', dept: '資訊管理學系', time: '昨天',
-    tags: ['防曬推薦', '混合性肌'],
-    title: '混合肌用物理防曬還是化學防曬比較合適？',
-    excerpt: '試過幾款化學防曬都覺得油油的，物理防曬又容易卡粉，想知道有沒有混合肌適合的選擇重點可以參考。',
-    views: 423, solved: true, hot: false,
-    aiAnswer: '物理防曬（氧化鋅/二氧化鈦）成膜感較重，容易泛白卡粉，但對敏感肌較溫和；化學防曬質地輕薄，但部分成分（如 Avobenzone）可能刺激敏感部位。混合肌的最佳解通常是「混合型配方」——同時含物理與化學防曬劑，兼顧輕薄與安全性。\n\n選購重點：尋找標示「Oil-Free」或「Sebum Control」的化學防曬；或選用奈米氧化鋅比例高的物理防曬，泛白感已大幅改善。PA++++ + SPF 50+ 為戶外日常首選。',
-    expert: { initial: '林', color: '#C4897A', name: '林小羽', badge: '化妝品系・彩妝研究', answer: '混合肌分區保養的邏輯也可以用在防曬：T 區用控油化學防曬（輕薄不悶），兩頰用物理防曬（保護敏感部位）。雖然麻煩，但這樣體驗確實最好。', likes: 18 },
-    community: [
-      { initial: '陳', color: '#9E8A7A', name: '陳柔安', dept: '護理學系', time: '昨天', text: '我後來改用韓系水感防曬（含化學+物理混合），一點都不悶，而且上妝服貼很多，混合肌推薦！', likes: 27 },
-      { initial: '吳', color: '#9A7AA0', name: '吳宜庭', dept: '生物科技學系', time: '昨天', text: '記得補擦的時候可以用防曬噴霧或蜜粉型防曬，不用全部洗掉重來，方便很多。', likes: 9 },
-    ],
-  },
-  {
-    id: 5, initial: '黃', authorColor: '#A08060',
-    author: '黃品蓁', dept: '化妝品系', time: '2 天前',
-    tags: ['屏障修護', '敏感肌'],
-    title: '過度清潔造成屏障受損，修復期間要停用所有活性成分嗎？',
-    excerpt: '上個月換了洗臉機，臉開始乾癢脫皮。想問修護期間煙醯胺、神經醯胺還能用嗎？還是全部停掉？',
-    views: 754, solved: true, hot: true,
-    aiAnswer: '屏障受損期間的保養原則是「最小刺激，最大修復」。需要立即停用的成分：AHA/BHA/視黃醇/高濃度維生素 C 等活性成分。可以繼續使用的有益成分：神經醯胺（Ceramide）、膽固醇（Cholesterol）、脂肪酸三合一配方是修復屏障的黃金組合；菸鹼醯胺低濃度（2-5%）溫和版亦可保留。\n\n建議流程：只用胺基酸潔顏（早上可省略用洗面乳）→ 含神經醯胺的修護霜 → 凡士林或乳木果油封層。一般 2–4 週可見明顯改善。',
-    expert: { initial: '王', color: '#7A8A9E', name: '王思涵', badge: '化學系・成分達人', answer: '另外提醒：洗臉機的刷頭會物理摩擦，即便換回正常洗法，屏障修復期仍要避免使用任何去角質工具或磨砂膏。日曬也是屏障最大的敵人，修護期間建議特別留意防曬。', likes: 52 },
-    community: [
-      { initial: '林', color: '#C4897A', name: '林小羽', dept: '化妝品系', time: '2 天前', text: '我遇過一樣情況，停掉所有東西只用 CeraVe 修護霜 + 凡士林，兩週後好了大半，真的不需要很複雜。', likes: 44 },
-      { initial: '陳', color: '#9E8A7A', name: '陳柔安', dept: '護理學系', time: '2 天前', text: '護理學系課有教過，屏障修復跟腸黏膜修復類似，最重要是停止傷害，讓細胞自然重建，別急著加東西。', likes: 38 },
-    ],
-  },
-  {
-    id: 6, initial: '吳', authorColor: '#9A7AA0',
-    author: '吳宜庭', dept: '生物科技學系', time: '3 天前',
-    tags: ['成分討論', '保濕'],
-    title: '玻尿酸塗完反而更乾？用法或濃度哪裡出問題？',
-    excerpt: '不管先濕後乾還是乾著直接塗，感覺到最後都更乾燥。是分子量的問題還是我步驟有問題？',
-    views: 891, solved: true, hot: false,
-    aiAnswer: '玻尿酸（Hyaluronic Acid）是雙向吸濕劑——在濕度充足的環境從外界吸水；但在乾燥環境中反而會從皮膚深層「抽水」到表面蒸發，造成更乾的感受。這就是「越擦越乾」的根本原因。\n\n解決方式：①塗完玻尿酸必須立刻用保濕霜/乳液封住，避免水分蒸散；②選擇多分子量配方（大+中+小分子），同時補充表面與深層水分；③在環境濕度低於 60% 時，單獨使用高分子玻尿酸效果有限，建議搭配 glycerin 或 panthenol 提升吸濕效率。',
-    expert: { initial: '黃', color: '#A08060', name: '黃品蓁', badge: '化妝品系・配方研究', answer: '再補充：市售「玻尿酸精華」很多其實主要成分是水和甘油，玻尿酸含量極低（0.01% 以下也算有添加）。如果你買的產品第一成分是水，第二是 glycerin，效果主要來自甘油而非玻尿酸，但其實甘油的吸濕效果反而更穩定。', likes: 61 },
-    community: [
-      { initial: '張', color: '#8A9E7A', name: '張宇軒', dept: '資訊管理學系', time: '3 天前', text: '我之前也有這個問題，後來理解原理之後就改先噴化妝水讓臉有點濕，馬上塗玻尿酸精華，再立刻加乳液，完全解決了。', likes: 29 },
-      { initial: '林', color: '#C4897A', name: '林小羽', dept: '化妝品系', time: '3 天前', text: '住宿舍冬天超乾，我都直接加濕器開著用，玻尿酸效果差很多，環境濕度真的很重要。', likes: 17 },
-    ],
-  },
-];
+
 
 const ALL_TAGS = ['全部', '成分討論', '油性肌', '敏感肌', '混合性肌', '保濕', '防曬推薦', '抗老', '屏障修護'];
 
@@ -111,13 +27,47 @@ export default function QA() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLang();
-  const [questions,   setQuestions]   = useState(MOCK_QUESTIONS);
+  const [questions,   setQuestions]   = useState([]);
   const [tab,         setTab]         = useState('all');
   const [activeTag,   setActiveTag]   = useState('全部');
   const [search,      setSearch]      = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
   const [expandedId,  setExpandedId]  = useState(null);
   useReveal();
+
+  /* 頁面載入時從後端拿問題 */
+  useEffect(() => {
+    const stored = localStorage.getItem('user');
+    const currentUser = stored ? JSON.parse(stored) : null;
+    const anonIds = JSON.parse(localStorage.getItem('anon_question_ids') || '[]');
+
+    fetch(`${API_BASE}/api/questions`)
+      .then(r => r.json())
+      .then(data => {
+        const COLORS = ['#C4897A','#9E8A7A','#7BAF7B','#7AAFC4','#C4B07A','#9B7AC4'];
+        const formatted = data.map((q, i) => ({
+          id: q.question_id,
+          title: q.title,
+          excerpt: q.detail,
+          tags: q.tags || [],
+          solved: q.solved,
+          views: q.views,
+          hot: false,
+          initial: q.users?.nickname?.[0]?.toUpperCase() || '?',
+          authorColor: COLORS[i % COLORS.length],
+          author: q.users?.nickname || '匿名用戶',
+          dept: q.users?.department_grade || '',
+          time: new Date(q.created_at).toLocaleDateString('zh-TW'),
+          aiAnswer: '',
+          expert: null,
+          community: [],
+          _mine: (currentUser && String(q.user_id) === String(currentUser.user_id)) ||
+                 anonIds.includes(q.question_id),
+        }));
+        setQuestions(formatted);
+      })
+      .catch(err => console.error('載入問題失敗', err));
+  }, []);
 
   /* 從 AskQuestion 頁面帶回的新問題 */
   useEffect(() => {
@@ -131,23 +81,17 @@ export default function QA() {
   }, []);
 
   const TABS = [
-    { key: 'all',      label: t('全部問題') || '全部問題' },
-    { key: 'unsolved', label: t('未解決') || '未解決' },
-    { key: 'solved',   label: t('已解決') || '已解決' },
-    { key: 'mine',     label: t('我的提問') || '我的提問' },
+    { key: 'all',  label: t('全部問題') || '全部問題' },
+    { key: 'mine', label: t('我的提問') || '我的提問' },
   ];
 
   const filtered = questions
     .filter(q => {
-      if (tab === 'solved')   return q.solved;
-      if (tab === 'unsolved') return !q.solved;
-      if (tab === 'mine')     return q._mine === true;
+      if (tab === 'mine') return q._mine === true;
       return true;
     })
     .filter(q => activeTag === '全部' || q.tags.includes(activeTag))
     .filter(q => !search || q.title.includes(search) || q.excerpt.includes(search));
-
-  const unsolvedCount = questions.filter(q => !q.solved).length;
 
   const handleToggle = (id) => setExpandedId(prev => prev === id ? null : id);
 
@@ -192,19 +136,6 @@ export default function QA() {
             </button>
           </div>
 
-          {/* Stats 橫條 */}
-          <div style={s.heroStats}>
-            {[
-              { num: '486',   label: t('個問題') || '個問題' },
-              { num: '2,130', label: t('則回答') || '則回答' },
-              { num: `${unsolvedCount}`, label: t('待解決') || '待解決' },
-            ].map((item, i, arr) => (
-              <div key={item.label} style={{ ...s.statItem, ...(i < arr.length - 1 ? s.statItemBorder : {}) }}>
-                <span style={s.statNum}>{item.num}</span>
-                <span style={s.statLabel}>{item.label}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -351,8 +282,63 @@ export default function QA() {
 
 /* ─── 問題卡片（含三層回答展開） ───────────────────────── */
 function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
-  const answerTotal = (q.community?.length || 0) + (q.expert ? 1 : 0) + 1;
+  const [answers,        setAnswers]        = useState([]);
+  const [showReplyForm,  setShowReplyForm]  = useState(false);
+  const [replyText,      setReplyText]      = useState('');
+  const [replyAnon,      setReplyAnon]      = useState(false);
+  const [replySubmitting, setReplySubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!expanded) return;
+    fetch(`${API_BASE}/api/questions/${q.id}/answers`)
+      .then(r => r.json())
+      .then(data => {
+        const COLORS = ['#C4897A','#9E8A7A','#7BAF7B','#7AAFC4','#C4B07A','#9B7AC4'];
+        setAnswers(data.map((a, i) => ({
+          initial: a.users?.nickname?.[0]?.toUpperCase() || '?',
+          color:   COLORS[i % COLORS.length],
+          name:    a.users?.nickname || '匿名用戶',
+          dept:    a.users?.department_grade || '',
+          time:    new Date(a.created_at).toLocaleDateString('zh-TW'),
+          text:    a.content,
+          likes:   0,
+        })));
+      })
+      .catch(() => {});
+  }, [expanded, q.id]);
+
+  const allReplies  = answers;
+  const answerTotal = allReplies.length + (q.expert ? 1 : 0) + 1;
   const statusColor = q.solved ? '#5A9E7A' : '#C4A35A';
+
+  const handleReplySubmit = async () => {
+    if (!replyText.trim()) return;
+    const stored = localStorage.getItem('user');
+    const cu = stored ? JSON.parse(stored) : null;
+    setReplySubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/questions/${q.id}/answers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: replyAnon ? null : (cu?.user_id || null), content: replyText.trim() }),
+      });
+      if (res.ok) {
+        setAnswers(prev => [...prev, {
+          initial: replyAnon ? '匿' : (cu?.nickname?.[0]?.toUpperCase() || '?'),
+          color:   '#C4897A',
+          name:    replyAnon ? '匿名用戶' : (cu?.nickname || '匿名'),
+          dept:    replyAnon ? '' : (cu?.department_grade || ''),
+          time:    '剛剛',
+          text:    replyText.trim(),
+          likes:   0,
+        }]);
+        setReplyText('');
+        setShowReplyForm(false);
+      }
+    } finally {
+      setReplySubmitting(false);
+    }
+  };
 
   return (
     <div style={{ ...s.card, animationDelay: `${idx * 60}ms` }} className="g-fade-up">
@@ -387,39 +373,20 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
           </div>
         </div>
 
-        {/* 右側：統計 + 操作 */}
+        {/* 右側：回答數泡泡 + 查看回答 */}
         <div style={s.cardSide}>
-          {/* 回答數泡泡 */}
           <div style={{ ...s.answerBubble, borderColor: q.solved ? 'rgba(90,158,122,0.3)' : 'var(--border)' }}>
             <span style={{ ...s.answerBubbleNum, color: statusColor }}>{answerTotal}</span>
             <span style={s.answerBubbleLabel}>{t('則回答') || '則回答'}</span>
           </div>
-
-          {/* 瀏覽數 */}
-          <span style={s.viewCount}>
-            <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
-              <ellipse cx="6.5" cy="6.5" rx="5.5" ry="3.5" stroke="var(--text-tertiary)" strokeWidth="1.2"/>
-              <circle cx="6.5" cy="6.5" r="1.5" fill="var(--text-tertiary)"/>
+          <button style={s.expandBtn} onClick={onToggle}>
+            {expanded ? (t('收起') || '收起') : (t('查看回答') || '查看回答')}
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+              style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }}>
+              <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            {q.views}
-          </span>
-
-          {/* 狀態 badge */}
-          <span style={{ ...s.statusBadge, ...(q.solved ? s.statusSolved : s.statusUnsolved) }}>
-            {q.solved ? (t('已解決') || '已解決') : (t('待解決') || '待解決')}
-          </span>
+          </button>
         </div>
-      </div>
-
-      {/* 展開按鈕 */}
-      <div style={s.cardFooter}>
-        <button style={s.expandBtn} onClick={onToggle}>
-          {expanded ? (t('收起回答') || '收起回答') : (t('查看回答') || '查看回答')}
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
-            style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }}>
-            <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
       </div>
 
       {/* ── 三層回答展開區 ── */}
@@ -438,9 +405,12 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
             <div style={s.tierBodyAI}>
               <div style={s.aiGlow} />
               <p style={s.tierText}>
-                {q.aiAnswer.split('\n\n').map((para, i) => (
-                  <span key={i}>{para}{i < q.aiAnswer.split('\n\n').length - 1 && <><br /><br /></>}</span>
-                ))}
+                {q.aiAnswer
+                  ? q.aiAnswer.split('\n\n').map((para, i, arr) => (
+                      <span key={i}>{para}{i < arr.length - 1 && <><br /><br /></>}</span>
+                    ))
+                  : <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>AI 回覆功能即將上線</span>
+                }
               </p>
             </div>
           </div>
@@ -484,44 +454,101 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
           )}
 
           {/* ── Tier 3：社群回答 ── */}
-          {q.community && q.community.length > 0 && (
-            <div style={s.tierBlock}>
-              <div style={s.tierHeader}>
-                <div style={s.tierBadgeCommunity}>
-                  <CommunityIcon size={12} />
-                  <span>{t('社群回答') || '社群回答'}</span>
-                </div>
-                <span style={s.tierHeaderLabel}>{q.community.length} {t('則') || '則'}</span>
+          <div style={s.tierBlock}>
+            <div style={s.tierHeader}>
+              <div style={s.tierBadgeCommunity}>
+                <CommunityIcon size={12} />
+                <span>{t('社群回答') || '社群回答'}</span>
               </div>
-              <div style={s.tierBodyCommunity}>
-                {q.community.map((c, i) => (
-                  <div key={i} style={{ ...s.communityAnswer, ...(i < q.community.length - 1 ? s.communityAnswerBorder : {}) }}>
-                    <div style={s.communityAuthorRow}>
-                      <div style={{ ...s.communityAvatar, backgroundColor: c.color }}>{c.initial}</div>
-                      <div style={s.communityAuthorInfo}>
-                        <span style={s.communityName}>{c.name}</span>
-                        <span style={s.communityMeta}>{c.dept} · {c.time}</span>
-                      </div>
-                      <button style={s.likeBtn}>
-                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                          <path d="M6.5 11S1 7.5 1 4a2.5 2.5 0 015-0 2.5 2.5 0 015 0C11 7.5 6.5 11 6.5 11z"
-                            stroke="var(--text-tertiary)" strokeWidth="1.2" strokeLinejoin="round"/>
-                        </svg>
-                        {c.likes}
-                      </button>
+              <span style={s.tierHeaderLabel}>{allReplies.length} {t('則') || '則'}</span>
+            </div>
+            <div style={s.tierBodyCommunity}>
+
+              {/* 現有回覆列表 */}
+              {allReplies.length === 0 && !showReplyForm && (
+                <p style={s.noReplyHint}>尚無社群回答，成為第一個回覆的人</p>
+              )}
+              {allReplies.map((c, i) => (
+                <div key={i} style={{ ...s.communityAnswer, ...(i < allReplies.length - 1 ? s.communityAnswerBorder : {}) }}>
+                  <div style={s.communityAuthorRow}>
+                    <div style={{ ...s.communityAvatar, backgroundColor: c.color }}>{c.initial}</div>
+                    <div style={s.communityAuthorInfo}>
+                      <span style={s.communityName}>{c.name}</span>
+                      <span style={s.communityMeta}>{c.dept}{c.dept && ' · '}{c.time}</span>
                     </div>
-                    <p style={s.communityText}>{c.text}</p>
+                    <button style={s.likeBtn}>
+                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                        <path d="M6.5 11S1 7.5 1 4a2.5 2.5 0 015-0 2.5 2.5 0 015 0C11 7.5 6.5 11 6.5 11z"
+                          stroke="var(--text-tertiary)" strokeWidth="1.2" strokeLinejoin="round"/>
+                      </svg>
+                      {c.likes}
+                    </button>
                   </div>
-                ))}
-                <button style={s.replyBtn}>
+                  <p style={s.communityText}>{c.text}</p>
+                </div>
+              ))}
+
+              {/* 回覆表單 */}
+              {showReplyForm ? (
+                <div style={s.replyForm}>
+                  <textarea
+                    style={s.replyTextarea}
+                    placeholder="分享你的保養經驗或建議…"
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    rows={3}
+                    autoFocus
+                  />
+                  {/* 匿名回覆切換 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0 4px' }}>
+                    <button
+                      onClick={() => setReplyAnon(p => !p)}
+                      style={{
+                        width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                        backgroundColor: replyAnon ? '#C4897A' : 'rgba(255,255,255,0.12)',
+                        position: 'relative', transition: 'background 250ms ease', flexShrink: 0,
+                      }}
+                      aria-label="匿名回覆"
+                    >
+                      <span style={{
+                        position: 'absolute', top: '2px',
+                        left: replyAnon ? '18px' : '2px',
+                        width: '16px', height: '16px', borderRadius: '50%',
+                        backgroundColor: '#fff', transition: 'left 250ms ease',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                      }} />
+                    </button>
+                    <span style={{ fontSize: '12px', color: replyAnon ? '#C4897A' : 'rgba(247,244,242,0.45)' }}>
+                      {replyAnon ? '匿名回覆' : '顯示身份回覆'}
+                    </span>
+                  </div>
+                  <div style={s.replyFormActions}>
+                    <button
+                      style={s.replyCancelBtn}
+                      onClick={() => { setShowReplyForm(false); setReplyText(''); setReplyAnon(false); }}
+                    >
+                      取消
+                    </button>
+                    <button
+                      style={{ ...s.replySubmitBtn, opacity: replyText.trim() ? 1 : 0.45 }}
+                      onClick={handleReplySubmit}
+                      disabled={!replyText.trim() || replySubmitting}
+                    >
+                      送出回覆
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button style={s.replyBtn} onClick={() => setShowReplyForm(true)}>
                   <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                     <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                   </svg>
                   {t('回答此問題') || '回答此問題'}
                 </button>
-              </div>
+              )}
             </div>
-          )}
+          </div>
+
         </div>
       )}
     </div>
@@ -923,14 +950,16 @@ const s = {
     fontSize: '11px', color: 'var(--text-tertiary)',
   },
   expandBtn: {
-    display: 'flex', alignItems: 'center', gap: '5px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+    width: '100%',
     background: 'none',
     border: '1px solid var(--border)',
     borderRadius: '6px',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '12px', color: 'var(--text-secondary)',
-    cursor: 'pointer', padding: '5px 12px',
+    fontSize: '11px', color: 'var(--text-secondary)',
+    cursor: 'pointer', padding: '5px 6px',
     transition: 'border-color 150ms',
+    whiteSpace: 'nowrap',
   },
 
   /* ── Answer Panel ── */
@@ -1097,6 +1126,11 @@ const s = {
     fontSize: '13px', color: 'var(--text-secondary)',
     lineHeight: 1.65, margin: 0,
   },
+  noReplyHint: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px', color: 'var(--text-tertiary)',
+    textAlign: 'left', padding: '16px 18px 8px', margin: 0,
+  },
   replyBtn: {
     display: 'flex', alignItems: 'center', gap: '6px',
     margin: '10px 18px 14px',
@@ -1109,6 +1143,55 @@ const s = {
     cursor: 'pointer',
     alignSelf: 'flex-start',
     transition: 'border-color 150ms, color 150ms',
+  },
+  replyForm: {
+    margin: '8px 18px 14px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  replyTextarea: {
+    width: '100%',
+    padding: '12px 14px',
+    borderRadius: '10px',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: 'var(--text-primary)',
+    lineHeight: 1.65,
+    resize: 'vertical',
+    outline: 'none',
+    boxSizing: 'border-box',
+  },
+  replyFormActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '8px',
+  },
+  replyCancelBtn: {
+    height: '34px',
+    padding: '0 16px',
+    backgroundColor: 'transparent',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px',
+    color: 'var(--text-secondary)',
+    cursor: 'pointer',
+  },
+  replySubmitBtn: {
+    height: '34px',
+    padding: '0 18px',
+    backgroundColor: 'var(--accent)',
+    border: 'none',
+    borderRadius: '8px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px',
+    fontWeight: 500,
+    color: '#FFFFFF',
+    cursor: 'pointer',
+    transition: 'opacity 150ms',
   },
 
   /* Tier list (sidebar) */
