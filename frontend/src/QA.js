@@ -35,10 +35,18 @@ export default function QA() {
   const [expandedId,  setExpandedId]  = useState(null);
   useReveal();
 
-  /* 頁面載入時從後端拿問題 */
+  /* 頁面載入時從後端拿問題，並處理從 AskQuestion 帶回的新問題 */
   useEffect(() => {
     const stored = localStorage.getItem('user');
     const currentUser = stored ? JSON.parse(stored) : null;
+
+    // 先注入剛發布的新問題（state 帶來的），避免 fetch 覆蓋它
+    const nq = location.state?.newQuestion;
+    if (nq) {
+      setQuestions([nq]);
+      setTab('mine');
+      window.history.replaceState({}, '');
+    }
 
     fetch(`${API_BASE}/api/questions`)
       .then(r => r.json())
@@ -63,19 +71,10 @@ export default function QA() {
           community: [],
           _mine: currentUser && String(q.user_id) === String(currentUser.user_id),
         }));
+        // 用後端資料替換（後端已包含新問題，且 is_anonymous 欄位是準確的）
         setQuestions(formatted);
       })
       .catch(err => console.error('載入問題失敗', err));
-  }, []);
-
-  /* 從 AskQuestion 頁面帶回的新問題 */
-  useEffect(() => {
-    const nq = location.state?.newQuestion;
-    if (nq) {
-      setQuestions(prev => [nq, ...prev]);
-      setTab('mine');
-      window.history.replaceState({}, '');
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
