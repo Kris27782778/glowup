@@ -8,6 +8,14 @@ import API_BASE from './config';
 
 const ALL_TAGS = ['全部', '成分討論', '油性肌', '敏感肌', '混合性肌', '保濕', '防曬推薦', '抗老', '屏障修護'];
 
+const COLORS = ['#C4897A', '#9E8A7A', '#7BAF7B', '#7AAFC4', '#C4B07A', '#9B7AC4'];
+const ANON_COLOR = '#A89990';
+function userColor(userId) {
+  if (!userId) return ANON_COLOR;
+  const n = String(userId).split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+  return COLORS[n % COLORS.length];
+}
+
 const HOT_TAGS = [
   { tag: '#果酸', count: 18 },
   { tag: '#視黃醇', count: 27 },
@@ -55,11 +63,10 @@ export default function QA() {
 
     Promise.all([publicFetch, mineFetch])
       .then(([publicData, mineData]) => {
-        const COLORS = ['#C4897A','#9E8A7A','#7BAF7B','#7AAFC4','#C4B07A','#9B7AC4'];
         // 建立「我自己的問題 ID」集合（包含匿名）
         const myIds = new Set((Array.isArray(mineData) ? mineData : []).map(q => q.question_id));
 
-        const formatted = (Array.isArray(publicData) ? publicData : []).map((q, i) => ({
+        const formatted = (Array.isArray(publicData) ? publicData : []).map((q) => ({
           id: q.question_id,
           is_anonymous: q.is_anonymous,
           title: q.title,
@@ -69,7 +76,7 @@ export default function QA() {
           views: q.views,
           hot: false,
           initial: q.is_anonymous ? '匿' : (q.users?.nickname?.[0]?.toUpperCase() || '?'),
-          authorColor: COLORS[i % COLORS.length],
+          authorColor: userColor(q.is_anonymous ? null : q.user_id),
           author: q.is_anonymous ? '匿名用戶' : (q.users?.nickname || '匿名用戶'),
           dept: q.is_anonymous ? '' : (q.users?.department_grade || ''),
           time: new Date(q.created_at).toLocaleDateString('zh-TW'),
@@ -297,10 +304,9 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
     fetch(`${API_BASE}/api/questions/${q.id}/answers`)
       .then(r => r.json())
       .then(data => {
-        const COLORS = ['#C4897A','#9E8A7A','#7BAF7B','#7AAFC4','#C4B07A','#9B7AC4'];
-        setAnswers(data.map((a, i) => ({
-          initial: a.users?.nickname?.[0]?.toUpperCase() || '?',
-          color:   COLORS[i % COLORS.length],
+        setAnswers(data.map((a) => ({
+          initial: a.users?.nickname?.[0]?.toUpperCase() || '匿',
+          color:   userColor(a.user_id),
           name:    a.users?.nickname || '匿名用戶',
           dept:    a.users?.department_grade || '',
           time:    new Date(a.created_at).toLocaleDateString('zh-TW'),
