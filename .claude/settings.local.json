@@ -8,25 +8,7 @@
       "Bash(kill 87820:*)",
       "Bash(npm start:*)",
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const a=JSON.parse\\(d\\); console.log\\(JSON.stringify\\(a.slice\\(0,2\\).map\\(q=>\\({id:q.question_id,is_anonymous:q.is_anonymous,user_id:q.user_id}\\)\\),null,2\\)\\)\")",
-      "Bash(curl -s \"http://localhost:5001/\")",
-      "Bash(kill 7156 7132)",
-      "Bash(kill 53134 53133 53113)",
-      "Bash(git -C \"/Users/xuan/Desktop/Glow-Up demo/glow-platform/glowup\" status)",
-      "Bash(echo \"EXIT:$?\")",
-      "Bash(git *)",
-      "Bash(ps -p 21844 -p 21845 -o pid,command)",
-      "Bash(GIT_DIR=\"/Users/xuan/Desktop/Glow-Up demo/glow-platform/glowup/.git\" GIT_WORK_TREE=\"/Users/xuan/Desktop/Glow-Up demo/glow-platform/glowup\" git status --short)",
-      "Bash(echo \"RC=$?\")",
-      "Bash(GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND=\"ssh -o BatchMode=yes\" git -C \"/Users/xuan/Desktop/Glow-Up demo/glow-platform/glowup\" log --oneline -3)",
-      "Bash(echo \"exists_check=$?\")",
-      "Bash(echo \"c8dc=$?\")",
-      "Bash(echo \"tree=$?\")",
-      "Bash(cp \"/Users/xuan/Desktop/Glow-Up demo/glow-platform/glowup/backend/index.js\" /tmp/glowup_backup_backend_index.js)",
-      "Bash(cp \"/Users/xuan/Desktop/Glow-Up demo/glow-platform/glowup/frontend/src/index.js\" /tmp/glowup_backup_frontend_index.js)",
-      "Bash(echo \"diff_rc=$?\")",
-      "Bash(rm -rf \"/Users/xuan/Desktop/Glow-Up demo/glow-platform/glowup/.git\")",
-      "Bash(cp -r /tmp/glowup_fresh/.git \"/Users/xuan/Desktop/Glow-Up demo/glow-platform/glowup/.git\")",
-      "Bash(GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND=\"ssh -o BatchMode=yes\" git -C \"/Users/xuan/Desktop/Glow-Up demo/glow-platform/glowup\" status --short)"
+      "Bash(curl -s \"http://localhost:5001/\")"
     ]
   }
 }
