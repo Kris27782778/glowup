@@ -71,7 +71,7 @@ function ProductDB() {
   };
 
   const itemOptions = category === '化妝品' ? MAKEUP_ITEMS : SKINCARE_ITEMS;
-  const hasFilter   = category || skinType || effect || item || search.trim();
+  const hasFilter   = category || skinType || effect || item;
   const activeTags  = [category, item, skinType, effect].filter(Boolean);
 
   const totalPages   = Math.ceil(products.length / PAGE_SIZE);
@@ -90,24 +90,15 @@ useEffect(() => {
   fetchProducts();
 }, [category, item, skinType, effect]);
 
-useEffect(() => {
-  const timer = setTimeout(() => {
-    setPage(1);
-    fetchProducts();
-  }, 400);
-  return () => clearTimeout(timer);
-}, [search]);
-
 const fetchProducts = async () => {
-  if (!category && !item && !search.trim()) { setProducts([]); return; }
+  if (!category && !item) { setProducts([]); return; }
   setLoading(true);
   try {
     const params = new URLSearchParams();
-    if (category)      params.append('category', category);
-    if (item)          params.append('sub_category', itemMap[item] || item);
-    if (skinType)      params.append('skin_type', skinType);
-    if (effect)        params.append('effect', effect);
-    if (search.trim()) params.append('search', search.trim());
+    if (category)  params.append('category', category);
+    if (item)      params.append('sub_category', itemMap[item] || item);
+    if (skinType)  params.append('skin_type', skinType);   // ← 新增
+    if (effect)    params.append('effect', effect);         // ← 新增
 
     const res  = await fetch(`${API_BASE}/api/products?${params}`);
     const data = await res.json();

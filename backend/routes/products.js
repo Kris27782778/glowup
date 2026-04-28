@@ -23,7 +23,7 @@ const effectMap = {
 };
 
 router.get('/', async (req, res) => {
-  const { category, sub_category, skin_type, effect, search } = req.query;
+  const { category, sub_category, skin_type, effect } = req.query;
 
   try {
     // 第一步：撈產品 + 成分資料（含分數）
@@ -54,7 +54,6 @@ router.get('/', async (req, res) => {
 
     if (category)     query = query.eq('category', category);
     if (sub_category) query = query.eq('sub_category', sub_category);
-    if (search)       query = query.or(`name.ilike.%${search}%,brand.ilike.%${search}%`);
 
     const { data, error } = await query;
     if (error) return res.status(400).json({ error: error.message });
