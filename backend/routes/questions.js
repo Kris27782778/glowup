@@ -25,12 +25,26 @@ router.get('/', async (req, res) => {
     const { data, error } = await query;
     if (error) return res.status(400).json({ error: error.message });
 
+    // 另外查每題的社群回覆數
+    const questionIds = (data || []).map(q => q.question_id);
+    let answerCountMap = {};
+    if (questionIds.length > 0) {
+      const { data: ansData } = await supabase
+        .from('answers')
+        .select('question_id')
+        .in('question_id', questionIds);
+      (ansData || []).forEach(a => {
+        answerCountMap[a.question_id] = (answerCountMap[a.question_id] || 0) + 1;
+      });
+    }
+
     // 匿名問題：遮蔽公開列表的用戶資料（個人頁 include_anonymous=true 時保留）
     const masked = (data || []).map(q => {
+      const base = { ...q, answer_count: answerCountMap[q.question_id] || 0 };
       if (q.is_anonymous && include_anonymous !== 'true') {
-        return { ...q, user_id: null, users: null };
+        return { ...base, user_id: null, users: null };
       }
-      return q;
+      return base;
     });
 
     res.json(masked);
@@ -55,26 +69,31 @@ router.post('/', async (req, res) => {
 
     if (error) return res.status(400).json({ error: error.message });
 
-    // 立即回傳，不等 AI（背景執行）
+    // 立即回傳，不等 AI
     res.json({ message: '問題新增成功', question: data });
 
-    // 背景呼叫 Claude，完成後更新 ai_answer 欄位
-    if (process.env.ANTHROPIC_API_KEY) {
+    // 背景呼叫 Claude（完全獨立，任何錯誤都不影響主流程）
+    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+    if (apiKey) {
       const questionId = data.question_id;
-      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-      anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 400,
-        messages: [{
-          role: 'user',
-          content: `你是 GLŌW AI，輔大美妝交流平台的智能助理，專精保養成分分析。請針對以下問題，提供簡潔、科學的初步分析（150字以內），重點放在成分、膚質適合性或保養建議，語氣親切自然。\n\n問題標題：${title}\n問題說明：${detail}`,
-        }],
-      })
-        .then(msg => {
+      (async () => {
+        try {
+          const anthropic = new Anthropic({ apiKey, timeout: 30000 });
+          const msg = await anthropic.messages.create({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 400,
+            messages: [{
+              role: 'user',
+              content: `你是 GLŌW AI，輔大美妝交流平台的智能助理，專精保養成分分析。請針對以下問題，提供簡潔、科學的初步分析（150字以內），重點放在成分、膚質適合性或保養建議，語氣親切自然。\n\n問題標題：${title}\n問題說明：${detail}`,
+            }],
+          });
           const aiText = msg.content?.[0]?.text || '';
-          return supabase.from('questions').update({ ai_answer: aiText }).eq('question_id', questionId);
-        })
-        .catch(err => console.error('AI 回覆失敗:', err));
+          await supabase.from('questions').update({ ai_answer: aiText }).eq('question_id', questionId);
+          console.log(`AI 回覆完成 (question ${questionId})`);
+        } catch (err) {
+          console.error('AI 回覆失敗:', err.message || err);
+        }
+      })();
     }
   } catch (err) {
     console.error(err);

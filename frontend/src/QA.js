@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useReveal } from './hooks/useReveal';
 import { useLang } from './hooks/useLang';
@@ -16,19 +16,7 @@ function userColor(userId) {
   return COLORS[n % COLORS.length];
 }
 
-const HOT_TAGS = [
-  { tag: '#果酸', count: 18 },
-  { tag: '#視黃醇', count: 27 },
-  { tag: '#防曬選擇', count: 15 },
-  { tag: '#屏障修護', count: 31 },
-  { tag: '#玻尿酸', count: 22 },
-];
 
-const TOP_ANSWERERS = [
-  { initial: '王', color: '#7A8A9E', name: '王思涵', answers: 36 },
-  { initial: '吳', color: '#9A7AA0', name: '吳宜庭', answers: 28 },
-  { initial: '林', color: '#C4897A', name: '林小羽', answers: 21 },
-];
 
 /* ─── 主元件 ─────────────────────────────────────────────── */
 export default function QA() {
@@ -81,6 +69,7 @@ export default function QA() {
           dept: q.is_anonymous ? '' : (q.users?.department_grade || ''),
           time: new Date(q.created_at).toLocaleDateString('zh-TW'),
           aiAnswer: q.ai_answer || '',
+          answerCount: q.answer_count ?? 0,
           expert: null,
           community: [],
           _mine: myIds.has(q.question_id),
@@ -91,16 +80,34 @@ export default function QA() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 從已載入的問題即時統計熱門標籤（取前 5）
+  const hotTags = useMemo(() => {
+    const countMap = {};
+    questions.forEach(q => {
+      (q.tags || []).forEach(tag => {
+        countMap[tag] = (countMap[tag] || 0) + 1;
+      });
+    });
+    return Object.entries(countMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([tag, count]) => ({ tag: `#${tag}`, count }));
+  }, [questions]);
+
+  // 社群尚未回答的問題（按最舊排序，等最久的先顯示）
+  const allUnanswered = useMemo(() =>
+    [...questions.filter(q => q.answerCount === 0)].reverse(),
+  [questions]);
+  const unlitQuestions = allUnanswered.slice(0, 3);
+  const unlitExtra     = allUnanswered.length > 3 ? allUnanswered.length - 3 : 0;
+
   const TABS = [
     { key: 'all',  label: t('全部問題') || '全部問題' },
     { key: 'mine', label: t('我的提問') || '我的提問' },
   ];
 
   const filtered = questions
-    .filter(q => {
-      if (tab === 'mine') return q._mine === true;
-      return true;
-    })
+    .filter(q => tab === 'mine' ? q._mine === true : true)
     .filter(q => activeTag === '全部' || q.tags.includes(activeTag))
     .filter(q => !search || q.title.includes(search) || q.excerpt.includes(search));
 
@@ -246,29 +253,42 @@ export default function QA() {
           <div style={s.sideCard} className="g-reveal delay-1">
             <p style={s.sideTitle}>{t('熱門標籤') || '熱門標籤'}</p>
             <div style={s.tagCloud}>
-              {HOT_TAGS.map((item, i) => (
-                <div key={item.tag} style={s.hotTagRow}>
-                  <span style={s.hotTagRank}>{i + 1}</span>
-                  <span style={s.hotTagText}>{item.tag}</span>
-                  <span style={s.hotTagCount}>{item.count} {t('題') || '題'}</span>
-                </div>
-              ))}
+              {hotTags.length === 0
+                ? <p style={{ ...s.hotTagText, color: 'var(--text-tertiary)', fontSize: '12px', margin: 0 }}>尚無標籤資料</p>
+                : hotTags.map((item, i) => (
+                  <div key={item.tag} style={s.hotTagRow}>
+                    <span style={s.hotTagRank}>{i + 1}</span>
+                    <span style={s.hotTagText}>{item.tag}</span>
+                    <span style={s.hotTagCount}>{item.count} {t('題') || '題'}</span>
+                  </div>
+                ))
+              }
             </div>
           </div>
 
-          {/* 優質回答者 */}
+          {/* 還沒發光的問題 */}
           <div style={s.sideCard} className="g-reveal delay-2">
-            <p style={s.sideTitle}>{t('優質回答者') || '優質回答者'}</p>
-            <div style={s.memberList}>
-              {TOP_ANSWERERS.map(m => (
-                <div key={m.name} style={s.memberRow}>
-                  <div style={{ ...s.memberAvatar, backgroundColor: m.color }}>{m.initial}</div>
-                  <div style={s.memberInfo}>
-                    <span style={s.memberName}>{m.name}</span>
-                    <span style={s.memberSub}>{m.answers} {t('則回答') || '則回答'}</span>
-                  </div>
-                </div>
-              ))}
+            <p style={s.sideTitle}>✦ 還沒發光的問題</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {unlitQuestions.length === 0
+                ? <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: 0 }}>所有問題都已獲得回覆 ✨</p>
+                : unlitQuestions.map(q => (
+                  <button
+                    key={q.id}
+                    style={s.unlitItem}
+                    onClick={() => { setExpandedId(q.id); window.scrollTo({ top: 300, behavior: 'smooth' }); }}
+                  >
+                    <span style={s.unlitDot} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={s.unlitTitle}>{q.title}</p>
+                      <span style={s.unlitMeta}>{q.time} · 尚無回答</span>
+                    </div>
+                  </button>
+                ))
+              }
+              {unlitExtra > 0 && (
+                <p style={s.unlitMoreText}>還有 {unlitExtra} 題等待解答</p>
+              )}
             </div>
           </div>
 
@@ -1294,6 +1314,34 @@ const s = {
   memberSub: {
     fontFamily: '"DM Sans", sans-serif',
     fontSize: '11px', color: 'var(--text-tertiary)',
+  },
+
+  /* 還沒發光的問題 */
+  unlitItem: {
+    display: 'flex', alignItems: 'flex-start', gap: '8px',
+    background: 'none', border: 'none', cursor: 'pointer',
+    padding: '6px 8px', borderRadius: '8px', textAlign: 'left', width: '100%',
+    transition: 'background 150ms',
+  },
+  unlitDot: {
+    width: '6px', height: '6px', borderRadius: '50%',
+    backgroundColor: 'var(--accent)', flexShrink: 0, marginTop: '5px',
+  },
+  unlitTitle: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px', color: 'var(--text-primary)', margin: '0 0 2px',
+    lineHeight: 1.4,
+    overflow: 'hidden', textOverflow: 'ellipsis',
+    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+  },
+  unlitMeta: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '10px', color: 'var(--text-tertiary)',
+  },
+  unlitMoreText: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px', color: 'var(--text-tertiary)',
+    margin: '4px 8px 0',
   },
 
   /* Quick buttons */

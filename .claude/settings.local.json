@@ -9,7 +9,10 @@
       "Bash(npm start:*)",
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const a=JSON.parse\\(d\\); console.log\\(JSON.stringify\\(a.slice\\(0,2\\).map\\(q=>\\({id:q.question_id,is_anonymous:q.is_anonymous,user_id:q.user_id}\\)\\),null,2\\)\\)\")",
       "Bash(curl -s \"http://localhost:5001/\")",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(node -e ' *)",
+      "Bash(pkill -f \"node index.js\")",
+      "Bash(node index.js)"
     ]
   }
 }
