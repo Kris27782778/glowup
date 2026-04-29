@@ -80,7 +80,7 @@ export default function QA() {
           author: q.is_anonymous ? '匿名用戶' : (q.users?.nickname || '匿名用戶'),
           dept: q.is_anonymous ? '' : (q.users?.department_grade || ''),
           time: new Date(q.created_at).toLocaleDateString('zh-TW'),
-          aiAnswer: '',
+          aiAnswer: q.ai_answer || '',
           expert: null,
           community: [],
           _mine: myIds.has(q.question_id),
