@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=Noto+Sans+TC:wght@300;400;500&family=Noto+Serif+TC:wght@300;400;500&display=swap');
+
+/* ── Design tokens ── */
+:root {
+  --bg-base:      #F7F4F2;
+  --bg-surface:   #FFFFFF;
+  --bg-subtle:    #F0EBE7;
+  --bg-inverse:   #1C1917;
+  --accent:       #C4897A;
+  --accent-light: #E8C4BA;
+  --text-primary:   #1C1917;
+  --text-secondary: #6B5E58;
+  --text-tertiary:  #A89990;
+  --text-inverse:   #F7F4F2;
+  --border:       #E5DDD9;
+  --safe:         #7BAE8A;
+  --color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg-base:      #0F0C0A;
+  --bg-surface:   #1C1917;
+  --bg-subtle:    #2C2118;
+  --bg-inverse:   #F7F4F2;
+  --accent:       #C4897A;
+  --accent-light: #9E6457;
+  --text-primary:   #F0EBE7;
+  --text-secondary: #C4B5AF;
+  --text-tertiary:  #7A6B65;
+  --text-inverse:   #1C1917;
+  --border:       #3A2E2A;
+  --safe:         #5A9E6A;
+  --color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg-base:      #0F0C0A;
+    --bg-surface:   #1C1917;
+    --bg-subtle:    #2C2118;
+    --bg-inverse:   #F7F4F2;
+    --accent:       #C4897A;
+    --accent-light: #9E6457;
+    --text-primary:   #F0EBE7;
+    --text-secondary: #C4B5AF;
+    --text-tertiary:  #7A6B65;
+    --text-inverse:   #1C1917;
+    --border:       #3A2E2A;
+    --safe:         #5A9E6A;
+    --color-scheme: dark;
+  }
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: var(--color-scheme);
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-base);
+  font-family: 'DM Sans', 'Noto Sans TC', sans-serif;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 250ms ease, color 250ms ease;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #E5DDD9; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #C4B5AF; }

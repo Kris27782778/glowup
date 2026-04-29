@@ -1,0 +1,1491 @@
+import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useReveal } from './hooks/useReveal';
+import { useLang } from './hooks/useLang';
+
+const T = {
+  bgBase:        '#F7F4F2',
+  bgSurface:     '#FFFFFF',
+  bgSubtle:      '#F0EBE7',
+  bgInverse:     '#1C1917',
+  accent:        '#C4897A',
+  accentLight:   '#E8C4BA',
+  accentDark:    '#9E6457',
+  textPrimary:   '#1C1917',
+  textSecondary: '#6B5E58',
+  textTertiary:  '#A89990',
+  textInverse:   '#F7F4F2',
+  border:        '#E5DDD9',
+};
+
+/* ── 登入頁 Mock 資料 ── */
+const MOCK_POSTS = [
+  {
+    id: 1,
+    author: '林小羽', initial: '林', dept: '化妝品系',
+    time: '2 小時前', tag: '油性肌',
+    title: '用了一個月角鯊烷的心得：油肌也能超水嫩',
+    excerpt: '一直以為油肌不能碰油，但加了角鯊烷之後膚況穩了很多，皮脂分泌反而變少…',
+    likes: 48, comments: 12, hot: true,
+  },
+  {
+    id: 2,
+    author: '陳柔安', initial: '陳', dept: '護理學系',
+    time: '5 小時前', tag: '敏感肌',
+    title: '終於找到敏感肌也能用的去角質方法',
+    excerpt: '試過幾款果酸都刺激到不行，後來換成低濃度杏仁酸每週一次，完全沒有泛紅…',
+    likes: 31, comments: 7, hot: false,
+  },
+  {
+    id: 3,
+    author: '王思涵', initial: '王', dept: '化學系',
+    time: '昨天', tag: '成分討論',
+    title: '菸鹼醯胺 5% vs 10%，整理研究與實測差異',
+    excerpt: '整理了幾篇期刊和自身使用三個月的結果，兩個濃度對色沉的影響差距其實不如想像中大…',
+    likes: 87, comments: 24, hot: true,
+  },
+  {
+    id: 4,
+    author: '張宇軒', initial: '張', dept: '資訊管理學系',
+    time: '昨天', tag: '混合性肌',
+    title: 'T 區控油、兩頰保濕：分區保養的實際操作法',
+    excerpt: '混合肌最麻煩的就是兩個區域的需求完全不同，這是我目前在用的早晚保養流程分享…',
+    likes: 22, comments: 5, hot: false,
+  },
+];
+
+const MOCK_EVENTS = [
+  {
+    id: 1, badge: '新活動',
+    title: '輔大保養品交換會',
+    date: '5 月 18 日（六）14:00',
+    location: '學生活動中心 B1',
+    desc: '帶一瓶來交換一瓶，找到下一個心頭好！',
+    urgent: false,
+  },
+  {
+    id: 2, badge: '即將截止',
+    title: '免費膚質分析體驗',
+    date: '截止 5 月 12 日',
+    location: '線上填問卷',
+    desc: '填寫問卷即獲得個人化成分建議報告。',
+    urgent: true,
+  },
+];
+
+const MOCK_TAGS = ['保濕', '控油', '敏感肌', '成分討論', '防曬推薦', '乳液評比', '抗老', '屏障修護', '早安水'];
+
+
+/* ── 輪播資料 ── */
+const BANNER_SLIDES = [
+  {
+    id: 1,
+    tag: '限時活動',
+    tagColor: '#C4897A',
+    title: '保養品交換會',
+    sub: '5 月 18 日（六）14:00・學生活動中心 B1',
+    desc: '帶一件你不再使用的好品，換一件新驚喜。免費參加，名額有限。',
+    cta: '立即報名',
+    ctaColor: '#C4897A',
+    bg: 'linear-gradient(135deg, #1C1917 0%, #2D2218 60%, #3A2820 100%)',
+    accentBlob: 'rgba(196,137,122,0.18)',
+  },
+  {
+    id: 2,
+    tag: '新功能上線',
+    tagColor: '#7BAF7B',
+    title: '問答模組全新升級',
+    sub: '提出問題・獲得同學解答・AI 相似問題偵測',
+    desc: '有保養疑問嗎？現在就去問答區發問，讓輔大同學一起幫你解惑。',
+    cta: '前往問答',
+    ctaColor: '#7BAF7B',
+    bg: 'linear-gradient(135deg, #111A11 0%, #182418 60%, #1E2E1E 100%)',
+    accentBlob: 'rgba(123,175,123,0.18)',
+  },
+  {
+    id: 3,
+    tag: '本週精選',
+    tagColor: '#7AAFC4',
+    title: '油肌保養完整攻略',
+    sub: '精選 12 篇社群心得・成分解析・推薦清單',
+    desc: '由社群版主整理，涵蓋清潔、控油、保濕到防曬的全步驟建議。',
+    cta: '查看精選',
+    ctaColor: '#7AAFC4',
+    bg: 'linear-gradient(135deg, #0F1620 0%, #162030 60%, #1A2A3A 100%)',
+    accentBlob: 'rgba(122,175,196,0.18)',
+  },
+  {
+    id: 4,
+    tag: '成分資料庫',
+    tagColor: '#C4B07A',
+    title: '150+ 款產品已收錄',
+    sub: '依膚質・功效・成分篩選你的理想保養品',
+    desc: '從化妝水到防曬，每款產品都有成分解析。現在就找到適合你的那一瓶。',
+    cta: '瀏覽產品',
+    ctaColor: '#C4B07A',
+    bg: 'linear-gradient(135deg, #1A1608 0%, #272010 60%, #302A14 100%)',
+    accentBlob: 'rgba(196,176,122,0.18)',
+  },
+];
+
+function BannerCarousel() {
+  const [idx, setIdx]       = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [animDir, setAnimDir] = useState('next'); // 'next' | 'prev'
+  const [animating, setAnimating] = useState(false);
+  const timerRef = useRef(null);
+
+  const goTo = (next, dir = 'next') => {
+    if (animating) return;
+    setAnimDir(dir);
+    setAnimating(true);
+    setTimeout(() => {
+      setIdx(next);
+      setAnimating(false);
+    }, 350);
+  };
+
+  const navigate_slide = useCallback((dir) => {
+    const next = dir === 'next'
+      ? (idx + 1) % BANNER_SLIDES.length
+      : (idx - 1 + BANNER_SLIDES.length) % BANNER_SLIDES.length;
+    goTo(next, dir);
+  }, [idx, animating]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (paused) return;
+    timerRef.current = setInterval(() => navigate_slide('next'), 5000);
+    return () => clearInterval(timerRef.current);
+  }, [paused, navigate_slide]);
+
+  const slide = BANNER_SLIDES[idx];
+
+  return (
+    <div
+      style={{ position: 'relative', width: '100%', overflow: 'hidden', borderRadius: '16px',
+        margin: '0 0 28px', userSelect: 'none', flexShrink: 0 }}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {/* 卡片本體 */}
+      <div style={{
+        background: slide.bg,
+        borderRadius: '16px',
+        padding: '36px 44px',
+        minHeight: '160px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '24px',
+        position: 'relative',
+        overflow: 'hidden',
+        opacity: animating ? 0 : 1,
+        transform: animating
+          ? `translateX(${animDir === 'next' ? '-24px' : '24px'})`
+          : 'translateX(0)',
+        transition: 'opacity 350ms ease, transform 350ms ease, background 400ms ease',
+      }}>
+        {/* 裝飾光暈 */}
+        <div style={{
+          position: 'absolute', right: '-60px', top: '-60px',
+          width: '280px', height: '280px', borderRadius: '50%',
+          background: slide.accentBlob, pointerEvents: 'none',
+          filter: 'blur(40px)',
+          transition: 'background 400ms',
+        }} />
+        <div style={{
+          position: 'absolute', left: '30%', bottom: '-80px',
+          width: '200px', height: '200px', borderRadius: '50%',
+          background: slide.accentBlob, pointerEvents: 'none',
+          filter: 'blur(60px)', opacity: 0.6,
+          transition: 'background 400ms',
+        }} />
+
+        {/* 文字區 */}
+        <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
+          <span style={{
+            display: 'inline-block',
+            padding: '3px 12px',
+            borderRadius: '999px',
+            background: `${slide.tagColor}22`,
+            color: slide.tagColor,
+            fontSize: '11px', fontWeight: 600,
+            letterSpacing: '0.08em',
+            fontFamily: '"DM Sans", sans-serif',
+            marginBottom: '12px',
+            border: `1px solid ${slide.tagColor}44`,
+          }}>
+            {slide.tag}
+          </span>
+          <h2 style={{
+            margin: '0 0 6px',
+            fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+            fontSize: '26px', fontWeight: 400,
+            color: '#F7F4F2', lineHeight: 1.2, letterSpacing: '0.02em',
+          }}>
+            {slide.title}
+          </h2>
+          <p style={{
+            margin: '0 0 6px',
+            fontSize: '12px', color: 'rgba(247,244,242,0.55)',
+            fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+            letterSpacing: '0.02em',
+          }}>
+            {slide.sub}
+          </p>
+          <p style={{
+            margin: '0 0 20px',
+            fontSize: '13px', color: 'rgba(247,244,242,0.75)',
+            fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+            lineHeight: 1.6, maxWidth: '480px',
+          }}>
+            {slide.desc}
+          </p>
+          <button style={{
+            padding: '8px 22px',
+            borderRadius: '8px',
+            border: `1px solid ${slide.ctaColor}`,
+            background: 'transparent',
+            color: slide.ctaColor,
+            fontSize: '13px', fontWeight: 500,
+            fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+            cursor: 'pointer',
+            transition: 'all 180ms',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.background = slide.ctaColor; e.currentTarget.style.color = '#1C1917'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = slide.ctaColor; }}
+          >
+            {slide.cta} →
+          </button>
+        </div>
+
+        {/* 幻燈片序號裝飾 */}
+        <div style={{
+          position: 'relative', zIndex: 1, flexShrink: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px',
+        }}>
+          <span style={{
+            fontFamily: '"Cormorant Garamond", serif',
+            fontSize: '64px', fontWeight: 300, lineHeight: 1,
+            color: 'rgba(247,244,242,0.08)',
+            letterSpacing: '-0.02em',
+          }}>
+            {String(idx + 1).padStart(2, '0')}
+          </span>
+        </div>
+      </div>
+
+      {/* 控制列：點 + 箭頭 */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 4px 0',
+      }}>
+        {/* 點指示器 */}
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          {BANNER_SLIDES.map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => goTo(i, i > idx ? 'next' : 'prev')}
+              style={{
+                border: 'none', padding: 0, cursor: 'pointer',
+                width: i === idx ? '24px' : '6px',
+                height: '6px', borderRadius: '999px',
+                background: i === idx ? slide.ctaColor : T.border,
+                transition: 'all 300ms cubic-bezier(0.16,1,0.3,1)',
+              }}
+            />
+          ))}
+        </div>
+
+        {/* 上 / 下一張 */}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {[{ dir: 'prev', icon: '←' }, { dir: 'next', icon: '→' }].map(({ dir, icon }) => (
+            <button
+              key={dir}
+              onClick={() => navigate_slide(dir)}
+              style={{
+                width: '30px', height: '30px', borderRadius: '50%',
+                border: `1px solid ${T.border}`,
+                background: 'transparent',
+                color: T.textTertiary,
+                fontSize: '14px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 150ms',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = slide.ctaColor; e.currentTarget.style.color = slide.ctaColor; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.textTertiary; }}
+            >
+              {icon}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ═══════════════════════════════════════
+   主元件：依登入狀態切換畫面
+   ═══════════════════════════════════════ */
+function Hero() {
+  const [user, setUser] = useState(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('user');
+    setUser(stored ? JSON.parse(stored) : null);
+    setReady(true);
+  }, []);
+
+  if (!ready) return null;
+  if (user)   return <LoggedInHome user={user} />;
+  return <LandingPage />;
+}
+
+/* ═══════════════════════════════════════
+   登入後主頁
+   ═══════════════════════════════════════ */
+function LoggedInHome({ user }) {
+  const navigate = useNavigate();
+  const { t } = useLang();
+  const [tab, setTab] = useState('latest');
+  const [announceDismissed, setAnnounceDismissed] = useState(false);
+  const [eventPop, setEventPop] = useState(false);
+  const [eventPopDismissed, setEventPopDismissed] = useState(false);
+  useReveal();
+
+  /* 活動 pop：1.8 秒後浮現 */
+  useEffect(() => {
+    const t = setTimeout(() => setEventPop(true), 1800);
+    return () => clearTimeout(t);
+  }, []);
+
+  const filteredPosts = tab === 'hot'
+    ? [...MOCK_POSTS].sort((a, b) => b.likes - a.likes)
+    : MOCK_POSTS;
+
+  return (
+    <div style={H.page}>
+
+      {/* ── 輪播 Banner ── */}
+      <div style={{ maxWidth: '860px', margin: '0 auto', padding: '0 24px', width: '100%', boxSizing: 'border-box' }}
+        className="g-fade-up gd-1">
+        <BannerCarousel />
+      </div>
+
+      {/* ── 主體 ── */}
+      <div style={H.body}>
+
+        {/* 左欄：Feed */}
+        <main style={H.main}>
+
+          {/* 公告條 */}
+          {!announceDismissed && (
+            <div style={H.announce} className="g-fade-up gd-1">
+              <span style={H.announceBadge}>{t('公告')}</span>
+              <span style={H.announceText}>
+                {t('保養品交換會 5/18 即將舉行，快來報名！')}
+              </span>
+              <button
+                style={H.announceClose}
+                onClick={() => setAnnounceDismissed(true)}
+                aria-label="關閉"
+              >✕</button>
+            </div>
+          )}
+
+          {/* Tab 列 */}
+          <div style={H.tabBar} className="g-fade-up gd-2">
+            {[
+              { key: 'latest',    label: '最新動態' },
+              { key: 'hot',       label: '熱門貼文' },
+              { key: 'following', label: '追蹤中' },
+            ].map(item => (
+              <button
+                key={item.key}
+                style={{ ...H.tabBtn, ...(tab === item.key ? H.tabActive : {}) }}
+                onClick={() => setTab(item.key)}
+              >
+                {t(item.label)}
+                {tab === item.key && <span style={H.tabLine} />}
+              </button>
+            ))}
+          </div>
+
+          {/* 貼文列表 */}
+          <div key={tab} className="g-tab-content">
+            {tab === 'following' ? (
+              <div style={H.emptyFeed}>
+                <p style={H.emptyTitle}>{t('還沒有追蹤的用戶')}</p>
+                <p style={H.emptySub}>{t('追蹤其他同學，在這裡看見他們的最新動態')}</p>
+              </div>
+            ) : (
+              filteredPosts.map((post, i) => (
+                <PostCard key={post.id} post={post} idx={i} t={t} />
+              ))
+            )}
+          </div>
+        </main>
+
+        {/* 右欄：Sidebar */}
+        <aside style={H.sidebar}>
+
+          {/* 近期活動 */}
+          <div style={H.sideSection} className="g-reveal">
+            <p style={H.sideTitle}>{t('近期活動')}</p>
+            <div style={H.eventList}>
+              {MOCK_EVENTS.map(ev => (
+                <EventCard key={ev.id} event={ev} t={t} />
+              ))}
+            </div>
+          </div>
+
+          {/* 熱門標籤 */}
+          <div style={H.sideSection} className="g-reveal delay-1">
+            <p style={H.sideTitle}>{t('熱門標籤')}</p>
+            <div style={H.tagCloud}>
+              {MOCK_TAGS.map(tag => (
+                <button key={tag} style={H.tagChip} className="fchip">
+                  {t(tag)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 快速入口 */}
+          <div style={H.sideSection} className="g-reveal delay-2">
+            <p style={H.sideTitle}>{t('快速入口')}</p>
+            <div style={H.quickLinks}>
+              {[
+                { label: '成分資料庫', sub: '查詢保養成分', to: '/products' },
+                { label: '個人主頁',   sub: '管理我的帖文', to: '/dashboard' },
+              ].map(l => (
+                <button key={l.label} style={H.quickLink} onClick={() => navigate(l.to)}>
+                  <span style={H.quickLabel}>{t(l.label)}</span>
+                  <span style={H.quickSub}>{t(l.sub)}</span>
+                  <span style={H.quickArrow}>→</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+        </aside>
+      </div>
+
+      {/* ── 活動 Pop（右下角浮現）── */}
+      {eventPop && !eventPopDismissed && (
+        <div style={H.eventPopWrap}>
+          <div style={H.eventPop} className="g-scale-in">
+            <div style={H.eventPopHeader}>
+              <span style={H.eventPopBadge}>{t('新活動')}</span>
+              <button
+                style={H.eventPopClose}
+                onClick={() => setEventPopDismissed(true)}
+                aria-label="關閉"
+              >✕</button>
+            </div>
+            <p style={H.eventPopTitle}>輔大保養品交換會</p>
+            <p style={H.eventPopDate}>5 月 18 日（六）14:00</p>
+            <p style={H.eventPopDesc}>帶一瓶來換一瓶，找到你的下一個愛用品！</p>
+            <button style={H.eventPopCta} onClick={() => setEventPopDismissed(true)}>
+              {t('了解詳情')}
+            </button>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+/* ── 貼文卡片 ── */
+function PostCard({ post, idx, t }) {
+  return (
+    <div style={{ ...H.postCard, animationDelay: `${idx * 70}ms` }} className="g-fade-up">
+      <div style={H.postHeader}>
+        <div style={H.postAvatar}>{post.initial}</div>
+        <div style={H.postMeta}>
+          <span style={H.postAuthor}>{post.author}</span>
+          <span style={H.postDept}>{post.dept} · {post.time}</span>
+        </div>
+        {post.hot && <span style={H.hotBadge}>{t('熱門')}</span>}
+      </div>
+      <span style={H.postTag}>{post.tag}</span>
+      <h3 style={H.postTitle}>{post.title}</h3>
+      <p style={H.postExcerpt}>{post.excerpt}</p>
+      <div style={H.postFooter}>
+        <button style={H.postStat}>♡ {post.likes}</button>
+        <button style={H.postStat}>◎ {post.comments}</button>
+        <button style={H.postStatRight}>{t('分享')}</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── 活動卡片 ── */
+function EventCard({ event, t }) {
+  return (
+    <div style={{ ...H.eventCard, ...(event.urgent ? H.eventCardUrgent : {}) }}>
+      <div style={H.eventCardTop}>
+        <span style={{ ...H.eventBadge, ...(event.urgent ? H.eventBadgeUrgent : {}) }}>
+          {t(event.badge)}
+        </span>
+        <span style={H.eventDate}>{event.date}</span>
+      </div>
+      <p style={H.eventTitle}>{event.title}</p>
+      <p style={H.eventLocation}>{event.location}</p>
+      <p style={H.eventDesc}>{event.desc}</p>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   未登入首頁（原行銷頁）
+   ═══════════════════════════════════════ */
+const FEATURES = [
+  { num: '01', title: '成分知識庫', desc: '查詢任何保養成分的安全等級、功效與使用禁忌，讓每一步保養都有所依據。', cta: '探索成分庫', to: '/products' },
+  { num: '02', title: '社群討論',   desc: '與輔大同學分享真實的保養心得與使用評價，找到你信任的美妝參考。', cta: '加入討論', to: '#' },
+  { num: '03', title: '膚質配對',   desc: '完成膚質測驗，平台將依你的肌膚狀況推薦最合適的成分與產品。', cta: '開始測驗', to: '/register' },
+];
+
+const SKIN_TOPICS = [
+  { tag: '油性肌', title: '控油不過度清潔：油肌保濕的正確方式', reads: '1.2k' },
+  { tag: '敏感肌', title: '成分越少越好？敏感肌選品的五個原則', reads: '980' },
+  { tag: '成分討論', title: '菸鹼醯胺與 A 醇能一起用嗎？', reads: '2.1k' },
+  { tag: '混合性肌', title: 'T 區與兩頰分區保養的實際操作方式', reads: '756' },
+];
+
+const TICKER_ITEMS = ['成分透明', 'CLARITY IS BEAUTY', '輔大美妝社群', 'INGREDIENT LIBRARY', '膚質配對', 'GLOW UP'];
+
+const INGREDIENTS = [
+  {
+    name: '菸鹼醯胺', en: 'Niacinamide', safeScore: 85,
+    tags: ['美白', '控油', '毛孔', '修護'],
+    desc: '多效合一的明星成分，適合大多數膚質，與 A 醇搭配需注意濃度與順序。',
+    ewg: 'EWG 1 級', barColor: '#7BAE8A',
+  },
+  {
+    name: '玻尿酸', en: 'Hyaluronic Acid', safeScore: 96,
+    tags: ['保濕', '鎖水', '敏感肌', '全膚質'],
+    desc: '天然保濕因子，能吸附自身重量千倍的水分，溫和適合各種膚質使用。',
+    ewg: 'EWG 1 級', barColor: '#7BAE8A',
+  },
+  {
+    name: '視黃醇', en: 'Retinol', safeScore: 62,
+    tags: ['抗老', '促代謝', '淡斑', '需適應期'],
+    desc: '維生素 A 衍生物，刺激膠原蛋白再生，新手建議從低濃度（0.1%）開始使用。',
+    ewg: 'EWG 3 級', barColor: '#D4A853',
+  },
+  {
+    name: '水楊酸', en: 'Salicylic Acid', safeScore: 70,
+    tags: ['去角質', '控油', '痘痘', '毛孔'],
+    desc: '脂溶性酸，能深入毛孔清潔油脂，0.5–2% 濃度適用一般保養品。',
+    ewg: 'EWG 2 級', barColor: '#C4AF7B',
+  },
+  {
+    name: '角鯊烷', en: 'Squalane', safeScore: 93,
+    tags: ['保濕', '柔膚', '油肌', '全膚質'],
+    desc: '植物來源的仿皮脂成分，質地輕薄不黏膩，油性肌膚也能安心使用。',
+    ewg: 'EWG 1 級', barColor: '#7BAE8A',
+  },
+  {
+    name: '杏仁酸', en: 'Mandelic Acid', safeScore: 75,
+    tags: ['去角質', '敏感肌', '溫和', '淡斑'],
+    desc: '分子量大的果酸，滲透速度慢，敏感肌與換膚新手的首選入門酸。',
+    ewg: 'EWG 2 級', barColor: '#C4AF7B',
+  },
+];
+
+/* ═══════════════════════════════════════
+   互動背景畫布（油彩暈染擴散）
+   ═══════════════════════════════════════ */
+function InteractiveBg() {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animId, W = 0, H = 0;
+
+    const mouse = { x: -999, y: -999, active: false };
+
+    /* 跟隨鼠標的主光暈（帶緩動） */
+    const glow = { x: 0, y: 0 };
+
+    /* 擴散暈染池：鼠標停頓時從該點緩慢向外暈染 */
+    const blooms = [];
+    const MAX_BLOOMS = 7;
+    let lastBloom = 0;
+
+    /* 兩個極緩慢漂移的背景色塊 */
+    const bg = [
+      { x: 0, y: 0, speed: 0.008, R: 380, r: 196, g: 137, b: 122, a: 0.07 },
+      { x: 0, y: 0, speed: 0.005, R: 320, r: 200, g: 152,  b: 72, a: 0.05 },
+    ];
+
+    const resize = () => {
+      W = canvas.width  = canvas.offsetWidth;
+      H = canvas.height = canvas.offsetHeight;
+      glow.x = W / 2; glow.y = H / 2;
+      bg[0].x = W * 0.65; bg[0].y = H * 0.40;
+      bg[1].x = W * 0.30; bg[1].y = H * 0.60;
+    };
+
+    const onMove = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+      mouse.active = true;
+    };
+
+    resize();
+    window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', onMove);
+
+    const draw = (time) => {
+      ctx.clearRect(0, 0, W, H);
+
+      /* ── 背景靜態色塊（極緩慢呼吸） ── */
+      bg.forEach((b, i) => {
+        const pulse = 1 + Math.sin(time * 0.0004 + i * Math.PI) * 0.06;
+        const ox = Math.sin(time * 0.0003 + i * 1.8) * 50;
+        const oy = Math.cos(time * 0.00025 + i * 2.2) * 40;
+        b.x += (W * (i === 0 ? 0.65 : 0.30) + ox - b.x) * b.speed;
+        b.y += (H * (i === 0 ? 0.40 : 0.60) + oy - b.y) * b.speed;
+
+        const gr = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.R * pulse);
+        gr.addColorStop(0, `rgba(${b.r},${b.g},${b.b},${b.a})`);
+        gr.addColorStop(1, `rgba(${b.r},${b.g},${b.b},0)`);
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.R * pulse, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      /* ── 主光暈：緩動跟隨鼠標 ── */
+      if (mouse.active) {
+        glow.x += (mouse.x - glow.x) * 0.07;
+        glow.y += (mouse.y - glow.y) * 0.07;
+
+        const gr = ctx.createRadialGradient(glow.x, glow.y, 0, glow.x, glow.y, 130);
+        gr.addColorStop(0,   'rgba(196,137,122,0.14)');
+        gr.addColorStop(0.5, 'rgba(196,137,122,0.06)');
+        gr.addColorStop(1,   'rgba(196,137,122,0)');
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(glow.x, glow.y, 130, 0, Math.PI * 2);
+        ctx.fill();
+
+        /* ── 每隔 500ms 在鼠標位置生成一個向外暈染的油彩圓 ── */
+        if (time - lastBloom > 500) {
+          lastBloom = time;
+          if (blooms.length >= MAX_BLOOMS) blooms.shift();
+          const cols = [[196,137,122],[200,152,72],[196,110,88]];
+          const col  = cols[Math.floor(Math.random() * cols.length)];
+          blooms.push({
+            x:    mouse.x + (Math.random() - 0.5) * 20,
+            y:    mouse.y + (Math.random() - 0.5) * 20,
+            r:    8,
+            maxR: 120 + Math.random() * 80,
+            col,
+            a0:   0.13 + Math.random() * 0.07, // 初始透明度
+          });
+        }
+      }
+
+      /* ── 擴散暈染：由內向外，中心先淡 ── */
+      for (let i = blooms.length - 1; i >= 0; i--) {
+        const bl = blooms[i];
+        bl.r += (bl.maxR - bl.r) * 0.016; // 緩出 easing
+        const p = bl.r / bl.maxR;          // 0→1
+
+        // 整體透明度：p^0.5 讓擴散初期有值，後期漸無
+        const alpha = bl.a0 * Math.pow(1 - p, 0.9);
+        if (alpha < 0.004) { blooms.splice(i, 1); continue; }
+
+        // 環形漸變：中心淡（已擴散）、邊緣濃
+        const [r, g, b] = bl.col;
+        const innerA = alpha * Math.max(0, 1 - p * 1.6); // 中心更早消失
+        const gr = ctx.createRadialGradient(bl.x, bl.y, bl.r * 0.3, bl.x, bl.y, bl.r);
+        gr.addColorStop(0,    `rgba(${r},${g},${b},${innerA})`);
+        gr.addColorStop(0.55, `rgba(${r},${g},${b},${alpha})`);
+        gr.addColorStop(1,    `rgba(${r},${g},${b},0)`);
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(bl.x, bl.y, bl.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    animId = requestAnimationFrame(draw);
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', onMove);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute', inset: 0,
+        width: '100%', height: '100%',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}
+    />
+  );
+}
+
+function LandingPage() {
+  const navigate = useNavigate();
+  const { t } = useLang();
+  useReveal();
+
+  const [ingIdx,  setIngIdx]  = useState(0);
+  const [fading,  setFading]  = useState(false);
+  const [barReady, setBarReady] = useState(false);
+
+  /* 每 5 秒切換成分 */
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setIngIdx(i => (i + 1) % INGREDIENTS.length);
+        setFading(false);
+        setBarReady(false);
+        // 讓 safeBar transition 在新值渲染後觸發
+        requestAnimationFrame(() => requestAnimationFrame(() => setBarReady(true)));
+      }, 350);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  /* 初次載入時啟動 bar */
+  useEffect(() => {
+    const t = setTimeout(() => setBarReady(true), 200);
+    return () => clearTimeout(t);
+  }, []);
+
+  const ing = INGREDIENTS[ingIdx];
+
+  return (
+    <div style={L.page}>
+
+      <section style={L.hero}>
+        <InteractiveBg />
+        <div style={L.heroInner}>
+          <div style={L.heroLeft}>
+            <p style={L.heroEyebrow} className="g-fade-in gd-0">{t('輔仁大學 · 美妝知識平台')}</p>
+            <h1 style={L.heroTitle} className="g-fade-up gd-1">
+              {t('成分透明，')}<br /><em>{t('才是真正的')}</em><br />{t('美妝自由')}
+            </h1>
+            <p style={L.heroDesc} className="g-fade-up gd-2">
+              {t('GLŌW 是專為輔大學生打造的美妝知識平台。')}<br />
+              {t('查成分、看評價、找同學討論，讓每一瓶都擦得安心。')}
+            </p>
+            <div style={L.heroCtas} className="g-fade-up gd-3">
+              <button style={L.ctaPrimary} onClick={() => navigate('/register')}>{t('立即加入')}</button>
+              <button style={L.ctaGhost}  onClick={() => navigate('/products')}>{t('探索成分庫 →')}</button>
+            </div>
+          </div>
+
+          <div style={L.heroRight} className="g-scale-in gd-2">
+            <div style={L.heroCard} className="g-float">
+              {/* 成分內容：淡入淡出 */}
+              <div style={{ opacity: fading ? 0 : 1, transition: 'opacity 300ms ease' }}>
+                <p style={L.cardLabel}>{t('成分介紹')}</p>
+                <p style={L.cardIngredient}>{ing.name}</p>
+                <p style={L.cardEn}>{ing.en}</p>
+                {/* 安全評分 bar */}
+                <div style={{ marginBottom: '4px' }}>
+                  <div style={L.safeBar}>
+                    <div style={{
+                      ...L.safeBarFill,
+                      backgroundColor: ing.barColor,
+                      width: barReady ? `${ing.safeScore}%` : '0%',
+                      transition: 'width 700ms cubic-bezier(0.22,1,0.36,1)',
+                    }} />
+                  </div>
+                  <p style={L.safeScore}>{t('安全評分')} {ing.safeScore} / 100</p>
+                </div>
+                <div style={L.cardTags}>
+                  {ing.tags.map(t => <span key={t} style={L.cardTag}>{t}</span>)}
+                </div>
+                <p style={L.cardDesc}>{ing.desc}</p>
+              </div>
+              {/* 分頁圓點 */}
+              <div style={L.dotRow}>
+                {INGREDIENTS.map((_, i) => (
+                  <button
+                    key={i}
+                    style={{ ...L.dot, ...(i === ingIdx ? L.dotActive : {}) }}
+                    onClick={() => { setFading(true); setTimeout(() => { setIngIdx(i); setFading(false); setBarReady(false); requestAnimationFrame(() => requestAnimationFrame(() => setBarReady(true))); }, 350); }}
+                    aria-label={`成分 ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+            <div style={{ ...L.floatCard, opacity: fading ? 0 : 1, transition: 'opacity 300ms ease' }} className="g-float-sm">
+              <span style={{ ...L.floatIcon, color: ing.barColor }}>✓</span>
+              <span style={L.floatText}>{ing.ewg}</span>
+            </div>
+          </div>
+        </div>
+        <div style={L.heroDeco1} /><div style={L.heroDeco2} />
+      </section>
+
+      <div style={L.ticker}>
+        <div className="g-ticker-track">
+          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((t, i) => (
+            <span key={i} style={L.tickerItem}>{t} <span style={L.tickerDot}>·</span></span>
+          ))}
+        </div>
+      </div>
+
+      <section style={L.features}>
+        <div style={L.featuresHeader}>
+          <p style={L.sectionEyebrow} className="g-reveal">WHAT WE OFFER</p>
+          <h2 style={L.sectionTitle} className="g-reveal delay-1">{t('三個理由加入 GLŌW')}</h2>
+        </div>
+        <div style={L.featureGrid} className="g-reveal delay-2">
+          {FEATURES.map(f => (
+            <div key={f.num} style={L.featureCard} className="g-feature-card" onClick={() => navigate(f.to)}>
+              <p style={L.featureNum}>{f.num}</p>
+              <h3 style={L.featureTitle}>{t(f.title)}</h3>
+              <p style={L.featureDesc}>{t(f.desc)}</p>
+              <button style={L.featureCta} className="g-feature-cta">{t(f.cta)} →</button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section style={L.topics}>
+        <div style={L.topicsInner}>
+          <div style={L.topicsHeader}>
+            <div>
+              <p style={L.sectionEyebrow} className="g-reveal">TRENDING</p>
+              <h2 style={L.sectionTitleLight} className="g-reveal delay-1">{t('熱門討論')}</h2>
+            </div>
+            <button style={L.viewAllBtn} className="g-reveal delay-2" onClick={() => navigate('#')}>{t('查看全部')}</button>
+          </div>
+          <div style={L.topicList}>
+            {SKIN_TOPICS.map((topic, i) => (
+              <div key={i} style={L.topicItem} className={`g-topic-item g-reveal delay-${i + 1}`}>
+                <div style={L.topicLeft}>
+                  <span style={L.topicTag}>{t(topic.tag)}</span>
+                  <p style={L.topicTitle} className="g-topic-title">{topic.title}</p>
+                </div>
+                <div style={L.topicRight}>
+                  <span style={L.topicReads}>{topic.reads} {t('閱讀')}</span>
+                  <span style={L.topicArrow} className="g-topic-arrow">→</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section style={L.ctaBanner}>
+        <div style={L.ctaBannerInner} className="g-reveal">
+          <p style={L.ctaBannerEyebrow}>JOIN GLŌW</p>
+          <h2 style={L.ctaBannerTitle}>{t('用知識武裝你的')}<br />{t('保養日常')}</h2>
+          <p style={L.ctaBannerSub}>{t('免費加入，使用輔大校務帳號即可註冊')}</p>
+          <div style={L.ctaBannerBtns}>
+            <button style={L.ctaBannerPrimary} onClick={() => navigate('/register')}>{t('立即註冊')}</button>
+            <button style={L.ctaBannerGhost}   onClick={() => navigate('/login')}>{t('已有帳號，登入')}</button>
+          </div>
+        </div>
+        <div style={L.ctaBannerDeco1} /><div style={L.ctaBannerDeco2} />
+      </section>
+
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   Styles — 登入後主頁
+   ═══════════════════════════════════════ */
+const H = {
+  page: { paddingTop: '96px', backgroundColor: 'var(--bg-base)', minHeight: '100vh' },
+
+  /* 歡迎列 */
+  welcomeBar: {
+    backgroundColor: '#1C1917',
+    borderBottom: '1px solid rgba(255,255,255,0.06)',
+    padding: '0',
+  },
+  welcomeInner: {
+    maxWidth: '1100px',
+    margin: '0 auto',
+    padding: '20px 40px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  welcomeLeft: { display: 'flex', alignItems: 'center', gap: '12px' },
+  greetText: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '22px',
+    fontWeight: 300,
+    color: T.textInverse,
+    margin: 0,
+    letterSpacing: '0.02em',
+  },
+  skinBadge: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px',
+    fontWeight: 500,
+    color: T.accent,
+    backgroundColor: 'rgba(196,137,122,0.15)',
+    border: '1px solid rgba(196,137,122,0.3)',
+    borderRadius: '999px',
+    padding: '3px 10px',
+  },
+  postBtn: {
+    height: '36px',
+    padding: '0 20px',
+    backgroundColor: T.accent,
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    letterSpacing: '0.04em',
+  },
+
+  /* 主體雙欄 */
+  body: {
+    maxWidth: '1100px',
+    margin: '0 auto',
+    padding: '32px 40px 64px',
+    display: 'flex',
+    gap: '32px',
+    alignItems: 'flex-start',
+  },
+  main: { flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 },
+  sidebar: { width: '300px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '20px' },
+
+  /* 公告條 */
+  announce: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '12px 16px',
+    backgroundColor: 'rgba(196,137,122,0.1)',
+    border: `1px solid rgba(196,137,122,0.25)`,
+    borderRadius: '10px',
+  },
+  announceBadge: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '10px',
+    fontWeight: 600,
+    letterSpacing: '0.1em',
+    color: '#fff',
+    backgroundColor: T.accent,
+    borderRadius: '4px',
+    padding: '2px 7px',
+    whiteSpace: 'nowrap',
+  },
+  announceText: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: 'var(--text-secondary)',
+    flex: 1,
+  },
+  announceClose: {
+    background: 'none',
+    border: 'none',
+    fontSize: '13px',
+    color: 'var(--text-tertiary)',
+    cursor: 'pointer',
+    padding: '0 4px',
+    flexShrink: 0,
+  },
+
+  /* Tab */
+  tabBar: {
+    display: 'flex',
+    borderBottom: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
+    borderRadius: '12px 12px 0 0',
+    padding: '0 8px',
+  },
+  tabBtn: {
+    position: 'relative',
+    padding: '14px 20px',
+    background: 'none',
+    border: 'none',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '14px',
+    fontWeight: 400,
+    color: 'var(--text-tertiary)',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  tabActive: { color: 'var(--text-primary)', fontWeight: 500 },
+  tabLine: {
+    position: 'absolute', bottom: '-1px', left: '12px', right: '12px',
+    height: '2px', backgroundColor: 'var(--accent)', borderRadius: '999px',
+  },
+
+  /* 貼文卡 */
+  postCard: {
+    backgroundColor: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '0',
+    padding: '24px 28px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    borderTop: 'none',
+    cursor: 'pointer',
+    transition: 'background-color 180ms',
+  },
+  postHeader: { display: 'flex', alignItems: 'center', gap: '10px' },
+  postAvatar: {
+    width: '36px', height: '36px', borderRadius: '50%',
+    backgroundColor: 'var(--accent)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontFamily: '"Cormorant Garamond", serif',
+    fontSize: '16px', color: '#fff', flexShrink: 0,
+  },
+  postMeta: { display: 'flex', flexDirection: 'column', gap: '1px', flex: 1 },
+  postAuthor: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)',
+  },
+  postDept: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px', color: 'var(--text-tertiary)',
+  },
+  hotBadge: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '10px', fontWeight: 600,
+    color: 'var(--accent)',
+    backgroundColor: 'rgba(196,137,122,0.12)',
+    border: '1px solid rgba(196,137,122,0.2)',
+    borderRadius: '4px', padding: '2px 7px', whiteSpace: 'nowrap',
+  },
+  postTag: {
+    alignSelf: 'flex-start',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px', fontWeight: 500, letterSpacing: '0.05em',
+    color: 'var(--accent)',
+    backgroundColor: 'rgba(196,137,122,0.08)',
+    border: '1px solid rgba(196,137,122,0.18)',
+    borderRadius: '999px', padding: '2px 10px',
+  },
+  postTitle: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '20px', fontWeight: 400, color: 'var(--text-primary)',
+    margin: 0, lineHeight: 1.35,
+  },
+  postExcerpt: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '14px', color: 'var(--text-secondary)',
+    lineHeight: 1.65, margin: 0,
+    display: '-webkit-box', WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical', overflow: 'hidden',
+  },
+  postFooter: {
+    display: 'flex', alignItems: 'center', gap: '4px',
+    paddingTop: '8px', borderTop: '1px solid var(--border)',
+    marginTop: '4px',
+  },
+  postStat: {
+    background: 'none', border: 'none', padding: '4px 10px',
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '12px', color: 'var(--text-tertiary)', cursor: 'pointer',
+    borderRadius: '6px',
+    transition: 'color 140ms, background-color 140ms',
+  },
+  postStatRight: {
+    marginLeft: 'auto',
+    background: 'none', border: 'none', padding: '4px 10px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px', color: 'var(--text-tertiary)', cursor: 'pointer',
+    borderRadius: '6px',
+  },
+
+  /* Feed empty */
+  emptyFeed: {
+    backgroundColor: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
+    borderTop: 'none',
+    borderRadius: '0 0 12px 12px',
+    padding: '64px 40px',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+  },
+  emptyTitle: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '20px', fontWeight: 400, color: 'var(--text-primary)', margin: 0,
+  },
+  emptySub: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px', color: 'var(--text-tertiary)', margin: 0, textAlign: 'center',
+  },
+
+  /* Sidebar */
+  sideSection: {
+    backgroundColor: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    padding: '20px',
+    display: 'flex', flexDirection: 'column', gap: '14px',
+  },
+  sideTitle: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em',
+    color: 'var(--text-tertiary)', margin: 0, textTransform: 'uppercase',
+  },
+
+  /* 活動卡 */
+  eventList: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  eventCard: {
+    backgroundColor: 'var(--bg-subtle)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px', padding: '14px 16px',
+    display: 'flex', flexDirection: 'column', gap: '4px',
+    transition: 'transform 160ms, box-shadow 160ms',
+    cursor: 'pointer',
+  },
+  eventCardUrgent: {
+    backgroundColor: 'rgba(196,137,122,0.08)',
+    border: '1px solid rgba(196,137,122,0.25)',
+  },
+  eventCardTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' },
+  eventBadge: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
+    color: 'var(--text-secondary)',
+    backgroundColor: 'var(--border)',
+    borderRadius: '4px', padding: '2px 7px',
+  },
+  eventBadgeUrgent: { color: 'var(--accent)', backgroundColor: 'rgba(196,137,122,0.15)' },
+  eventDate: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '11px', color: 'var(--text-tertiary)', margin: 0,
+  },
+  eventTitle: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '16px', fontWeight: 400, color: 'var(--text-primary)', margin: 0,
+  },
+  eventLocation: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px', color: 'var(--accent)', margin: 0,
+  },
+  eventDesc: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0,
+  },
+
+  /* 標籤雲 */
+  tagCloud: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
+  tagChip: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px', color: 'var(--text-secondary)',
+    backgroundColor: 'var(--bg-subtle)',
+    border: '1px solid var(--border)',
+    borderRadius: '999px', padding: '4px 12px',
+    cursor: 'pointer', background: 'none',
+  },
+
+  /* 快速入口 */
+  quickLinks: { display: 'flex', flexDirection: 'column', gap: '6px' },
+  quickLink: {
+    display: 'flex', alignItems: 'center', gap: '8px',
+    width: '100%', background: 'none',
+    border: '1px solid var(--border)',
+    borderRadius: '8px', padding: '10px 14px',
+    cursor: 'pointer', textAlign: 'left',
+    transition: 'border-color 150ms, background-color 150ms',
+  },
+  quickLabel: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', flex: 1,
+  },
+  quickSub: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px', color: 'var(--text-tertiary)',
+  },
+  quickArrow: { color: 'var(--text-tertiary)', fontSize: '14px', flexShrink: 0 },
+
+  /* 活動 Pop */
+  eventPopWrap: {
+    position: 'fixed', bottom: '32px', right: '32px', zIndex: 200,
+  },
+  eventPop: {
+    width: '280px',
+    backgroundColor: T.bgInverse,
+    border: '1px solid rgba(196,137,122,0.2)',
+    borderRadius: '14px',
+    padding: '20px',
+    boxShadow: '0 12px 48px rgba(28,25,23,0.3)',
+    display: 'flex', flexDirection: 'column', gap: '8px',
+  },
+  eventPopHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  eventPopBadge: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em',
+    color: T.accent,
+    backgroundColor: 'rgba(196,137,122,0.15)',
+    borderRadius: '4px', padding: '2px 8px',
+  },
+  eventPopClose: {
+    background: 'none', border: 'none',
+    fontSize: '13px', color: 'rgba(247,244,242,0.4)',
+    cursor: 'pointer', padding: '0 2px',
+  },
+  eventPopTitle: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '18px', fontWeight: 400, color: T.textInverse,
+    margin: 0, lineHeight: 1.3,
+  },
+  eventPopDate: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px', color: 'rgba(247,244,242,0.5)', margin: 0,
+  },
+  eventPopDesc: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px', color: 'rgba(247,244,242,0.65)',
+    lineHeight: 1.6, margin: 0,
+  },
+  eventPopCta: {
+    marginTop: '6px',
+    height: '36px', backgroundColor: T.accent,
+    color: '#fff', border: 'none', borderRadius: '8px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+  },
+};
+
+/* ═══════════════════════════════════════
+   Styles — 未登入首頁
+   ═══════════════════════════════════════ */
+const L = {
+  page: { paddingTop: '64px', backgroundColor: 'var(--bg-base)', overflow: 'hidden' },
+  hero: {
+    position: 'relative', minHeight: '600px',
+    display: 'flex', alignItems: 'center',
+    padding: '80px 64px', overflow: 'hidden',
+    background: 'linear-gradient(160deg, var(--bg-subtle) 0%, var(--bg-base) 55%)',
+  },
+  heroInner: {
+    position: 'relative', zIndex: 1,
+    maxWidth: '1200px', margin: '0 auto', width: '100%',
+    display: 'flex', alignItems: 'center', gap: '80px',
+  },
+  heroLeft: { flex: '0 0 520px', display: 'flex', flexDirection: 'column', gap: '24px' },
+  heroEyebrow: {
+    fontFamily: '"DM Sans", sans-serif', fontSize: '11px', fontWeight: 500,
+    letterSpacing: '0.18em', color: 'var(--accent)', margin: 0, textTransform: 'uppercase',
+  },
+  heroTitle: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '64px', fontWeight: 300, lineHeight: 1.15, color: 'var(--text-primary)', margin: 0,
+  },
+  heroDesc: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.75, margin: 0,
+  },
+  heroCtas: { display: 'flex', gap: '12px', alignItems: 'center', marginTop: '8px' },
+  ctaPrimary: {
+    height: '46px', padding: '0 32px', backgroundColor: 'var(--bg-inverse)',
+    color: 'var(--text-inverse)', border: 'none', borderRadius: '8px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '14px', fontWeight: 500, cursor: 'pointer', letterSpacing: '0.06em',
+  },
+  ctaGhost: {
+    height: '46px', padding: '0 24px', backgroundColor: 'transparent',
+    color: 'var(--text-secondary)', border: 'none',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '14px', cursor: 'pointer',
+  },
+  heroRight: { flex: 1, position: 'relative', display: 'flex', justifyContent: 'center' },
+  heroCard: {
+    backgroundColor: 'var(--bg-surface)', borderRadius: '16px',
+    border: '1px solid var(--border)', padding: '32px', width: '300px',
+    display: 'flex', flexDirection: 'column', gap: '12px',
+    boxShadow: '0 4px 24px rgba(28,25,23,0.07)',
+  },
+  cardLabel: {
+    fontFamily: '"DM Sans", sans-serif', fontSize: '10px', fontWeight: 500,
+    letterSpacing: '0.14em', color: 'var(--accent)', margin: 0, textTransform: 'uppercase',
+  },
+  cardIngredient: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '36px', fontWeight: 400, color: 'var(--text-primary)', margin: 0, lineHeight: 1,
+  },
+  cardEn: {
+    fontFamily: '"DM Sans", sans-serif', fontSize: '13px',
+    color: 'var(--text-tertiary)', margin: '-6px 0 0 0', letterSpacing: '0.06em',
+  },
+  safeBar: { height: '6px', backgroundColor: 'var(--bg-subtle)', borderRadius: '999px', overflow: 'hidden', marginBottom: '4px' },
+  safeBarFill: { height: '100%', borderRadius: '999px' },
+  safeScore: {
+    fontFamily: '"DM Sans", sans-serif', fontSize: '10px',
+    color: 'var(--text-tertiary)', margin: '4px 0 0 0', letterSpacing: '0.04em',
+  },
+  dotRow: { display: 'flex', gap: '6px', alignItems: 'center', paddingTop: '4px' },
+  dot: {
+    width: '6px', height: '6px', borderRadius: '50%',
+    backgroundColor: 'var(--border)', border: 'none', padding: 0, cursor: 'pointer',
+    transition: 'background-color 250ms, transform 250ms',
+  },
+  dotActive: { backgroundColor: 'var(--accent)', transform: 'scale(1.3)' },
+  cardTags: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
+  cardTag: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', fontSize: '11px',
+    color: 'var(--text-secondary)', backgroundColor: 'var(--bg-subtle)', borderRadius: '999px', padding: '3px 10px',
+  },
+  cardDesc: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', fontSize: '13px',
+    color: 'var(--text-secondary)', lineHeight: 1.65, margin: '4px 0 0 0',
+    borderTop: '1px solid var(--border)', paddingTop: '12px',
+  },
+  floatCard: {
+    position: 'absolute', bottom: '-16px', left: '-24px',
+    backgroundColor: '#1C1917', borderRadius: '10px', padding: '10px 16px',
+    display: 'flex', alignItems: 'center', gap: '8px',
+    boxShadow: '0 4px 16px rgba(28,25,23,0.15)',
+  },
+  floatIcon: { color: '#7BAE8A', fontSize: '14px', fontWeight: 700 },
+  floatText: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px', color: 'rgba(247,244,242,0.8)', whiteSpace: 'nowrap',
+  },
+  heroDeco1: {
+    position: 'absolute', width: '480px', height: '480px', borderRadius: '50%',
+    border: `1px solid rgba(196,137,122,0.12)`, right: '-80px', top: '-80px', pointerEvents: 'none',
+  },
+  heroDeco2: {
+    position: 'absolute', width: '300px', height: '300px', borderRadius: '50%',
+    border: `1px solid rgba(196,137,122,0.08)`, right: '100px', bottom: '-60px', pointerEvents: 'none',
+  },
+  ticker: { backgroundColor: T.accent, padding: '12px 0', overflow: 'hidden' },
+  tickerItem: {
+    fontFamily: '"DM Sans", sans-serif', fontSize: '12px', fontWeight: 500,
+    letterSpacing: '0.12em', color: '#FFFFFF', padding: '0 20px',
+    textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '20px', whiteSpace: 'nowrap',
+  },
+  tickerDot: { opacity: 0.6 },
+  features: { padding: '96px 64px', maxWidth: '1200px', margin: '0 auto' },
+  featuresHeader: { marginBottom: '56px' },
+  sectionEyebrow: {
+    fontFamily: '"DM Sans", sans-serif', fontSize: '11px', fontWeight: 500,
+    letterSpacing: '0.18em', color: 'var(--accent)', margin: '0 0 12px 0',
+  },
+  sectionTitle: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '40px', fontWeight: 400, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2,
+  },
+  featureGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px',
+    border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden',
+  },
+  featureCard: {
+    backgroundColor: 'var(--bg-surface)', padding: '48px 40px',
+    display: 'flex', flexDirection: 'column', gap: '16px',
+    borderRight: '1px solid var(--border)',
+  },
+  featureNum: {
+    fontFamily: '"Cormorant Garamond", serif', fontSize: '48px', fontWeight: 300,
+    color: 'var(--accent-light)', margin: 0, lineHeight: 1,
+  },
+  featureTitle: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '24px', fontWeight: 400, color: 'var(--text-primary)', margin: 0,
+  },
+  featureDesc: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0, flex: 1,
+  },
+  featureCta: {
+    background: 'none', border: 'none', padding: 0,
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px', color: 'var(--accent)', cursor: 'pointer', fontWeight: 500, textAlign: 'left',
+  },
+  topics: { backgroundColor: '#1C1917', padding: '80px 0' },
+  topicsInner: { maxWidth: '1200px', margin: '0 auto', padding: '0 64px' },
+  topicsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' },
+  sectionTitleLight: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '40px', fontWeight: 400, color: T.textInverse, margin: 0, lineHeight: 1.2,
+  },
+  viewAllBtn: {
+    background: 'none', border: `1px solid rgba(247,244,242,0.2)`, borderRadius: '8px',
+    padding: '8px 20px', fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px', color: 'rgba(247,244,242,0.6)', cursor: 'pointer',
+  },
+  topicList: { display: 'flex', flexDirection: 'column' },
+  topicItem: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '24px 0', borderBottom: `1px solid rgba(247,244,242,0.08)`, gap: '24px',
+  },
+  topicLeft: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  topicTag: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', fontSize: '11px', fontWeight: 500,
+    letterSpacing: '0.08em', color: T.accent, backgroundColor: 'rgba(196,137,122,0.12)',
+    padding: '3px 10px', borderRadius: '999px', alignSelf: 'flex-start',
+  },
+  topicTitle: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '20px', fontWeight: 400, color: 'rgba(247,244,242,0.85)', margin: 0, lineHeight: 1.35,
+  },
+  topicRight: { display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 },
+  topicReads: {
+    fontFamily: '"DM Sans", sans-serif', fontSize: '12px',
+    color: 'rgba(247,244,242,0.3)', whiteSpace: 'nowrap',
+  },
+  topicArrow: { color: 'rgba(247,244,242,0.3)', fontSize: '16px' },
+  ctaBanner: {
+    position: 'relative', backgroundColor: 'var(--bg-subtle)', padding: '96px 64px',
+    overflow: 'hidden', borderTop: '1px solid var(--border)',
+  },
+  ctaBannerInner: {
+    position: 'relative', zIndex: 1, maxWidth: '560px', margin: '0 auto',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', textAlign: 'center',
+  },
+  ctaBannerEyebrow: {
+    fontFamily: '"DM Sans", sans-serif', fontSize: '11px', fontWeight: 500,
+    letterSpacing: '0.18em', color: 'var(--accent)', margin: 0,
+  },
+  ctaBannerTitle: {
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '52px', fontWeight: 300, color: 'var(--text-primary)', lineHeight: 1.2, margin: 0,
+  },
+  ctaBannerSub: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '15px', color: 'var(--text-secondary)', margin: 0,
+  },
+  ctaBannerBtns: { display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap', justifyContent: 'center' },
+  ctaBannerPrimary: {
+    height: '46px', padding: '0 36px', backgroundColor: 'var(--bg-inverse)',
+    color: 'var(--text-inverse)', border: 'none', borderRadius: '8px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '14px', fontWeight: 500, cursor: 'pointer', letterSpacing: '0.06em',
+  },
+  ctaBannerGhost: {
+    height: '46px', padding: '0 28px', backgroundColor: 'transparent',
+    color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', fontSize: '14px', cursor: 'pointer',
+  },
+  ctaBannerDeco1: {
+    position: 'absolute', width: '500px', height: '500px', borderRadius: '50%',
+    border: `1px solid rgba(196,137,122,0.15)`, right: '-100px', top: '-150px', pointerEvents: 'none',
+  },
+  ctaBannerDeco2: {
+    position: 'absolute', width: '300px', height: '300px', borderRadius: '50%',
+    border: `1px solid rgba(196,137,122,0.1)`, left: '-60px', bottom: '-80px', pointerEvents: 'none',
+  },
+};
+
+export default Hero;

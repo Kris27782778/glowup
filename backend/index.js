@@ -1,0 +1,45 @@
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
+const pool = require('./config/db');
+const authRoutes = require('./routes/auth');
+const productRoutes = require('./routes/products');
+const wishlistRoutes  = require('./routes/wishlist');
+const adminRoutes     = require('./routes/admin');
+const questionRoutes  = require('./routes/questions');
+const answerRoutes = require('./routes/answers');
+const app = express();
+const PORT = process.env.PORT || 5001;
+
+app.use(cors());
+app.use(express.json());
+
+// 路由
+app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/wishlist',   wishlistRoutes);
+app.use('/api/admin',     adminRoutes);
+app.use('/api/questions', questionRoutes);
+app.use('/api/questions/:id/answers', answerRoutes);
+// 測試路由
+app.get('/', (req, res) => {
+  res.json({ message: 'Glow Up 後端啟動成功 🌸' });
+});
+
+// 測試資料庫連線
+app.get('/test-db', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM skin_types');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`伺服器跑在 port ${PORT}`);
+});

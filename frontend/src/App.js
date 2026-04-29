@@ -1,0 +1,132 @@
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import Navbar from './Navbar';
+import Hero from './Hero';
+import Footer from './Footer';
+import Login from './Login';
+import Register from './Register';
+import ProductDB from './ProductDB';
+import Dashboard from './Dashboard';
+import Settings from './Settings';
+import AuthGate from './components/AuthGate';
+import Community from './Community';
+import QA from './QA';
+import AskQuestion from './AskQuestion';
+import Admin from './Admin';
+import { applyTheme, getStoredSettings } from './hooks/useSettings';
+import './animations.css';
+
+function RequireAuth({ feature, children }) {
+  const user = localStorage.getItem('user');
+  if (!user) return <AuthGate feature={feature} />;
+  return children;
+}
+
+// Apply saved theme before first render
+applyTheme(getStoredSettings().theme);
+
+const SPLASH_BG = '#1C1917';
+const SPLASH_ACCENT = '#C4897A';
+
+function GlobalSplash({ onDone }) {
+  const [phase, setPhase] = useState('in'); // 'in' | 'exit'
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase('exit'), 2000);
+    const t2 = setTimeout(() => onDone(), 2750);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [onDone]);
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      backgroundColor: SPLASH_BG,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      overflow: 'hidden',
+      animation: phase === 'exit'
+        ? 'glow-splash-rise 750ms cubic-bezier(0.76,0,0.24,1) forwards'
+        : 'none',
+    }}>
+      <div style={{ position: 'absolute', width: '600px', height: '600px', borderRadius: '50%',
+        border: '1px solid rgba(196,137,122,0.1)', top: '-160px', right: '-160px', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', width: '360px', height: '360px', borderRadius: '50%',
+        border: '1px solid rgba(196,137,122,0.07)', bottom: '-80px', left: '-80px', pointerEvents: 'none' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+        <h1 style={{
+          fontFamily: '"Cormorant Garamond","Noto Serif TC",serif',
+          fontSize: '100px', fontWeight: 300, letterSpacing: '0.18em',
+          color: '#F7F4F2', margin: 0, lineHeight: 1,
+          animation: 'glow-splash-text 800ms cubic-bezier(0.22,1,0.36,1) 150ms both',
+        }}>GLŌW</h1>
+        <div style={{
+          width: '48px', height: '1px', backgroundColor: SPLASH_ACCENT,
+          margin: '28px auto 24px',
+          animation: 'glow-splash-line 600ms cubic-bezier(0.22,1,0.36,1) 600ms both',
+        }} />
+        <p style={{
+          fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+          fontSize: '12px', fontWeight: 400, letterSpacing: '0.22em',
+          color: 'rgba(196,137,122,0.75)', margin: 0,
+          animation: 'glow-splash-sub 500ms ease 800ms both',
+        }}>輔大美妝交流平台</p>
+      </div>
+    </div>
+  );
+}
+
+function Layout() {
+  const { pathname } = useLocation();
+  const [mountKey, setMountKey] = useState(0);
+  const prevPath = useRef(null);
+
+  useEffect(() => {
+    if (prevPath.current !== null && prevPath.current !== pathname) {
+      setMountKey(k => k + 1);
+    }
+    prevPath.current = pathname;
+  }, [pathname]);
+
+  return (
+    <>
+      <Navbar />
+      {/* key 改變時強制重新掛載，觸發 glow-page 入場動畫 */}
+      <div key={`${pathname}-${mountKey}`} className="glow-page">
+        <Routes>
+          <Route path="/"          element={<Hero />} />
+          <Route path="/login"     element={<Login />} />
+          <Route path="/register"  element={<Register />} />
+          <Route path="/community" element={<RequireAuth feature="community"><Community /></RequireAuth>} />
+          <Route path="/qa"         element={<RequireAuth feature="qa"><QA /></RequireAuth>} />
+          <Route path="/qa/ask"    element={<RequireAuth feature="qa"><AskQuestion /></RequireAuth>} />
+          <Route path="/products"  element={<RequireAuth feature="products"><ProductDB /></RequireAuth>} />
+          <Route path="/dashboard" element={<RequireAuth feature="dashboard"><Dashboard /></RequireAuth>} />
+          <Route path="/settings"  element={<RequireAuth feature="settings"><Settings /></RequireAuth>} />
+        </Routes>
+      </div>
+      <Footer />
+    </>
+  );
+}
+
+function App() {
+  const [splashDone, setSplashDone] = useState(false);
+
+  const handleSplashDone = () => {
+    setSplashDone(true);
+    window.scrollTo(0, 0);
+  };
+
+  if (!splashDone) {
+    return <GlobalSplash onDone={handleSplashDone} />;
+  }
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/admin/*" element={<Admin />} />
+        <Route path="/*"       element={<Layout />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
