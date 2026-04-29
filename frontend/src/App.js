@@ -1,20 +1,21 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import Navbar from './Navbar';
 import Hero from './Hero';
 import Footer from './Footer';
-import Login from './Login';
-import Register from './Register';
-import ProductDB from './ProductDB';
-import Dashboard from './Dashboard';
-import Settings from './Settings';
 import AuthGate from './components/AuthGate';
-import Community from './Community';
-import QA from './QA';
-import AskQuestion from './AskQuestion';
-import Admin from './Admin';
 import { applyTheme, getStoredSettings } from './hooks/useSettings';
 import './animations.css';
+
+const Login = lazy(() => import('./Login'));
+const Register = lazy(() => import('./Register'));
+const ProductDB = lazy(() => import('./ProductDB'));
+const Dashboard = lazy(() => import('./Dashboard'));
+const Settings = lazy(() => import('./Settings'));
+const Community = lazy(() => import('./Community'));
+const QA = lazy(() => import('./QA'));
+const AskQuestion = lazy(() => import('./AskQuestion'));
+const Admin = lazy(() => import('./Admin'));
 
 function RequireAuth({ feature, children }) {
   const user = localStorage.getItem('user');
@@ -31,8 +32,8 @@ const SPLASH_ACCENT = '#C4897A';
 function GlobalSplash({ onDone }) {
   const [phase, setPhase] = useState('in'); // 'in' | 'exit'
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('exit'), 2000);
-    const t2 = setTimeout(() => onDone(), 2750);
+    const t1 = setTimeout(() => setPhase('exit'), 800);
+    const t2 = setTimeout(() => onDone(), 1200);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [onDone]);
 
@@ -88,19 +89,20 @@ function Layout() {
   return (
     <>
       <Navbar />
-      {/* key 改變時強制重新掛載，觸發 glow-page 入場動畫 */}
       <div key={`${pathname}-${mountKey}`} className="glow-page">
-        <Routes>
-          <Route path="/"          element={<Hero />} />
-          <Route path="/login"     element={<Login />} />
-          <Route path="/register"  element={<Register />} />
-          <Route path="/community" element={<RequireAuth feature="community"><Community /></RequireAuth>} />
-          <Route path="/qa"         element={<RequireAuth feature="qa"><QA /></RequireAuth>} />
-          <Route path="/qa/ask"    element={<RequireAuth feature="qa"><AskQuestion /></RequireAuth>} />
-          <Route path="/products"  element={<RequireAuth feature="products"><ProductDB /></RequireAuth>} />
-          <Route path="/dashboard" element={<RequireAuth feature="dashboard"><Dashboard /></RequireAuth>} />
-          <Route path="/settings"  element={<RequireAuth feature="settings"><Settings /></RequireAuth>} />
-        </Routes>
+        <Suspense fallback={null}>
+          <Routes>
+            <Route path="/"          element={<Hero />} />
+            <Route path="/login"     element={<Login />} />
+            <Route path="/register"  element={<Register />} />
+            <Route path="/community" element={<RequireAuth feature="community"><Community /></RequireAuth>} />
+            <Route path="/qa"         element={<RequireAuth feature="qa"><QA /></RequireAuth>} />
+            <Route path="/qa/ask"    element={<RequireAuth feature="qa"><AskQuestion /></RequireAuth>} />
+            <Route path="/products"  element={<RequireAuth feature="products"><ProductDB /></RequireAuth>} />
+            <Route path="/dashboard" element={<RequireAuth feature="dashboard"><Dashboard /></RequireAuth>} />
+            <Route path="/settings"  element={<RequireAuth feature="settings"><Settings /></RequireAuth>} />
+          </Routes>
+        </Suspense>
       </div>
       <Footer />
     </>
@@ -121,10 +123,12 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/admin/*" element={<Admin />} />
-        <Route path="/*"       element={<Layout />} />
-      </Routes>
+      <Suspense fallback={null}>
+        <Routes>
+          <Route path="/admin/*" element={<Admin />} />
+          <Route path="/*"       element={<Layout />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
