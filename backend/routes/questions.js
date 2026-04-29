@@ -3,51 +3,43 @@ const router   = express.Router();
 const supabase = require('../config/supabase');
 const Anthropic = require('@anthropic-ai/sdk');
 
-// GET /api/questions — 取問題列表（支援 tag / search / solved 篩選）
+// GET /api/questions — 取問題列表（支援 tag / search / solved 篩選，分頁）
 router.get('/', async (req, res) => {
-  const { tag, search, solved, user_id, include_anonymous } = req.query;
+  const { tag, search, solved, user_id, include_anonymous, page = 1, limit = 20 } = req.query;
+  const pageNum = Math.max(1, parseInt(page));
+  const pageSize = Math.min(50, Math.max(1, parseInt(limit)));
+  const from = (pageNum - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   try {
     let query = supabase
       .from('questions')
-      .select('question_id, user_id, is_anonymous, title, detail, tags, solved, views, created_at, ai_answer, users(nickname, department_grade)')
-      .order('created_at', { ascending: false });
+      .select('question_id, user_id, is_anonymous, title, tags, solved, views, created_at, ai_answer, users(nickname, department_grade), answers(count)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (user_id) {
       query = query.eq('user_id', user_id);
-      // 查別人的問題時排除匿名，只有本人（include_anonymous=true）才能看到自己的匿名問題
       if (include_anonymous !== 'true') query = query.eq('is_anonymous', false);
     }
     if (solved === 'true')  query = query.eq('solved', true);
     if (solved === 'false') query = query.eq('solved', false);
     if (tag)    query = query.contains('tags', [tag]);
-    if (search) query = query.or(`title.ilike.%${search}%,detail.ilike.%${search}%`);
+    if (search) query = query.or(`title.ilike.%${search}%`);
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) return res.status(400).json({ error: error.message });
 
-    // 另外查每題的社群回覆數
-    const questionIds = (data || []).map(q => q.question_id);
-    let answerCountMap = {};
-    if (questionIds.length > 0) {
-      const { data: ansData } = await supabase
-        .from('answers')
-        .select('question_id')
-        .in('question_id', questionIds);
-      (ansData || []).forEach(a => {
-        answerCountMap[a.question_id] = (answerCountMap[a.question_id] || 0) + 1;
-      });
-    }
-
-    // 匿名問題：遮蔽公開列表的用戶資料（個人頁 include_anonymous=true 時保留）
     const masked = (data || []).map(q => {
-      const base = { ...q, answer_count: answerCountMap[q.question_id] || 0 };
+      const base = { ...q, answer_count: q.answers?.[0]?.count ?? 0 };
+      delete base.answers;
       if (q.is_anonymous && include_anonymous !== 'true') {
         return { ...base, user_id: null, users: null };
       }
       return base;
     });
 
-    res.json(masked);
+    res.json({ data: masked, total: count, page: pageNum, limit: pageSize });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: '查詢失敗' });

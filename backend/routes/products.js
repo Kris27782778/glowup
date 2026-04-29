@@ -23,10 +23,16 @@ const effectMap = {
 };
 
 router.get('/', async (req, res) => {
-  const { category, sub_category, skin_type, effect, search } = req.query;
+  const { category, sub_category, skin_type, effect, search, page = 1, limit = 24 } = req.query;
+  const pageNum = Math.max(1, parseInt(page));
+  const pageSize = Math.min(48, Math.max(1, parseInt(limit)));
+  const from = (pageNum - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const skinCol   = skinMap[skin_type];
+  const effectCol = effectMap[effect];
 
   try {
-    // 第一步：撈產品 + 成分資料（含分數）
     let query = supabase
       .from('products')
       .select(`
@@ -34,57 +40,41 @@ router.get('/', async (req, res) => {
         product_ingredients (
           ingredient_id,
           ingredients (
-            ingredient_id,
-            name,
-            skin_oily,
-            skin_dry,
-            skin_sensitive,
-            skin_normal,
-            skin_combo,
-            effect_hydration,
-            effect_oil_control,
-            effect_repair,
-            effect_anti_acne,
-            effect_exfoliate,
-            effect_whitening,
-            effect_anti_aging
+            ingredient_id, name,
+            ${skinCol   ? skinCol + ',' : ''}
+            ${effectCol ? effectCol     : 'skin_oily'}
           )
         )
-      `);
+      `, { count: 'exact' });
 
     if (category)     query = query.eq('category', category);
     if (sub_category) query = query.eq('sub_category', sub_category);
     if (search)       query = query.or(`name.ilike.%${search}%,brand.ilike.%${search}%`);
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) return res.status(400).json({ error: error.message });
 
-    // 第二步：計算每個產品的分數
-    const skinCol   = skinMap[skin_type];
-    const effectCol = effectMap[effect];
-
     const scored = data.map(product => {
-      let score = 3; // 基礎分
-
+      let score = 3;
       product.product_ingredients?.forEach(pi => {
         const ing = pi.ingredients;
         if (!ing) return;
         if (skinCol   && ing[skinCol]   != null) score += ing[skinCol];
         if (effectCol && ing[effectCol] != null) score += ing[effectCol];
       });
-
       return { ...product, score };
     });
 
-    // 第三步：如果有選膚質或功效，過濾掉分數太低的（< 3分）
     const filtered = (skinCol || effectCol)
       ? scored.filter(p => p.score >= 3)
       : scored;
 
-    // 第四步：從高到低排序
     filtered.sort((a, b) => b.score - a.score);
 
-    res.json(filtered);
+    const paged = filtered.slice(from, to + 1);
+
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json({ data: paged, total: count, page: pageNum, limit: pageSize });
 
   } catch (err) {
     console.error(err);
