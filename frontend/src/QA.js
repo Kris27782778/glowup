@@ -33,6 +33,9 @@ export default function QA() {
 
   /* 頁面載入時從後端拿問題，並處理從 AskQuestion 帶回的新問題 */
   useEffect(() => {
+    // 記錄此時為「最後看過問答的時間」，讓 Navbar 通知歸零
+    localStorage.setItem('lastSeenQA', new Date().toISOString());
+
     const stored = localStorage.getItem('user');
     const currentUser = stored ? JSON.parse(stored) : null;
 
@@ -338,7 +341,7 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
   }, [expanded, q.id]);
 
   const allReplies  = answers;
-  const answerTotal = allReplies.length + (q.expert ? 1 : 0) + 1;
+  const answerTotal = q.answerCount + (q.expert ? 1 : 0) + 1;
   const statusColor = q.solved ? '#5A9E7A' : '#C4A35A';
 
   const handleReplySubmit = async () => {

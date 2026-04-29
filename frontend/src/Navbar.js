@@ -1,6 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useLang } from './hooks/useLang';
+import API_BASE from './config';
 import './animations.css';
 
 
@@ -11,9 +12,10 @@ const NAV_KEYS = [
 ];
 
 function Navbar() {
-  const [user, setUser]         = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [user,        setUser]        = useState(null);
+  const [menuOpen,    setMenuOpen]    = useState(false);
+  const [scrolled,    setScrolled]    = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const menuRef                 = useRef(null);
   const navigate                = useNavigate();
   const location                = useLocation();
@@ -26,7 +28,23 @@ function Navbar() {
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
-    setUser(stored ? JSON.parse(stored) : null);
+    const u = stored ? JSON.parse(stored) : null;
+    setUser(u);
+
+    const fetchUnread = (currentUser) => {
+      if (!currentUser?.user_id) { setUnreadCount(0); return; }
+      const since = localStorage.getItem('lastSeenQA') || '';
+      fetch(`${API_BASE}/api/notifications/unread?user_id=${currentUser.user_id}&since=${encodeURIComponent(since)}`)
+        .then(r => r.json())
+        .then(d => setUnreadCount(d.count || 0))
+        .catch(() => {});
+    };
+
+    fetchUnread(u);
+
+    // 每 60 秒自動重新查詢
+    const timer = setInterval(() => fetchUnread(u), 10000);
+    return () => clearInterval(timer);
   }, [location]);
 
   // 點選選單外部時關閉
@@ -67,9 +85,15 @@ function Navbar() {
                 style={{
                   ...styles.navLink,
                   ...(user && location.pathname === to ? styles.navLinkActive : {}),
+                  position: 'relative',
                 }}
               >
                 {t(key)}
+                {key === '問答' && unreadCount > 0 && (
+                  <span style={styles.badge}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Link>
             ))}
           </div>
@@ -242,6 +266,25 @@ const styles = {
   navLinkActive: {
     color: 'var(--text-primary)',
     backgroundColor: 'var(--bg-subtle)',
+  },
+
+  badge: {
+    position: 'absolute',
+    top: '2px',
+    right: '2px',
+    minWidth: '16px',
+    height: '16px',
+    borderRadius: '999px',
+    backgroundColor: '#C4897A',
+    color: '#FFFFFF',
+    fontSize: '10px',
+    fontWeight: 600,
+    fontFamily: '"DM Sans", sans-serif',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0 4px',
+    pointerEvents: 'none',
   },
 
   /* 右側 */

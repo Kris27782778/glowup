@@ -12,7 +12,8 @@
       "Bash(npm install *)",
       "Bash(node -e ' *)",
       "Bash(pkill -f \"node index.js\")",
-      "Bash(node index.js)"
+      "Bash(node index.js)",
+      "Bash(curl -s \"http://localhost:5001/api/notifications/unread?user_id=1&since=2020-01-01T00:00:00Z\")"
     ]
   }
 }
