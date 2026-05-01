@@ -112,7 +112,8 @@ const fetchProducts = async () => {
 
     const res  = await fetch(`${API_BASE}/api/products?${params}`);
     const data = await res.json();
-    setProducts(Array.isArray(data) ? data : []);
+    const arr = data?.data ?? (Array.isArray(data) ? data : []);
+    setProducts(arr);
   } catch (err) {
     console.error('撈取產品失敗', err);
     setProducts([]);
