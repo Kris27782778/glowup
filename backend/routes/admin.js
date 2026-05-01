@@ -47,10 +47,10 @@ router.get('/users', async (req, res) => {
   const { q = '' } = req.query;
   try {
     const result = await pool.query(
-      `SELECT user_id, student_id, nickname, department_grade, email, skin_type,
+      `SELECT user_id, student_id, nickname, real_name, department_grade, email, skin_type,
               COALESCE(is_banned, false) AS is_banned, ban_reason, banned_until, created_at
        FROM users
-       WHERE nickname ILIKE $1 OR student_id ILIKE $1 OR email ILIKE $1
+       WHERE nickname ILIKE $1 OR real_name ILIKE $1 OR student_id ILIKE $1 OR email ILIKE $1
        ORDER BY created_at DESC`,
       [`%${q}%`]
     );

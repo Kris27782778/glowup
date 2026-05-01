@@ -272,7 +272,7 @@ function UsersTab() {
       <div style={sectionStyle}>
         <table style={tableStyle}>
           <thead><tr>
-            {['暱稱','學號','Email','系所年級','狀態','加入時間','操作'].map(h => (
+            {['姓名','暱稱','學號','Email','系所年級','狀態','加入時間','操作'].map(h => (
               <th key={h} style={thStyle}>{h}</th>
             ))}
           </tr></thead>
@@ -283,7 +283,8 @@ function UsersTab() {
                 onMouseEnter={e => e.currentTarget.style.background = C.bgRowHover}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <td style={tdStyle}><strong style={{ color:C.text }}>{u.nickname}</strong></td>
+                <td style={tdStyle}><strong style={{ color:C.text }}>{u.real_name || '—'}</strong></td>
+                <td style={tdStyle}>{u.nickname}</td>
                 <td style={tdStyle}>{u.student_id}</td>
                 <td style={{ ...tdStyle, color:C.textSub, fontSize:'12px' }}>{u.email}</td>
                 <td style={tdStyle}>{u.department_grade || '—'}</td>

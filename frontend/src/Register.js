@@ -68,6 +68,7 @@ function Register() {
     student_id: '',
     password: '',
     passwordConfirm: '',
+    real_name: '',
     nickname: '',
     email: '',
     skin_type: '',
@@ -167,6 +168,7 @@ function Register() {
 
   const validateStep = () => {
     if (step === 0) {
+      if (!form.real_name.trim()) return '請輸入姓名';
       if (!form.nickname.trim()) return '請輸入暱稱';
       if (!college) return '請選擇學院';
       if (!dept) return '請選擇科系';
@@ -397,18 +399,35 @@ function Register() {
           {/* Step 0：基本資料 */}
           {step === 0 && (
             <div style={styles.fieldGroup}>
-              <div style={styles.field}>
-                <label style={styles.label}>{t('暱稱')}</label>
-                <input
-                  style={inputStyle('nickname')}
-                  type="text"
-                  placeholder={t('顯示在平台上的名字')}
-                  value={form.nickname}
-                  onChange={set('nickname')}
-                  onFocus={() => setFocusField('nickname')}
-                  onBlur={() => setFocusField(null)}
-                />
+              <div style={styles.twoCol}>
+                <div style={styles.field}>
+                  <label style={styles.label}>姓名</label>
+                  <input
+                    style={inputStyle('real_name')}
+                    type="text"
+                    placeholder="真實姓名"
+                    value={form.real_name}
+                    onChange={set('real_name')}
+                    onFocus={() => setFocusField('real_name')}
+                    onBlur={() => setFocusField(null)}
+                  />
+                </div>
+                <div style={styles.field}>
+                  <label style={styles.label}>{t('暱稱')}</label>
+                  <input
+                    style={inputStyle('nickname')}
+                    type="text"
+                    placeholder={t('對外顯示的名字')}
+                    value={form.nickname}
+                    onChange={set('nickname')}
+                    onFocus={() => setFocusField('nickname')}
+                    onBlur={() => setFocusField(null)}
+                  />
+                </div>
               </div>
+              <p style={{ margin:0, fontSize:'11px', color: tokens.textTertiary, fontFamily:'"DM Sans","Noto Sans TC",sans-serif' }}>
+                姓名僅供平台管理使用，不對其他用戶顯示
+              </p>
 
               {/* 4 層系級選單 */}
               <div style={styles.field}>
