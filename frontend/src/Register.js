@@ -19,7 +19,6 @@ const tokens = {
   border: '#E5DDD9',
 };
 
-const SKIN_TYPES = ['油肌', '乾肌', '敏感肌', '中性肌', '混合肌'];
 const STEP_KEYS = ['基本資料', '帳號設定', '電子郵件驗證', '膚質設定'];
 
 function getPasswordStrength(pw) {
@@ -46,11 +45,11 @@ function Register() {
   const navigate = useNavigate();
   const { t } = useLang();
   const [step, setStep] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusField, setFocusField] = useState(null);
-  const [success, setSuccess] = useState(false);
-  const [registeredInfo, setRegisteredInfo] = useState(null);
+  const [success] = useState(false);
+  const [registeredInfo] = useState(null);
 
   // 電子郵件驗證
   const [otpDigits, setOtpDigits] = useState(Array(6).fill(''));

@@ -230,10 +230,6 @@ const en = {
   '試試其他關鍵字或標籤': 'Try a different keyword or tag',
   '全部': 'All',
 
-  // Tags shared between Community and QA
-  '去角質': 'Exfoliation',
-  '混合性肌': 'Combination Skin',
-
   // ── QA ──────────────────────────────────────────
   '向社群提出你的保養疑問，獲得同學的真實解答。': 'Ask the community your skincare questions and get real answers.',
   '個問題': 'questions',
@@ -246,7 +242,6 @@ const en = {
   '已解決': 'Solved',
   '我的提問': 'My Questions',
   '題': '',
-  '熱門標籤': 'Hot Tags',
   '優質回答者': 'Top Answerers',
   '回答此問題': 'Answer',
   '找不到符合的問題': 'No matching questions',
@@ -255,18 +250,14 @@ const en = {
   '向社群提出保養疑問，獲得真實回答。登入後即可提問與回答。':
     'Ask the community your skincare questions and get real answers. Sign in to participate.',
 
-  // ── Shared ──────────────────────────────────────
-  '學號': 'Student ID',
-
   // ── Login ───────────────────────────────────────
   '了解你擦在':         'Know everything',
   '臉上的一切':         'you put on your skin',
   '成分透明，每一瓶都清楚':     'Full ingredient transparency in every bottle',
   '輔大同學的真實保養心得':     'Real skincare reviews from FJU classmates',
   '依膚質推薦適合你的產品':     'Product recommendations tailored to your skin type',
-  '登入':           'Sign In',
-  '使用輔大校務帳號登入': 'Sign in with your FJU account',
   '學號':           'Student ID',
+  '使用輔大校務帳號登入': 'Sign in with your FJU account',
   '請輸入學號':     'Enter your student ID',
   '請輸入密碼':     'Enter your password',
   '登入中…':        'Signing in…',
@@ -281,7 +272,6 @@ const en = {
   '基本資料':     'Basic Info',
   '電子郵件驗證': 'Email Verification',
   '膚質設定':     'Skin Setup',
-  '建立帳號':     'Create Account',
   '告訴我們一些關於你的資訊':         'Tell us a little about yourself',
   '為你的學號設定登入密碼':           'Set a login password for your student account',
   '回答 5 題，找出你的膚質類型':     'Answer 5 questions to find your skin type',
@@ -300,10 +290,6 @@ const en = {
   '確認密碼':           'Confirm Password',
   '輸入相同密碼':       'Re-enter your password',
   '請輸入暱稱':         'Please enter a nickname',
-  '請選擇學院':         'Please select a college',
-  '請選擇科系':         'Please select a department',
-  '請選擇部別':         'Please select a division',
-  '請選擇年級':         'Please select a grade',
   '請輸入帳號（@ 前方）': 'Please enter your account (before @)',
   '只需輸入 @ 前方的帳號即可': 'Enter only the part before @',
   '密碼至少需要 6 個字元':         'Password must be at least 6 characters',
@@ -316,7 +302,6 @@ const en = {
   '秒後重新發送': 's to resend',
 
   // Password strength
-  '請輸入密碼': 'Enter a password',
   '非常弱':     'Very Weak',
   '弱':         'Weak',
   '普通':       'Fair',
@@ -326,8 +311,6 @@ const en = {
   '請查收驗證信件': 'Check your email for the verification code',
   '沒有收到信件？': "Didn't receive the email?",
   '驗證並繼續':   'Verify & Continue',
-  '下一步':       'Next',
-  '上一步':       'Back',
   '已有帳號？':   'Already have an account?',
 
   // Register success
@@ -340,7 +323,6 @@ const en = {
 
   // ── Settings ────────────────────────────────────
   '返回':     'Back',
-  '設定':     'Settings',
   '外觀':     'Appearance',
   '色彩模式': 'Color Mode',
   '日間':     'Light',
