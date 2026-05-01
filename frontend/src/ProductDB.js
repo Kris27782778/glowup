@@ -40,16 +40,17 @@ function ProductDB() {
   const currentUser = (() => {
     try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
   })();
+  const userId = currentUser?.user_id;
 
   useEffect(() => {
-    if (!currentUser?.user_id) return;
-    fetch(`${API_BASE}/api/wishlist/${currentUser.user_id}`)
+    if (!userId) return;
+    fetch(`${API_BASE}/api/wishlist/${userId}`)
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) setFavorites(data.map(w => w.product_id));
       })
       .catch(() => {});
-  }, []);
+  }, [userId]);
 
   const toggleFavorite = async (productId) => {
     if (!currentUser?.user_id) return;
@@ -88,7 +89,7 @@ function ProductDB() {
 useEffect(() => {
   setPage(1);
   fetchProducts();
-}, [category, item, skinType, effect]);
+}, [category, item, skinType, effect]); // eslint-disable-line react-hooks/exhaustive-deps
 
 useEffect(() => {
   const timer = setTimeout(() => {
@@ -96,7 +97,7 @@ useEffect(() => {
     fetchProducts();
   }, 400);
   return () => clearTimeout(timer);
-}, [search]);
+}, [search]); // eslint-disable-line react-hooks/exhaustive-deps
 
 const fetchProducts = async () => {
   if (!category && !item && !search.trim()) { setProducts([]); return; }
