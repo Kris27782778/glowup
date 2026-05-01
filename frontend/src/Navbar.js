@@ -154,6 +154,19 @@ function Navbar() {
                     {t('帳號設定')}
                   </button>
 
+                  {user?.is_admin && (
+                    <>
+                      <div style={styles.dropSeparator} />
+                      <button
+                        style={{ ...styles.dropItem, color: '#C4897A' }}
+                        onClick={() => { navigate('/admin'); setMenuOpen(false); }}
+                      >
+                        <DropIcon type="admin" />
+                        平台管理
+                      </button>
+                    </>
+                  )}
+
                   <div style={styles.dropSeparator} />
 
                   <button style={{ ...styles.dropItem, ...styles.dropItemDanger }} onClick={handleLogout}>
@@ -188,6 +201,12 @@ function DropIcon({ type }) {
       <circle cx="7" cy="7" r="2" stroke={color} strokeWidth="1.2"/>
       <path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M10.01 10.01l1.06 1.06M2.93 11.07l1.06-1.06M10.01 3.99l1.06-1.06"
         stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  );
+  if (type === 'admin') return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M7 1.5L2 4v3c0 2.76 2.13 5.34 5 5.97C9.87 12.34 12 9.76 12 7V4L7 1.5z"
+        stroke="#C4897A" strokeWidth="1.2" strokeLinejoin="round"/>
     </svg>
   );
   return null;

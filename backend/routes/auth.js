@@ -168,6 +168,7 @@ router.post('/login', async (req, res) => {
         department_grade: user.department_grade,
         email: user.email,
         skin_type: user.skin_type,
+        is_admin: user.is_admin || false,
       }
     });
   } catch (err) {

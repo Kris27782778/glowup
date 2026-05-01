@@ -112,27 +112,53 @@ function OverviewTab() {
 
   if (!stats) return <Loading />;
 
-  const cards = [
-    { label: '總會員數', value: stats.userCount,     icon: '👥', color: C.accentText },
-    { label: '產品總數', value: stats.productCount,  icon: '🧴', color: C.green },
-    { label: '問答總數', value: stats.questionCount, icon: '💬', color: C.yellow },
-    { label: '收藏總數', value: stats.wishlistCount, icon: '❤️', color: C.red },
+  const todayCards = [
+    { label: '今日新增會員', value: stats.todayUsers     ?? '—', color: C.accentText, sub: '24h 內' },
+    { label: '今日新增問答', value: stats.todayQuestions ?? '—', color: C.green,      sub: '24h 內' },
+    { label: '待處理檢舉',  value: stats.pendingReports ?? 0,   color: stats.pendingReports > 0 ? C.red : C.textSub, sub: 'pending' },
+    { label: '成分庫產品數', value: stats.productCount,          color: C.yellow,     sub: '總計' },
+  ];
+
+  const totalCards = [
+    { label: '總會員數', value: stats.userCount,     color: C.accentText },
+    { label: '問答總數', value: stats.questionCount, color: C.green },
+    { label: '收藏總數', value: stats.wishlistCount, color: C.yellow },
+    { label: '產品總數', value: stats.productCount,  color: C.textSub },
   ];
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'28px' }}>
-      {/* 數字卡片 */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'16px' }}>
-        {cards.map(c => (
-          <div key={c.label} style={cardStyle}>
-            <span style={{ fontSize:'28px' }}>{c.icon}</span>
-            <div>
-              <p style={{ margin:0, fontSize:'28px', fontWeight:700, color:c.color,
+      {/* 今日 KPI */}
+      <div>
+        <p style={{ margin:'0 0 10px', fontSize:'11px', color:C.textDim, letterSpacing:'0.1em', textTransform:'uppercase' }}>今日狀況</p>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
+          {todayCards.map(c => (
+            <div key={c.label} style={{ ...cardStyle, flexDirection:'column', alignItems:'flex-start', gap:'8px' }}>
+              <p style={{ margin:0, fontSize:'30px', fontWeight:700, color:c.color,
                 fontFamily:'"DM Sans",sans-serif', lineHeight:1 }}>{c.value}</p>
-              <p style={{ margin:'4px 0 0', fontSize:'12px', color:C.textSub }}>{c.label}</p>
+              <div>
+                <p style={{ margin:0, fontSize:'13px', color:C.text }}>{c.label}</p>
+                <p style={{ margin:'2px 0 0', fontSize:'11px', color:C.textDim }}>{c.sub}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+      </div>
+
+      {/* 累計總覽 */}
+      <div>
+        <p style={{ margin:'0 0 10px', fontSize:'11px', color:C.textDim, letterSpacing:'0.1em', textTransform:'uppercase' }}>累計數據</p>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
+          {totalCards.map(c => (
+            <div key={c.label} style={cardStyle}>
+              <div>
+                <p style={{ margin:0, fontSize:'26px', fontWeight:700, color:c.color,
+                  fontFamily:'"DM Sans",sans-serif', lineHeight:1 }}>{c.value}</p>
+                <p style={{ margin:'4px 0 0', fontSize:'12px', color:C.textSub }}>{c.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* 最新會員 */}
@@ -140,7 +166,7 @@ function OverviewTab() {
         <h3 style={sectionTitle}>最新加入會員</h3>
         <table style={tableStyle}>
           <thead><tr>
-            {['暱稱','學號','系所年級','膚質','加入時間'].map(h => (
+            {['暱稱','學號','系所年級','膚質','狀態','加入時間'].map(h => (
               <th key={h} style={thStyle}>{h}</th>
             ))}
           </tr></thead>
@@ -155,6 +181,12 @@ function OverviewTab() {
                     {SKIN_LABELS[u.skin_type] || u.skin_type || '未設定'}
                   </span>
                 </td>
+                <td style={tdStyle}>
+                  {u.is_banned
+                    ? <span style={{ ...tagStyle, color:C.red, background:'rgba(196,122,122,0.12)' }}>已停權</span>
+                    : <span style={{ ...tagStyle, color:C.green, background:'rgba(123,175,123,0.12)' }}>正常</span>
+                  }
+                </td>
                 <td style={tdStyle}>{fmtDate(u.created_at)}</td>
               </tr>
             ))}
@@ -165,11 +197,47 @@ function OverviewTab() {
   );
 }
 
+// ── 停權 Modal ────────────────────────────────────────────────────
+function BanModal({ user, onBan, onCancel }) {
+  const [reason, setReason] = useState('');
+  const [days,   setDays]   = useState('');
+  const inputSt = {
+    width:'100%', boxSizing:'border-box', padding:'9px 12px',
+    background:C.bgCard, border:`1px solid ${C.border}`, borderRadius:'8px',
+    color:C.text, fontSize:'13px', fontFamily:'"DM Sans","Noto Sans TC",sans-serif', outline:'none',
+  };
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)',
+      display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+      <div style={{ background:C.bgPanel, border:`1px solid ${C.border}`, borderRadius:'14px',
+        padding:'28px 32px', width:'360px', display:'flex', flexDirection:'column', gap:'16px' }}>
+        <h3 style={{ margin:0, fontSize:'16px', color:C.text }}>停權會員：{user.nickname}</h3>
+        <div>
+          <label style={{ fontSize:'11px', color:C.textDim, display:'block', marginBottom:'6px' }}>停權原因（必填）</label>
+          <input style={inputSt} value={reason} onChange={e => setReason(e.target.value)} placeholder="請填入停權原因" />
+        </div>
+        <div>
+          <label style={{ fontSize:'11px', color:C.textDim, display:'block', marginBottom:'6px' }}>停權天數（空白 = 永久）</label>
+          <input style={inputSt} type="number" min="1" value={days} onChange={e => setDays(e.target.value)} placeholder="例：7、30、90" />
+        </div>
+        <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
+          <button onClick={onCancel} style={btnStyle('ghost')}>取消</button>
+          <button onClick={() => onBan({ reason, days: days ? parseInt(days) : null })}
+            disabled={!reason.trim()} style={{ ...btnStyle('danger'), opacity: reason.trim() ? 1 : 0.5 }}>
+            確認停權
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 會員管理頁 ────────────────────────────────────────────────────
 function UsersTab() {
-  const [users,  setUsers]  = useState([]);
-  const [q,      setQ]      = useState('');
-  const [del,    setDel]    = useState(null); // { user_id, nickname }
+  const [users,    setUsers]    = useState([]);
+  const [q,        setQ]        = useState('');
+  const [del,      setDel]      = useState(null);
+  const [banning,  setBanning]  = useState(null);
 
   const load = useCallback(() => {
     adminFetch(`/users?q=${encodeURIComponent(q)}`).then(d => { if (Array.isArray(d)) setUsers(d); });
@@ -183,6 +251,17 @@ function UsersTab() {
     load();
   };
 
+  const handleBan = async ({ reason, days }) => {
+    await adminFetch(`/users/${banning.user_id}/ban`, { method:'PATCH', body: { reason, days } });
+    setBanning(null);
+    load();
+  };
+
+  const handleUnban = async (u) => {
+    await adminFetch(`/users/${u.user_id}/unban`, { method:'PATCH' });
+    load();
+  };
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -193,7 +272,7 @@ function UsersTab() {
       <div style={sectionStyle}>
         <table style={tableStyle}>
           <thead><tr>
-            {['暱稱','學號','Email','系所年級','膚質','加入時間','操作'].map(h => (
+            {['暱稱','學號','Email','系所年級','狀態','加入時間','操作'].map(h => (
               <th key={h} style={thStyle}>{h}</th>
             ))}
           </tr></thead>
@@ -209,13 +288,21 @@ function UsersTab() {
                 <td style={{ ...tdStyle, color:C.textSub, fontSize:'12px' }}>{u.email}</td>
                 <td style={tdStyle}>{u.department_grade || '—'}</td>
                 <td style={tdStyle}>
-                  <span style={{ ...tagStyle, color:C.accentText, background:C.accentDim }}>
-                    {SKIN_LABELS[u.skin_type] || u.skin_type || '未設定'}
-                  </span>
+                  {u.is_banned
+                    ? <span style={{ ...tagStyle, color:C.red, background:'rgba(196,122,122,0.12)' }}
+                        title={u.ban_reason || ''}>已停權</span>
+                    : <span style={{ ...tagStyle, color:C.green, background:'rgba(123,175,123,0.12)' }}>正常</span>
+                  }
                 </td>
                 <td style={tdStyle}>{fmtDate(u.created_at)}</td>
                 <td style={tdStyle}>
-                  <button onClick={() => setDel(u)} style={btnStyle('danger')}>刪除</button>
+                  <div style={{ display:'flex', gap:'6px' }}>
+                    {u.is_banned
+                      ? <button onClick={() => handleUnban(u)} style={btnStyle('success')}>解除停權</button>
+                      : <button onClick={() => setBanning(u)} style={btnStyle('ghost')}>停權</button>
+                    }
+                    <button onClick={() => setDel(u)} style={btnStyle('danger')}>刪除</button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -230,6 +317,9 @@ function UsersTab() {
           onConfirm={handleDelete}
           onCancel={() => setDel(null)}
         />
+      )}
+      {banning && (
+        <BanModal user={banning} onBan={handleBan} onCancel={() => setBanning(null)} />
       )}
     </div>
   );
@@ -340,13 +430,71 @@ function FilterChip({ label, count, active, onClick, color }) {
   );
 }
 
+function AddProductModal({ meta, onAdd, onCancel }) {
+  const [form, setForm] = useState({ name:'', brand:'', category: meta.categories[0] || '', sub_category: meta.sub_categories[0] || '' });
+  const [saving, setSaving] = useState(false);
+  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
+  const inputSt = { width:'100%', boxSizing:'border-box', padding:'9px 12px',
+    background:C.bgCard, border:`1px solid ${C.border}`, borderRadius:'8px',
+    color:C.text, fontSize:'13px', fontFamily:'"DM Sans","Noto Sans TC",sans-serif', outline:'none' };
+  const labelSt = { fontSize:'11px', color:C.textDim, letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:'6px', display:'block' };
+
+  const handleAdd = async () => {
+    if (!form.name.trim() || !form.brand.trim()) return;
+    setSaving(true);
+    const res = await adminFetch('/products', { method:'POST', body: form });
+    setSaving(false);
+    if (res.product) onAdd(res.product);
+  };
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.65)',
+      display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+      <div style={{ background:C.bgPanel, border:`1px solid ${C.border}`, borderRadius:'16px',
+        padding:'32px', width:'480px', display:'flex', flexDirection:'column', gap:'20px' }}>
+        <h3 style={{ margin:0, fontSize:'17px', fontWeight:600, color:C.text }}>新增產品</h3>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px' }}>
+          <div style={{ gridColumn:'1/-1' }}>
+            <label style={labelSt}>產品名稱</label>
+            <input style={inputSt} value={form.name} onChange={set('name')} placeholder="請輸入產品名稱" />
+          </div>
+          <div>
+            <label style={labelSt}>品牌</label>
+            <input style={inputSt} value={form.brand} onChange={set('brand')} placeholder="請輸入品牌名稱" />
+          </div>
+          <div>
+            <label style={labelSt}>分類</label>
+            <select style={inputSt} value={form.category} onChange={set('category')}>
+              {(meta.categories || []).map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelSt}>子分類</label>
+            <select style={inputSt} value={form.sub_category} onChange={set('sub_category')}>
+              {(meta.sub_categories || []).map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
+          <button onClick={onCancel} style={btnStyle('ghost')}>取消</button>
+          <button onClick={handleAdd} disabled={saving || !form.name.trim() || !form.brand.trim()}
+            style={{ ...btnStyle('accent'), opacity: saving || !form.name.trim() || !form.brand.trim() ? 0.5 : 1 }}>
+            {saving ? '新增中…' : '新增'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProductsTab() {
-  const [all,       setAll]      = useState([]);   // 全部產品（一次載入）
+  const [all,       setAll]      = useState([]);
   const [q,         setQ]        = useState('');
-  const [catFilter, setCatFilter] = useState('');  // '' = 全部
+  const [catFilter, setCatFilter] = useState('');
   const [subFilter, setSubFilter] = useState('');
   const [del,       setDel]      = useState(null);
   const [editing,   setEditing]  = useState(null);
+  const [adding,    setAdding]   = useState(false);
   const [meta,      setMeta]     = useState({ categories:[], sub_categories:[] });
 
   // 一次載入全部，之後只做 client-side 篩選
@@ -364,6 +512,11 @@ function ProductsTab() {
   const handleSave = (updated) => {
     setAll(prev => prev.map(p => p.product_id === updated.product_id ? { ...p, ...updated } : p));
     setEditing(null);
+  };
+
+  const handleAdd = (newProduct) => {
+    setAll(prev => [newProduct, ...prev]);
+    setAdding(false);
   };
 
   // client-side 篩選
@@ -394,9 +547,10 @@ function ProductsTab() {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <SearchBar value={q} onChange={v => { setQ(v); setCatFilter(''); setSubFilter(''); }}
           placeholder="搜尋名稱 / 品牌" />
-        <span style={{ fontSize:'13px', color:C.textSub }}>
-          顯示 {filtered.length} / {all.length} 筆
-        </span>
+        <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+          <span style={{ fontSize:'13px', color:C.textSub }}>顯示 {filtered.length} / {all.length} 筆</span>
+          <button onClick={() => setAdding(true)} style={btnStyle('accent')}>＋ 新增產品</button>
+        </div>
       </div>
 
       {/* 標籤篩選 */}
@@ -487,11 +641,10 @@ function ProductsTab() {
         />
       )}
       {editing && (
-        <EditProductModal
-          product={editing} meta={meta}
-          onSave={handleSave}
-          onCancel={() => setEditing(null)}
-        />
+        <EditProductModal product={editing} meta={meta} onSave={handleSave} onCancel={() => setEditing(null)} />
+      )}
+      {adding && (
+        <AddProductModal meta={meta} onAdd={handleAdd} onCancel={() => setAdding(false)} />
       )}
     </div>
   );
@@ -709,6 +862,210 @@ function AnalyticsTab() {
   );
 }
 
+// ── 成分管理頁 ────────────────────────────────────────────────────
+const SCORE_COLS = [
+  { key:'skin_oily', label:'油性' }, { key:'skin_dry', label:'乾性' },
+  { key:'skin_sensitive', label:'敏感' }, { key:'skin_normal', label:'中性' },
+  { key:'skin_combo', label:'混合' },
+];
+
+function IngredientsTab() {
+  const [ingredients, setIngredients] = useState([]);
+  const [q, setQ] = useState('');
+
+  const load = useCallback(() => {
+    adminFetch(`/ingredients?q=${encodeURIComponent(q)}`).then(d => { if (Array.isArray(d)) setIngredients(d); });
+  }, [q]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const scoreColor = (v) => {
+    if (v == null) return C.textDim;
+    if (v >= 3) return C.green;
+    if (v >= 1) return C.yellow;
+    return C.red;
+  };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <SearchBar value={q} onChange={setQ} placeholder="搜尋成分名稱" />
+        <span style={{ fontSize:'13px', color:C.textSub }}>{ingredients.length} 筆</span>
+      </div>
+      <div style={sectionStyle}>
+        <table style={tableStyle}>
+          <thead><tr>
+            {['成分名稱', '油性', '乾性', '敏感', '中性', '混合'].map(h => (
+              <th key={h} style={thStyle}>{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {ingredients.map(ing => (
+              <tr key={ing.ingredient_id}
+                style={{ borderBottom:`1px solid ${C.border}`, transition:'background 150ms' }}
+                onMouseEnter={e => e.currentTarget.style.background = C.bgRowHover}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <td style={{ ...tdStyle, color:C.text, fontWeight:500 }}>{ing.name}</td>
+                {SCORE_COLS.map(col => (
+                  <td key={col.key} style={{ ...tdStyle, textAlign:'center' }}>
+                    <span style={{ color: scoreColor(ing[col.key]), fontWeight:600, fontSize:'13px' }}>
+                      {ing[col.key] ?? '—'}
+                    </span>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {ingredients.length === 0 && <EmptyState text="沒有符合的成分" />}
+      </div>
+    </div>
+  );
+}
+
+// ── 貼文審核頁 ────────────────────────────────────────────────────
+function PostsTab() {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+      <div style={{
+        ...sectionStyle, padding:'60px 40px', textAlign:'center',
+        display:'flex', flexDirection:'column', alignItems:'center', gap:'16px',
+      }}>
+        <div style={{ fontSize:'40px', opacity:0.3 }}>◫</div>
+        <p style={{ margin:0, fontSize:'15px', color:C.text, fontWeight:500 }}>社群貼文審核</p>
+        <p style={{ margin:0, fontSize:'13px', color:C.textSub, maxWidth:'360px', lineHeight:1.6 }}>
+          Community 社群功能目前使用模擬資料。<br />
+          待社群貼文正式儲存至資料庫後，此頁面將顯示貼文列表、下架與恢復操作。
+        </p>
+        <span style={{ ...tagStyle, color:C.yellow, background:'rgba(196,176,122,0.12)',
+          fontSize:'11px', letterSpacing:'0.08em' }}>COMING SOON — v2</span>
+      </div>
+    </div>
+  );
+}
+
+// ── 檢舉管理頁 ────────────────────────────────────────────────────
+const REPORT_STATUS = {
+  pending:    { label:'待處理', color: C.yellow },
+  reviewing:  { label:'審核中', color: C.accentText },
+  resolved:   { label:'已成立', color: C.green },
+  dismissed:  { label:'不成立', color: C.textDim },
+};
+
+function ReportsTab() {
+  const [reports,   setReports]   = useState([]);
+  const [filter,    setFilter]    = useState('pending');
+  const [resolving, setResolving] = useState(null); // { report, action: 'resolve'|'dismiss' }
+  const [note,      setNote]      = useState('');
+
+  const load = useCallback(() => {
+    adminFetch(`/reports?status=${filter}`).then(d => { if (Array.isArray(d)) setReports(d); });
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleAction = async () => {
+    const path = resolving.action === 'resolve' ? 'resolve' : 'dismiss';
+    await adminFetch(`/reports/${resolving.report.report_id}/${path}`, {
+      method:'PATCH', body: { admin_note: note },
+    });
+    setResolving(null);
+    setNote('');
+    load();
+  };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+      <div style={{ display:'flex', gap:'8px' }}>
+        {['pending','reviewing','resolved','dismissed'].map(s => (
+          <FilterChip key={s} label={REPORT_STATUS[s].label} active={filter === s}
+            color={REPORT_STATUS[s].color} onClick={() => setFilter(s)} />
+        ))}
+      </div>
+
+      {reports.length === 0 ? (
+        <div style={{ ...sectionStyle, padding:'60px 40px', textAlign:'center' }}>
+          <p style={{ margin:0, color:C.textDim, fontSize:'13px' }}>
+            {filter === 'pending' ? '目前沒有待處理的檢舉（或 reports 資料表尚未建立）' : '沒有符合的紀錄'}
+          </p>
+        </div>
+      ) : (
+        <div style={sectionStyle}>
+          <table style={tableStyle}>
+            <thead><tr>
+              {['類型','內容預覽','原因','檢舉人','狀態','時間','操作'].map(h => (
+                <th key={h} style={thStyle}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {reports.map(r => {
+                const st = REPORT_STATUS[r.status] || REPORT_STATUS.pending;
+                return (
+                  <tr key={r.report_id}
+                    style={{ borderBottom:`1px solid ${C.border}`, transition:'background 150ms' }}
+                    onMouseEnter={e => e.currentTarget.style.background = C.bgRowHover}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <td style={tdStyle}><span style={{ ...tagStyle, color:C.accentText, background:C.accentDim }}>{r.target_type}</span></td>
+                    <td style={{ ...tdStyle, maxWidth:'160px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:C.text }}>
+                      #{r.target_id}
+                    </td>
+                    <td style={{ ...tdStyle, maxWidth:'140px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.reason}</td>
+                    <td style={tdStyle}>{r.reporter_name || '匿名'}</td>
+                    <td style={tdStyle}><span style={{ ...tagStyle, color:st.color, background:`${st.color}18` }}>{st.label}</span></td>
+                    <td style={tdStyle}>{fmtDate(r.created_at)}</td>
+                    <td style={tdStyle}>
+                      {r.status === 'pending' || r.status === 'reviewing' ? (
+                        <div style={{ display:'flex', gap:'6px' }}>
+                          <button onClick={() => { setResolving({ report:r, action:'resolve' }); setNote(''); }}
+                            style={btnStyle('danger')}>成立</button>
+                          <button onClick={() => { setResolving({ report:r, action:'dismiss' }); setNote(''); }}
+                            style={btnStyle('ghost')}>不成立</button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize:'12px', color:C.textDim }}>{r.admin_note || '—'}</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {resolving && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)',
+          display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+          <div style={{ background:C.bgPanel, border:`1px solid ${C.border}`, borderRadius:'14px',
+            padding:'28px 32px', width:'380px', display:'flex', flexDirection:'column', gap:'16px' }}>
+            <h3 style={{ margin:0, fontSize:'16px', color:C.text }}>
+              {resolving.action === 'resolve' ? '確認成立檢舉' : '關閉檢舉（不成立）'}
+            </h3>
+            <textarea
+              value={note} onChange={e => setNote(e.target.value)}
+              placeholder="處理備註（必填）"
+              style={{ width:'100%', boxSizing:'border-box', padding:'9px 12px', minHeight:'80px',
+                background:C.bgCard, border:`1px solid ${C.border}`, borderRadius:'8px',
+                color:C.text, fontSize:'13px', fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
+                outline:'none', resize:'vertical' }}
+            />
+            <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
+              <button onClick={() => setResolving(null)} style={btnStyle('ghost')}>取消</button>
+              <button onClick={handleAction} disabled={!note.trim()}
+                style={{ ...btnStyle(resolving.action === 'resolve' ? 'danger' : 'accent'),
+                  opacity: note.trim() ? 1 : 0.5 }}>
+                確認
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── 問答管理頁 ────────────────────────────────────────────────────
 function QuestionsTab() {
   const [questions, setQuestions] = useState([]);
@@ -912,11 +1269,14 @@ function AdminLogin({ onSuccess }) {
 
 // ── 主元件 ────────────────────────────────────────────────────────
 const TABS = [
-  { key:'overview',   label:'概覽',    icon:'◈' },
-  { key:'analytics',  label:'行銷數據', icon:'◐' },
-  { key:'users',      label:'會員管理', icon:'◉' },
-  { key:'products',   label:'產品管理', icon:'◧' },
-  { key:'questions',  label:'問答管理', icon:'◫' },
+  { key:'overview',     label:'概覽',    icon:'◈' },
+  { key:'analytics',   label:'行銷數據', icon:'◐' },
+  { key:'users',       label:'會員管理', icon:'◉' },
+  { key:'products',    label:'產品管理', icon:'◧' },
+  { key:'ingredients', label:'成分管理', icon:'◑' },
+  { key:'questions',   label:'問答管理', icon:'◫' },
+  { key:'posts',       label:'貼文審核', icon:'◰' },
+  { key:'reports',     label:'檢舉管理', icon:'◕' },
 ];
 
 export default function Admin() {
@@ -1000,20 +1360,26 @@ export default function Admin() {
             {TABS.find(t => t.key === tab)?.label}
           </h1>
           <p style={{ margin:'4px 0 0', fontSize:'12px', color:C.textDim }}>
-            {tab === 'overview'   && 'GLŌW 平台數據總覽'}
-            {tab === 'analytics'  && '用戶行為、產品與內容的數據分析'}
-            {tab === 'users'      && '管理所有已註冊的輔大同學'}
-            {tab === 'products'   && '管理美妝產品資料庫'}
-            {tab === 'questions'  && '管理問答討論內容'}
+            {tab === 'overview'     && 'GLŌW 平台數據總覽'}
+            {tab === 'analytics'   && '用戶行為、產品與內容的數據分析'}
+            {tab === 'users'       && '管理所有已註冊的輔大同學，支援停權與刪除'}
+            {tab === 'products'    && '管理美妝產品資料庫，支援新增、編輯、刪除'}
+            {tab === 'ingredients' && '管理成分知識庫，查看各成分的膚質適合分數'}
+            {tab === 'questions'   && '管理問答討論內容'}
+            {tab === 'posts'       && '審核社群貼文，下架違規內容'}
+            {tab === 'reports'     && '處理用戶檢舉案件'}
           </p>
         </div>
 
         {/* 分頁內容 */}
-        {tab === 'overview'   && <OverviewTab />}
-        {tab === 'analytics'  && <AnalyticsTab />}
-        {tab === 'users'      && <UsersTab />}
-        {tab === 'products'   && <ProductsTab />}
-        {tab === 'questions'  && <QuestionsTab />}
+        {tab === 'overview'     && <OverviewTab />}
+        {tab === 'analytics'   && <AnalyticsTab />}
+        {tab === 'users'       && <UsersTab />}
+        {tab === 'products'    && <ProductsTab />}
+        {tab === 'ingredients' && <IngredientsTab />}
+        {tab === 'questions'   && <QuestionsTab />}
+        {tab === 'posts'       && <PostsTab />}
+        {tab === 'reports'     && <ReportsTab />}
       </main>
     </div>
   );
