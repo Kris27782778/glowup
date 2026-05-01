@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
   try {
     let query = supabase
       .from('questions')
-      .select('question_id, user_id, is_anonymous, title, tags, solved, views, created_at, ai_answer, users(nickname, department_grade)', { count: 'exact' })
+      .select('question_id, user_id, is_anonymous, title, tags, solved, views, created_at, ai_answer, users(nickname, department_grade), answers(count)', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to);
 
@@ -31,7 +31,7 @@ router.get('/', async (req, res) => {
     if (error) return res.status(400).json({ error: error.message });
 
     const masked = (data || []).map(q => {
-      const base = { ...q, answer_count: 0 };
+      const base = { ...q, answer_count: q.answers?.[0]?.count ?? 0 };
       delete base.answers;
       if (q.is_anonymous && include_anonymous !== 'true') {
         return { ...base, user_id: null, users: null };
