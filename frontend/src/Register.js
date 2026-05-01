@@ -337,9 +337,9 @@ function Register() {
   }
 
   return (
-    <div style={styles.page}>
+    <div style={styles.page} className="auth-layout">
       {/* 左側裝飾區 */}
-      <div style={styles.decorPanel}>
+      <div style={styles.decorPanel} className="auth-left">
         {/* 背景裝飾圓 */}
         <div style={styles.decorCircle1} />
         <div style={styles.decorCircle2} />
@@ -382,7 +382,7 @@ function Register() {
       </div>
 
       {/* 右側表單區 */}
-      <div style={styles.formPanel}>
+      <div style={styles.formPanel} className="auth-right">
         <div style={styles.card} className="g-scale-in gd-1">
           {/* Header */}
           <div style={styles.cardHeader}>

@@ -71,7 +71,7 @@ function Login() {
   });
 
   return (
-    <div style={styles.page}>
+    <div style={styles.page} className="auth-layout">
 
       {/* ── GLŌW Splash ── */}
       {splash !== 'done' && (
@@ -94,7 +94,7 @@ function Login() {
       )}
 
       {/* ── 左側：品牌主視覺 ── */}
-      <div style={styles.brand}>
+      <div style={styles.brand} className="auth-left">
         {/* 背景裝飾 */}
         <div style={styles.brandBg} />
         <div style={styles.circle1} />
@@ -128,7 +128,7 @@ function Login() {
       </div>
 
       {/* ── 右側：登入表單 ── */}
-      <div style={styles.form}>
+      <div style={styles.form} className="auth-right">
         <div style={styles.formCard} className="g-scale-in gd-1">
 
           {/* 標題 */}

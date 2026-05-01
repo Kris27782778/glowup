@@ -161,7 +161,7 @@ export default function QA() {
       </div>
 
       {/* ── Body ── */}
-      <div style={s.body}>
+      <div style={s.body} className="qa-body">
 
         {/* ── Main ── */}
         <main style={s.main}>
@@ -216,7 +216,7 @@ export default function QA() {
         </main>
 
         {/* ── Sidebar ── */}
-        <aside style={s.sidebar}>
+        <aside style={s.sidebar} className="qa-sidebar">
 
           {/* 三層回答說明 */}
           <div style={s.sideCard} className="g-reveal">
