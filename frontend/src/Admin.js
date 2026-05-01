@@ -5,21 +5,21 @@ const API = `${API_BASE}/api/admin`;
 const ADMIN_KEY = 'glowadmin2026';
 
 const C = {
-  bg:         '#0F0D0C',
-  bgPanel:    '#1C1917',
-  bgCard:     '#232018',
-  bgRow:      '#1A1713',
-  bgRowHover: '#221F1A',
-  border:     'rgba(255,255,255,0.07)',
+  bg:         '#F7F5F3',
+  bgPanel:    '#FFFFFF',
+  bgCard:     '#F2EFED',
+  bgRow:      '#FAFAF9',
+  bgRowHover: '#F5F0EE',
+  border:     'rgba(0,0,0,0.08)',
   accent:     '#C4897A',
-  accentDim:  'rgba(196,137,122,0.15)',
-  accentText: '#D9A898',
-  text:       '#F7F4F2',
-  textSub:    '#A89990',
-  textDim:    '#6B5E58',
-  green:      '#7BAF7B',
-  red:        '#C47A7A',
-  yellow:     '#C4B07A',
+  accentDim:  'rgba(196,137,122,0.12)',
+  accentText: '#A8634F',
+  text:       '#1C1917',
+  textSub:    '#6B5E58',
+  textDim:    '#A89990',
+  green:      '#3D8A52',
+  red:        '#B84040',
+  yellow:     '#8A6A1E',
 };
 
 const SKIN_LABELS = {
@@ -1240,7 +1240,7 @@ function AdminLogin({ onSuccess }) {
         <p style={{ margin:'0 0 4px', fontFamily:'"Cormorant Garamond",serif',
           fontSize:'36px', fontWeight:300, letterSpacing:'0.18em', color:C.text }}>GL&#332;W</p>
         <p style={{ margin:'0 0 32px', fontSize:'11px', letterSpacing:'0.2em',
-          color:C.accent, fontFamily:'"DM Sans",sans-serif' }}>ADMIN PANEL</p>
+          color:C.accent, fontFamily:'"DM Sans",sans-serif', fontWeight:500 }}>ADMIN PANEL</p>
         <input
           type="password"
           value={pw}
@@ -1269,14 +1269,14 @@ function AdminLogin({ onSuccess }) {
 
 // ── 主元件 ────────────────────────────────────────────────────────
 const TABS = [
-  { key:'overview',     label:'概覽',    icon:'◈' },
-  { key:'analytics',   label:'行銷數據', icon:'◐' },
-  { key:'users',       label:'會員管理', icon:'◉' },
-  { key:'products',    label:'產品管理', icon:'◧' },
-  { key:'ingredients', label:'成分管理', icon:'◑' },
-  { key:'questions',   label:'問答管理', icon:'◫' },
-  { key:'posts',       label:'貼文審核', icon:'◰' },
-  { key:'reports',     label:'檢舉管理', icon:'◕' },
+  { key:'overview',     label:'概覽',    icon:'▦' },
+  { key:'analytics',   label:'行銷數據', icon:'↗' },
+  { key:'users',       label:'會員管理', icon:'♡' },
+  { key:'products',    label:'產品管理', icon:'◻' },
+  { key:'ingredients', label:'成分管理', icon:'✦' },
+  { key:'questions',   label:'問答管理', icon:'?' },
+  { key:'posts',       label:'貼文審核', icon:'≡' },
+  { key:'reports',     label:'檢舉管理', icon:'!' },
 ];
 
 export default function Admin() {
@@ -1324,14 +1324,21 @@ export default function Admin() {
                 onClick={() => setTab(t.key)}
                 style={{
                   display:'flex', alignItems:'center', gap:'10px',
-                  padding:'10px 14px', borderRadius:'8px', border:'none',
+                  padding:'9px 12px', borderRadius:'8px', border:'none',
                   background: active ? C.accentDim : 'transparent',
                   color: active ? C.accentText : C.textSub,
                   fontSize:'13px', fontFamily:'inherit', cursor:'pointer',
-                  textAlign:'left', transition:'all 150ms',
+                  textAlign:'left', transition:'all 150ms', width:'100%',
                 }}
               >
-                <span style={{ fontSize:'16px', opacity:0.8 }}>{t.icon}</span>
+                <span style={{
+                  width:'20px', height:'20px', flexShrink:0,
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  fontSize:'13px', fontWeight:600,
+                  background: active ? C.accent : C.bgCard,
+                  color: active ? '#fff' : C.textDim,
+                  borderRadius:'5px',
+                }}>{t.icon}</span>
                 {t.label}
               </button>
             );
