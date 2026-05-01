@@ -666,48 +666,84 @@ const CAT_COLORS_A = ['#C4897A','#7BAF7B','#7AAFC4','#C4B07A','#9B7AC4','#C47A9B
 function HBar({ label, value, max, color, suffix = '' }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'10px' }}>
-      <div style={{ width:'120px', fontSize:'12px', color:C.textSub, textAlign:'right', flexShrink:0,
+    <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
+      <div style={{ width:'100px', fontSize:'12px', color:C.textSub, flexShrink:0,
         whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{label}</div>
-      <div style={{ flex:1, background:C.bgCard, borderRadius:'999px', height:'8px', overflow:'hidden' }}>
+      <div style={{ flex:1, background:C.bgCard, borderRadius:'4px', height:'6px', overflow:'hidden' }}>
         <div style={{
-          width:`${pct}%`, height:'100%', borderRadius:'999px',
-          background:color, transition:'width 600ms cubic-bezier(0.16,1,0.3,1)',
+          width:`${pct}%`, height:'100%', borderRadius:'4px',
+          background:`linear-gradient(90deg, ${color}cc, ${color})`,
+          transition:'width 700ms cubic-bezier(0.16,1,0.3,1)',
         }} />
       </div>
-      <div style={{ width:'40px', fontSize:'12px', color, fontWeight:600, textAlign:'right' }}>
+      <div style={{ width:'36px', fontSize:'12px', color, fontWeight:600, textAlign:'right', flexShrink:0 }}>
         {value}{suffix}
       </div>
     </div>
   );
 }
 
-function WeeklyBar({ data, color, label }) {
+function WeeklyBar({ data, color, label, total }) {
   const max = Math.max(...data.map(d => d.count), 1);
+  const CHART_H = 160;
   return (
-    <div style={sectionStyle}>
-      <h3 style={sectionTitle}>{label}</h3>
-      <div style={{ padding:'0 20px 20px' }}>
-        {data.length === 0
-          ? <p style={{ color:C.textDim, fontSize:'13px', margin:0 }}>尚無足夠資料</p>
-          : (
-          <div style={{ display:'flex', alignItems:'flex-end', gap:'8px', height:'120px' }}>
+    <div style={{ ...sectionStyle, padding:'20px 24px 16px' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'20px' }}>
+        <div>
+          <p style={{ margin:0, fontSize:'11px', color:C.textDim, letterSpacing:'0.08em', textTransform:'uppercase' }}>{label}</p>
+          {total != null && (
+            <p style={{ margin:'4px 0 0', fontSize:'28px', fontWeight:700, color, fontFamily:'"DM Sans",sans-serif', lineHeight:1 }}>{total}</p>
+          )}
+        </div>
+        <span style={{ fontSize:'11px', color:C.textDim, marginTop:'2px' }}>近 12 週</span>
+      </div>
+      {data.length === 0 ? (
+        <p style={{ color:C.textDim, fontSize:'13px', margin:0, textAlign:'center', padding:'20px 0' }}>尚無足夠資料</p>
+      ) : (
+        <div style={{ position:'relative' }}>
+          {/* 格線 */}
+          {[0.25, 0.5, 0.75, 1].map(r => (
+            <div key={r} style={{
+              position:'absolute', left:0, right:0,
+              bottom: `${r * CHART_H}px`,
+              borderTop: `1px dashed ${C.border}`,
+              pointerEvents:'none',
+            }} />
+          ))}
+          <div style={{ display:'flex', alignItems:'flex-end', gap:'4px', height:`${CHART_H}px`, position:'relative' }}>
             {data.map((d, i) => {
-              const h = Math.max(Math.round((d.count / max) * 100), 4);
+              const h = Math.max(Math.round((d.count / max) * CHART_H), 3);
+              const isLast = i === data.length - 1;
               return (
-                <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'6px' }}>
-                  <span style={{ fontSize:'11px', color, fontWeight:600 }}>{d.count}</span>
+                <div key={i} title={`${d.week}: ${d.count}`}
+                  style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-end', height:'100%' }}>
                   <div style={{
-                    width:'100%', height:`${h}px`, borderRadius:'4px 4px 0 0',
-                    background:color, opacity:0.85, transition:'height 600ms',
-                  }} />
-                  <span style={{ fontSize:'10px', color:C.textDim }}>{d.week}</span>
+                    width:'100%', height:`${h}px`,
+                    borderRadius:'3px 3px 0 0',
+                    background: isLast
+                      ? `linear-gradient(180deg, ${color}, ${color}99)`
+                      : `${color}55`,
+                    transition:'height 600ms cubic-bezier(0.16,1,0.3,1)',
+                    position:'relative',
+                  }}>
+                    {isLast && d.count > 0 && (
+                      <span style={{
+                        position:'absolute', top:'-18px', left:'50%', transform:'translateX(-50%)',
+                        fontSize:'10px', fontWeight:700, color, whiteSpace:'nowrap',
+                      }}>{d.count}</span>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
-        )}
-      </div>
+          {/* X 軸標籤（只顯示首尾）*/}
+          <div style={{ display:'flex', justifyContent:'space-between', marginTop:'6px' }}>
+            <span style={{ fontSize:'10px', color:C.textDim }}>{data[0]?.week}</span>
+            <span style={{ fontSize:'10px', color:C.textDim }}>{data[data.length-1]?.week}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -721,64 +757,115 @@ function AnalyticsTab() {
 
   if (!data) return <Loading />;
 
-  const skinMax = Math.max(...(data.skinDist.map(d => d.count)), 1);
-  const subMax  = Math.max(...(data.subCatDist.map(d => d.count)), 1);
-  const tagMax  = Math.max(...(data.tagDist.map(d => d.count)), 1);
+  const skinMax  = Math.max(...data.skinDist.map(d => d.count), 1);
+  const subMax   = Math.max(...data.subCatDist.map(d => d.count), 1);
+  const tagMax   = Math.max(...data.tagDist.map(d => d.count), 1);
   const catTotal = data.categoryDist.reduce((s, d) => s + d.count, 0);
+  const totalUsers     = data.weeklyUsers.reduce((s, d) => s + d.count, 0);
+  const totalQuestions = data.weeklyQuestions.reduce((s, d) => s + d.count, 0);
+
+  const SectionHeader = ({ title }) => (
+    <div style={{ padding:'20px 24px 0', marginBottom:'16px' }}>
+      <p style={{ margin:0, fontSize:'13px', fontWeight:600, color:C.text,
+        fontFamily:'"DM Sans","Noto Sans TC",sans-serif' }}>{title}</p>
+    </div>
+  );
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:'24px' }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
 
-      {/* 週成長雙欄 */}
+      {/* 成長趨勢 */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
-        <WeeklyBar data={data.weeklyUsers}     color={C.accentText} label="週新增會員" />
-        <WeeklyBar data={data.weeklyQuestions} color={C.green}      label="週新增問答" />
+        <WeeklyBar data={data.weeklyUsers}     color={C.accentText} label="會員成長" total={totalUsers} />
+        <WeeklyBar data={data.weeklyQuestions} color={C.green}      label="問答成長" total={totalQuestions} />
       </div>
 
-      {/* 膚質分佈 + 產品分類 */}
+      {/* 膚質 + 熱門收藏 */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
-        {/* 膚質 */}
+
+        {/* 膚質分佈 */}
         <div style={sectionStyle}>
-          <h3 style={sectionTitle}>膚質分佈</h3>
-          <div style={{ padding:'4px 20px 20px' }}>
-            {data.skinDist.map(d => (
-              <HBar key={d.key}
-                label={SKIN_LABELS_FULL[d.key] || d.key}
-                value={d.count} max={skinMax}
-                color={SKIN_COLORS[d.key] || C.accent}
-              />
-            ))}
+          <SectionHeader title="膚質分佈" />
+          <div style={{ padding:'0 24px 20px' }}>
+            {data.skinDist.length === 0
+              ? <p style={{ color:C.textDim, fontSize:'13px', margin:0 }}>尚無資料</p>
+              : data.skinDist.map(d => (
+                <HBar key={d.key}
+                  label={SKIN_LABELS_FULL[d.key] || d.key}
+                  value={d.count} max={skinMax}
+                  color={SKIN_COLORS[d.key] || C.accent}
+                />
+              ))
+            }
           </div>
         </div>
 
+        {/* 熱門收藏 */}
+        <div style={sectionStyle}>
+          <SectionHeader title="熱門收藏 Top 8" />
+          <div style={{ padding:'0 24px 20px' }}>
+            {data.topWishlist.length === 0
+              ? <p style={{ color:C.textDim, fontSize:'13px', margin:0 }}>尚無資料</p>
+              : data.topWishlist.map((p, i) => (
+                <div key={i} style={{
+                  display:'flex', alignItems:'center', gap:'12px',
+                  padding:'9px 0',
+                  borderBottom: i < data.topWishlist.length - 1 ? `1px solid ${C.border}` : 'none',
+                }}>
+                  <span style={{
+                    width:'22px', height:'22px', borderRadius:'6px', flexShrink:0,
+                    background: i === 0 ? '#C4897A' : i === 1 ? '#A89990' : i === 2 ? '#B8966A' : C.bgCard,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    fontSize:'11px', fontWeight:700,
+                    color: i < 3 ? '#fff' : C.textDim,
+                  }}>{i + 1}</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <p style={{ margin:0, fontSize:'13px', color:C.text, fontWeight:500,
+                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</p>
+                    <p style={{ margin:'1px 0 0', fontSize:'11px', color:C.textSub }}>{p.brand}</p>
+                  </div>
+                  <div style={{ flexShrink:0, textAlign:'right' }}>
+                    <span style={{ fontSize:'15px', fontWeight:700, color: p.wishlist_count > 0 ? C.accentText : C.textDim,
+                      fontFamily:'"DM Sans",sans-serif' }}>{p.wishlist_count}</span>
+                    <p style={{ margin:'1px 0 0', fontSize:'10px', color:C.textDim }}>收藏</p>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* 產品分類 + 標籤 */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
+
         {/* 產品分類 */}
         <div style={sectionStyle}>
-          <h3 style={sectionTitle}>產品分類佔比</h3>
-          <div style={{ padding:'4px 20px 20px' }}>
+          <SectionHeader title="產品分類" />
+          <div style={{ padding:'0 24px 20px' }}>
             {data.categoryDist.map((d, i) => {
               const pct = catTotal > 0 ? Math.round((d.count / catTotal) * 100) : 0;
               return (
-                <div key={d.category} style={{ marginBottom:'16px' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'6px' }}>
-                    <span style={{ fontSize:'13px', color:C.text }}>{d.category}</span>
-                    <span style={{ fontSize:'13px', color:CAT_COLORS_A[i], fontWeight:600 }}>
-                      {d.count} 件 ({pct}%)
-                    </span>
+                <div key={d.category} style={{ marginBottom:'14px' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'5px' }}>
+                    <span style={{ fontSize:'13px', color:C.text, fontWeight:500 }}>{d.category}</span>
+                    <span style={{ fontSize:'12px', color:CAT_COLORS_A[i], fontWeight:600,
+                      fontFamily:'"DM Sans",sans-serif' }}>{pct}% · {d.count} 件</span>
                   </div>
-                  <div style={{ background:C.bgCard, borderRadius:'999px', height:'10px', overflow:'hidden' }}>
+                  <div style={{ background:C.bgCard, borderRadius:'4px', height:'6px', overflow:'hidden' }}>
                     <div style={{
-                      width:`${pct}%`, height:'100%', borderRadius:'999px',
-                      background:CAT_COLORS_A[i], transition:'width 600ms',
+                      width:`${pct}%`, height:'100%', borderRadius:'4px',
+                      background:`linear-gradient(90deg,${CAT_COLORS_A[i]}99,${CAT_COLORS_A[i]})`,
+                      transition:'width 700ms cubic-bezier(0.16,1,0.3,1)',
                     }} />
                   </div>
                 </div>
               );
             })}
-
             <div style={{ borderTop:`1px solid ${C.border}`, marginTop:'16px', paddingTop:'16px' }}>
-              <h4 style={{ margin:'0 0 12px', fontSize:'12px', color:C.textDim, textTransform:'uppercase', letterSpacing:'0.08em' }}>
+              <p style={{ margin:'0 0 12px', fontSize:'11px', color:C.textDim, textTransform:'uppercase', letterSpacing:'0.08em' }}>
                 子分類 Top 8
-              </h4>
+              </p>
               {data.subCatDist.map((d, i) => (
                 <HBar key={d.sub_category}
                   label={d.sub_category} value={d.count} max={subMax}
@@ -788,48 +875,14 @@ function AnalyticsTab() {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 熱門收藏 + 標籤分析 */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
-        {/* 熱門收藏 */}
+        {/* 熱門標籤 */}
         <div style={sectionStyle}>
-          <h3 style={sectionTitle}>熱門收藏排行 Top 8</h3>
-          <div style={{ padding:'0 20px 20px' }}>
-            {data.topWishlist.map((p, i) => (
-              <div key={i} style={{
-                display:'flex', alignItems:'center', gap:'12px',
-                padding:'10px 0', borderBottom: i < data.topWishlist.length-1 ? `1px solid ${C.border}` : 'none',
-              }}>
-                <span style={{
-                  width:'24px', height:'24px', borderRadius:'50%', flexShrink:0,
-                  background: i < 3 ? C.accent : C.bgCard,
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                  fontSize:'11px', fontWeight:700, color: i < 3 ? '#fff' : C.textDim,
-                }}>{i+1}</span>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <p style={{ margin:0, fontSize:'13px', color:C.text,
-                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</p>
-                  <p style={{ margin:'2px 0 0', fontSize:'11px', color:C.textSub }}>{p.brand}</p>
-                </div>
-                <div style={{ textAlign:'right', flexShrink:0 }}>
-                  <p style={{ margin:0, fontSize:'14px', fontWeight:700, color: p.wishlist_count > 0 ? C.accentText : C.textDim }}>
-                    {p.wishlist_count}
-                  </p>
-                  <p style={{ margin:'1px 0 0', fontSize:'10px', color:C.textDim }}>收藏</p>
-                </div>
-              </div>
-            ))}
-            {data.topWishlist.length === 0 && <p style={{ color:C.textDim, fontSize:'13px' }}>尚無收藏資料</p>}
-          </div>
-        </div>
-
-        {/* 問答標籤 */}
-        <div style={sectionStyle}>
-          <h3 style={sectionTitle}>問答熱門標籤</h3>
-          <div style={{ padding:'4px 20px 20px' }}>
-            {data.tagDist.length > 0
-              ? (
+          <SectionHeader title="問答熱門標籤" />
+          <div style={{ padding:'0 24px 20px' }}>
+            {data.tagDist.length === 0
+              ? <p style={{ color:C.textDim, fontSize:'13px', margin:0 }}>尚無資料</p>
+              : (
                 <>
                   {data.tagDist.map((d, i) => (
                     <HBar key={d.tag}
@@ -838,23 +891,22 @@ function AnalyticsTab() {
                       suffix=" 題"
                     />
                   ))}
-                  <div style={{ marginTop:'20px', display:'flex', flexWrap:'wrap', gap:'8px' }}>
+                  <div style={{ marginTop:'20px', display:'flex', flexWrap:'wrap', gap:'6px' }}>
                     {data.tagDist.map((d, i) => (
                       <span key={d.tag} style={{
-                        padding:'5px 14px', borderRadius:'999px',
-                        background:C.bgCard,
-                        border:`1px solid ${CAT_COLORS_A[i % CAT_COLORS_A.length]}40`,
+                        padding:'4px 12px', borderRadius:'6px',
+                        background:`${CAT_COLORS_A[i % CAT_COLORS_A.length]}12`,
+                        border:`1px solid ${CAT_COLORS_A[i % CAT_COLORS_A.length]}30`,
                         color:CAT_COLORS_A[i % CAT_COLORS_A.length],
                         fontSize:'12px', fontWeight:500,
                         fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
                       }}>
-                        #{d.tag} · {d.count}
+                        #{d.tag} <span style={{ opacity:0.6 }}>·</span> {d.count}
                       </span>
                     ))}
                   </div>
                 </>
               )
-              : <p style={{ color:C.textDim, fontSize:'13px' }}>尚無標籤資料</p>
             }
           </div>
         </div>
