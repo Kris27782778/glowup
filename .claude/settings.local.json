@@ -18,18 +18,15 @@
       "Bash(git -C /Users/wyk/Desktop/美妝樣本 status)",
       "Bash(git -C /Users/wyk/Desktop/美妝樣本 diff --staged --stat)",
       "Bash(git -C /Users/wyk/Desktop/美妝樣本 diff --staged -- backend/routes/notifications.js)",
-      "Bash(git -C /Users/wyk/Desktop/美妝樝樣本 diff --staged -- backend/index.js frontend/src/Navbar.js frontend/src/QA.js)",
+      "Bash(git -C /Users/wyk/Desktop/美妝樣本 diff --staged -- backend/index.js frontend/src/Navbar.js frontend/src/QA.js)",
       "Bash(git -C /Users/wyk/Desktop/美妝樣本 diff --staged -- backend/index.js frontend/src/Navbar.js frontend/src/QA.js)",
       "Bash(git -C /Users/wyk/Desktop/美妝樣本 commit -m ' *)",
       "Bash(git -C /Users/wyk/Desktop/美妝樣本 push)",
       "Bash(awk '{print $2, $11, $12, $13}')",
       "Bash(git -C /Users/wyk/Desktop/美妝樣本 log --oneline origin/main -5)",
-      "Bash(git -C /Users/wyk/Desktop/美妝樣本 pull)",
-      "Bash(git -C /Users/wyk/Desktop/美妝樣本 diff --stat)",
-      "Bash(git -C /Users/wyk/Desktop/美妝樣本 stash)",
-      "Bash(git -C /Users/wyk/Desktop/美妝樣本 stash pop)",
-      "Bash(sips -s format jpeg /Users/xuan/Downloads/IMG_7155.heic --out /tmp/IMG_7155.jpg)",
-      "Bash(sips -s format jpeg /Users/xuan/Downloads/IMG_7156.heic --out /tmp/IMG_7156.jpg)"
+      "Bash(git add *)",
+      "Bash(git stash *)",
+      "Bash(git push *)"
     ]
   }
 }
