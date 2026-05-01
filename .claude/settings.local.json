@@ -36,7 +36,8 @@
       "Bash(git stash *)",
       "Bash(git push *)",
       "Bash(git commit -m ' *)",
-      "Bash(xargs kill *)"
+      "Bash(xargs kill *)",
+      "Bash(git *)"
     ]
   }
 }
