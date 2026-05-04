@@ -4,6 +4,19 @@ const express = require('express');
 const router  = express.Router();
 const supabase = require('../config/supabase');
 
+// 必須放在 /:product_id 之前，避免 "user" 被當成 product_id
+router.get('/user/:user_id', async (req, res) => {
+  const { user_id } = req.params;
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*, products(name, brand, sub_category)')
+    .eq('user_id', user_id)
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
 // GET /api/reviews/:product_id  取得產品所有評論
 router.get('/:product_id', async (req, res) => {
   const { product_id } = req.params;
@@ -35,6 +48,8 @@ router.post('/', async (req, res) => {
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
+
+
 
 module.exports = router;
 

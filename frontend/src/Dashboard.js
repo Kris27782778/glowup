@@ -30,12 +30,13 @@ const SKIN_LABELS = {
   sensitive:  { label: '敏感性肌',     desc: '屏障較弱，選擇成分單純配方' },
 };
 
-const TAB_KEYS   = ['帖子', '問答', '收藏', '成分筆記'];
+const TAB_KEYS   = ['帖子', '問答', '收藏', '成分筆記', '歷史評論'];
 const EMPTY_KEYS = [
   { title: '還沒有貼文',       sub: '分享你的保養心得，讓社群看見你的經驗' },
   { title: '還沒有問答記錄',   sub: '向社群提出你的保養疑問' },
   { title: '收藏夾是空的',     sub: '收藏喜歡的貼文、成分與產品' },
   { title: '成分筆記尚未建立', sub: '標記你用過的成分，記錄使用心得' },
+  { title: '還沒有評論記錄', sub: '對產品留下評論，記錄你的使用心得' },,
 ];
 
 function Dashboard() {
@@ -45,6 +46,7 @@ function Dashboard() {
   const [showEdit, setShowEdit]   = useState(false);
   const [wishlist,     setWishlist]     = useState([]);
   const [myQuestions,  setMyQuestions]  = useState([]);
+  const [myReviews, setMyReviews] = useState([]);
   const navigate = useNavigate();
   const { t } = useLang();
 
@@ -60,6 +62,10 @@ function Dashboard() {
     fetch(`${API_BASE}/api/questions?user_id=${parsed.user_id}&include_anonymous=true`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setMyQuestions(data); })
+      .catch(() => {});
+    fetch(`${API_BASE}/api/reviews/user/${parsed.user_id}`)   // ← 加這段
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setMyReviews(data); })
       .catch(() => {});
   }, [navigate]);
 
@@ -368,6 +374,47 @@ function Dashboard() {
                                 </span>
                               ))}
                             </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : tab === 4 ? (
+                myReviews.length === 0 ? (
+                  <EmptyState
+                    title={t(EMPTY_KEYS[4].title)}
+                    sub={t(EMPTY_KEYS[4].sub)}
+                  />
+                ) : (
+                  <div style={wishlistStyle.grid}>
+                    {myReviews.map(r => {
+                      const p = r.products;
+                      return (
+                        <div key={r.review_id} style={wishlistStyle.card}>
+                          <div style={wishlistStyle.cardHeader}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <span style={wishlistStyle.brand}>{p?.brand}</span>
+                              <span style={{ fontSize: '10px', color: T.textTertiary }}>
+                                {new Date(r.created_at).toLocaleDateString('zh-TW')}
+                              </span>
+                            </div>
+                            <span style={wishlistStyle.badge}>{p?.sub_category}</span>
+                          </div>
+                          <p style={wishlistStyle.name}>{p?.name}</p>
+                          <div style={{ display: 'flex', gap: '2px' }}>
+                            {[1,2,3,4,5].map(n => (
+                              <span key={n} style={{ fontSize: '13px', color: n <= r.rating ? '#F5A623' : T.border }}>★</span>
+                            ))}
+                          </div>
+                          {r.content && (
+                            <p style={{
+                              margin: '4px 0 0', fontSize: '13px', color: T.textSecondary,
+                              lineHeight: 1.6, padding: '8px 10px',
+                              backgroundColor: T.bgSubtle, borderRadius: '8px',
+                            }}>
+                              {r.content}
+                            </p>
                           )}
                         </div>
                       );

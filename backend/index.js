@@ -52,9 +52,10 @@ app.get('/test-db', async (req, res) => {
   }
 });
 
+const reviewRoutes = require('./routes/reviews');
+app.use('/api/reviews', reviewRoutes);
+
 app.listen(PORT, () => {
   console.log(`伺服器跑在 port ${PORT}`);
 });
 
-const reviewRoutes = require('./routes/reviews');
-app.use('/api/reviews', reviewRoutes);
