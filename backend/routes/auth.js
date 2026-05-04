@@ -80,7 +80,7 @@ router.post('/verify-otp', async (req, res) => {
 
 // ── 註冊 POST /api/auth/register ─────────────────────────────────
 router.post('/register', async (req, res) => {
-  const { student_id, password, nickname, department_grade, email, skin_type } = req.body;
+  const { student_id, password, nickname, real_name, department_grade, email, skin_type } = req.body;
 
   try {
     // 確認 email 已通過驗證（最近 30 分鐘內）
@@ -98,9 +98,9 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      `INSERT INTO users (student_id, password, nickname, department_grade, email, skin_type)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [student_id, hashedPassword, nickname, department_grade, email, skin_type]
+      `INSERT INTO users (student_id, password, nickname, real_name, department_grade, email, skin_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [student_id, hashedPassword, nickname, real_name || null, department_grade, email, skin_type]
     );
 
     // 清理驗證紀錄
@@ -168,6 +168,7 @@ router.post('/login', async (req, res) => {
         department_grade: user.department_grade,
         email: user.email,
         skin_type: user.skin_type,
+        is_admin: user.is_admin || false,
       }
     });
   } catch (err) {

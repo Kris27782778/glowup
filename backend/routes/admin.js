@@ -15,20 +15,26 @@ router.use(requireAdmin);
 // ── 概覽統計 GET /api/admin/stats ─────────────────────────────────
 router.get('/stats', async (req, res) => {
   try {
-    const [users, products, questions, wishlists, newUsers] = await Promise.all([
+    const [users, products, questions, wishlists, newUsers, todayUsers, todayQuestions, pendingReports] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM users'),
       pool.query('SELECT COUNT(*) FROM products'),
       pool.query('SELECT COUNT(*) FROM questions'),
       pool.query('SELECT COUNT(*) FROM wishlists'),
-      pool.query(`SELECT user_id, nickname, student_id, department_grade, skin_type, created_at
+      pool.query(`SELECT user_id, nickname, student_id, department_grade, skin_type, is_banned, created_at
                   FROM users ORDER BY created_at DESC LIMIT 5`),
+      pool.query(`SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '24 hours'`),
+      pool.query(`SELECT COUNT(*) FROM questions WHERE created_at >= NOW() - INTERVAL '24 hours'`),
+      pool.query(`SELECT COUNT(*) FROM reports WHERE status = 'pending'`).catch(() => ({ rows: [{ count: 0 }] })),
     ]);
     res.json({
-      userCount:     parseInt(users.rows[0].count),
-      productCount:  parseInt(products.rows[0].count),
-      questionCount: parseInt(questions.rows[0].count),
-      wishlistCount: parseInt(wishlists.rows[0].count),
-      newUsers:      newUsers.rows,
+      userCount:      parseInt(users.rows[0].count),
+      productCount:   parseInt(products.rows[0].count),
+      questionCount:  parseInt(questions.rows[0].count),
+      wishlistCount:  parseInt(wishlists.rows[0].count),
+      newUsers:       newUsers.rows,
+      todayUsers:     parseInt(todayUsers.rows[0].count),
+      todayQuestions: parseInt(todayQuestions.rows[0].count),
+      pendingReports: parseInt(pendingReports.rows[0].count),
     });
   } catch (err) {
     console.error('[admin/stats]', err.message);
@@ -41,9 +47,10 @@ router.get('/users', async (req, res) => {
   const { q = '' } = req.query;
   try {
     const result = await pool.query(
-      `SELECT user_id, student_id, nickname, department_grade, email, skin_type, created_at
+      `SELECT user_id, student_id, nickname, real_name, department_grade, email, skin_type,
+              COALESCE(is_banned, false) AS is_banned, ban_reason, banned_until, created_at
        FROM users
-       WHERE nickname ILIKE $1 OR student_id ILIKE $1 OR email ILIKE $1
+       WHERE nickname ILIKE $1 OR real_name ILIKE $1 OR student_id ILIKE $1 OR email ILIKE $1
        ORDER BY created_at DESC`,
       [`%${q}%`]
     );
@@ -51,6 +58,36 @@ router.get('/users', async (req, res) => {
   } catch (err) {
     console.error('[admin/users]', err.message);
     res.status(500).json({ error: '查詢失敗' });
+  }
+});
+
+// ── 停權會員 PATCH /api/admin/users/:id/ban ───────────────────────
+router.patch('/users/:id/ban', async (req, res) => {
+  const { reason, days } = req.body;
+  const bannedUntil = days ? new Date(Date.now() + days * 24 * 60 * 60 * 1000) : null;
+  try {
+    await pool.query(
+      `UPDATE users SET is_banned = true, ban_reason = $1, banned_until = $2 WHERE user_id = $3`,
+      [reason || null, bannedUntil, req.params.id]
+    );
+    res.json({ message: '已停權' });
+  } catch (err) {
+    console.error('[admin/users ban]', err.message);
+    res.status(500).json({ error: '停權失敗' });
+  }
+});
+
+// ── 解除停權 PATCH /api/admin/users/:id/unban ─────────────────────
+router.patch('/users/:id/unban', async (req, res) => {
+  try {
+    await pool.query(
+      `UPDATE users SET is_banned = false, ban_reason = null, banned_until = null WHERE user_id = $1`,
+      [req.params.id]
+    );
+    res.json({ message: '已解除停權' });
+  } catch (err) {
+    console.error('[admin/users unban]', err.message);
+    res.status(500).json({ error: '解除停權失敗' });
   }
 });
 
@@ -124,6 +161,22 @@ router.get('/products/meta', async (req, res) => {
   }
 });
 
+// ── 新增產品 POST /api/admin/products ────────────────────────────
+router.post('/products', async (req, res) => {
+  const { name, brand, category, sub_category } = req.body;
+  if (!name || !brand || !category) return res.status(400).json({ error: '名稱、品牌、分類為必填' });
+  try {
+    const result = await pool.query(
+      `INSERT INTO products (name, brand, category, sub_category) VALUES ($1, $2, $3, $4) RETURNING *`,
+      [name, brand, category, sub_category || null]
+    );
+    res.json({ product: result.rows[0] });
+  } catch (err) {
+    console.error('[admin/products post]', err.message);
+    res.status(500).json({ error: '新增失敗' });
+  }
+});
+
 // ── 刪除產品 DELETE /api/admin/products/:id ───────────────────────
 router.delete('/products/:id', async (req, res) => {
   try {
@@ -177,6 +230,101 @@ router.delete('/questions/:id', async (req, res) => {
   } catch (err) {
     console.error('[admin/questions delete]', err.message);
     res.status(500).json({ error: '刪除失敗' });
+  }
+});
+
+// ── 成分列表 GET /api/admin/ingredients ──────────────────────────
+router.get('/ingredients', async (req, res) => {
+  const { q = '' } = req.query;
+  try {
+    const result = await pool.query(
+      `SELECT ingredient_id, name,
+              skin_oily, skin_dry, skin_sensitive, skin_normal, skin_combo,
+              effect_hydration, effect_oil_control, effect_repair, effect_anti_acne,
+              effect_exfoliate, effect_whitening, effect_anti_aging
+       FROM ingredients WHERE name ILIKE $1 ORDER BY name LIMIT 100`,
+      [`%${q}%`]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('[admin/ingredients]', err.message);
+    res.status(500).json({ error: '查詢失敗' });
+  }
+});
+
+// ── 編輯成分 PATCH /api/admin/ingredients/:id ─────────────────────
+router.patch('/ingredients/:id', async (req, res) => {
+  const fields = ['skin_oily','skin_dry','skin_sensitive','skin_normal','skin_combo',
+    'effect_hydration','effect_oil_control','effect_repair','effect_anti_acne',
+    'effect_exfoliate','effect_whitening','effect_anti_aging'];
+  const setClauses = []; const values = []; let idx = 1;
+  if (req.body.name !== undefined) { setClauses.push(`name = $${idx++}`); values.push(req.body.name); }
+  fields.forEach(f => {
+    if (req.body[f] !== undefined) { setClauses.push(`${f} = $${idx++}`); values.push(req.body[f]); }
+  });
+  if (setClauses.length === 0) return res.status(400).json({ error: '沒有需要更新的欄位' });
+  values.push(req.params.id);
+  try {
+    const result = await pool.query(
+      `UPDATE ingredients SET ${setClauses.join(', ')} WHERE ingredient_id = $${idx} RETURNING *`,
+      values
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: '找不到成分' });
+    res.json({ ingredient: result.rows[0] });
+  } catch (err) {
+    console.error('[admin/ingredients patch]', err.message);
+    res.status(500).json({ error: '更新失敗' });
+  }
+});
+
+// ── 檢舉列表 GET /api/admin/reports ──────────────────────────────
+router.get('/reports', async (req, res) => {
+  const { status = '' } = req.query;
+  try {
+    let sql = `SELECT r.*, u.nickname AS reporter_name
+               FROM reports r LEFT JOIN users u ON u.user_id = r.reporter_id
+               ORDER BY r.created_at DESC LIMIT 50`;
+    const params = [];
+    if (status) {
+      sql = `SELECT r.*, u.nickname AS reporter_name
+             FROM reports r LEFT JOIN users u ON u.user_id = r.reporter_id
+             WHERE r.status = $1 ORDER BY r.created_at DESC LIMIT 50`;
+      params.push(status);
+    }
+    const result = await pool.query(sql, params);
+    res.json(result.rows);
+  } catch (err) {
+    if (err.message.includes('does not exist')) return res.json([]);
+    console.error('[admin/reports]', err.message);
+    res.status(500).json({ error: '查詢失敗' });
+  }
+});
+
+// ── 處理檢舉 PATCH /api/admin/reports/:id/resolve ────────────────
+router.patch('/reports/:id/resolve', async (req, res) => {
+  const { admin_note } = req.body;
+  try {
+    await pool.query(
+      `UPDATE reports SET status = 'resolved', admin_note = $1, resolved_at = NOW() WHERE report_id = $2`,
+      [admin_note || null, req.params.id]
+    );
+    res.json({ message: '已處理' });
+  } catch (err) {
+    res.status(500).json({ error: '更新失敗' });
+  }
+});
+
+// ── 關閉檢舉 PATCH /api/admin/reports/:id/dismiss ────────────────
+router.patch('/reports/:id/dismiss', async (req, res) => {
+  const { admin_note } = req.body;
+  try {
+    await pool.query(
+      `UPDATE reports SET status = 'dismissed', admin_note = $1, resolved_at = NOW() WHERE report_id = $2`,
+      [admin_note || null, req.params.id]
+    );
+    res.json({ message: '已關閉' });
+  } catch (err) {
+    res.status(500).json({ error: '更新失敗' });
   }
 });
 

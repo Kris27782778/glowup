@@ -5,21 +5,21 @@ const API = `${API_BASE}/api/admin`;
 const ADMIN_KEY = 'glowadmin2026';
 
 const C = {
-  bg:         '#0F0D0C',
-  bgPanel:    '#1C1917',
-  bgCard:     '#232018',
-  bgRow:      '#1A1713',
-  bgRowHover: '#221F1A',
-  border:     'rgba(255,255,255,0.07)',
+  bg:         '#F7F5F3',
+  bgPanel:    '#FFFFFF',
+  bgCard:     '#F2EFED',
+  bgRow:      '#FAFAF9',
+  bgRowHover: '#F5F0EE',
+  border:     'rgba(0,0,0,0.08)',
   accent:     '#C4897A',
-  accentDim:  'rgba(196,137,122,0.15)',
-  accentText: '#D9A898',
-  text:       '#F7F4F2',
-  textSub:    '#A89990',
-  textDim:    '#6B5E58',
-  green:      '#7BAF7B',
-  red:        '#C47A7A',
-  yellow:     '#C4B07A',
+  accentDim:  'rgba(196,137,122,0.12)',
+  accentText: '#A8634F',
+  text:       '#1C1917',
+  textSub:    '#6B5E58',
+  textDim:    '#A89990',
+  green:      '#3D8A52',
+  red:        '#B84040',
+  yellow:     '#8A6A1E',
 };
 
 const SKIN_LABELS = {
@@ -112,27 +112,53 @@ function OverviewTab() {
 
   if (!stats) return <Loading />;
 
-  const cards = [
-    { label: '總會員數', value: stats.userCount,     icon: '👥', color: C.accentText },
-    { label: '產品總數', value: stats.productCount,  icon: '🧴', color: C.green },
-    { label: '問答總數', value: stats.questionCount, icon: '💬', color: C.yellow },
-    { label: '收藏總數', value: stats.wishlistCount, icon: '❤️', color: C.red },
+  const todayCards = [
+    { label: '今日新增會員', value: stats.todayUsers     ?? '—', color: C.accentText, sub: '24h 內' },
+    { label: '今日新增問答', value: stats.todayQuestions ?? '—', color: C.green,      sub: '24h 內' },
+    { label: '待處理檢舉',  value: stats.pendingReports ?? 0,   color: stats.pendingReports > 0 ? C.red : C.textSub, sub: 'pending' },
+    { label: '成分庫產品數', value: stats.productCount,          color: C.yellow,     sub: '總計' },
+  ];
+
+  const totalCards = [
+    { label: '總會員數', value: stats.userCount,     color: C.accentText },
+    { label: '問答總數', value: stats.questionCount, color: C.green },
+    { label: '收藏總數', value: stats.wishlistCount, color: C.yellow },
+    { label: '產品總數', value: stats.productCount,  color: C.textSub },
   ];
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'28px' }}>
-      {/* 數字卡片 */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'16px' }}>
-        {cards.map(c => (
-          <div key={c.label} style={cardStyle}>
-            <span style={{ fontSize:'28px' }}>{c.icon}</span>
-            <div>
-              <p style={{ margin:0, fontSize:'28px', fontWeight:700, color:c.color,
+      {/* 今日 KPI */}
+      <div>
+        <p style={{ margin:'0 0 10px', fontSize:'11px', color:C.textDim, letterSpacing:'0.1em', textTransform:'uppercase' }}>今日狀況</p>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
+          {todayCards.map(c => (
+            <div key={c.label} style={{ ...cardStyle, flexDirection:'column', alignItems:'flex-start', gap:'8px' }}>
+              <p style={{ margin:0, fontSize:'30px', fontWeight:700, color:c.color,
                 fontFamily:'"DM Sans",sans-serif', lineHeight:1 }}>{c.value}</p>
-              <p style={{ margin:'4px 0 0', fontSize:'12px', color:C.textSub }}>{c.label}</p>
+              <div>
+                <p style={{ margin:0, fontSize:'13px', color:C.text }}>{c.label}</p>
+                <p style={{ margin:'2px 0 0', fontSize:'11px', color:C.textDim }}>{c.sub}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+      </div>
+
+      {/* 累計總覽 */}
+      <div>
+        <p style={{ margin:'0 0 10px', fontSize:'11px', color:C.textDim, letterSpacing:'0.1em', textTransform:'uppercase' }}>累計數據</p>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
+          {totalCards.map(c => (
+            <div key={c.label} style={cardStyle}>
+              <div>
+                <p style={{ margin:0, fontSize:'26px', fontWeight:700, color:c.color,
+                  fontFamily:'"DM Sans",sans-serif', lineHeight:1 }}>{c.value}</p>
+                <p style={{ margin:'4px 0 0', fontSize:'12px', color:C.textSub }}>{c.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* 最新會員 */}
@@ -140,7 +166,7 @@ function OverviewTab() {
         <h3 style={sectionTitle}>最新加入會員</h3>
         <table style={tableStyle}>
           <thead><tr>
-            {['暱稱','學號','系所年級','膚質','加入時間'].map(h => (
+            {['暱稱','學號','系所年級','膚質','狀態','加入時間'].map(h => (
               <th key={h} style={thStyle}>{h}</th>
             ))}
           </tr></thead>
@@ -155,6 +181,12 @@ function OverviewTab() {
                     {SKIN_LABELS[u.skin_type] || u.skin_type || '未設定'}
                   </span>
                 </td>
+                <td style={tdStyle}>
+                  {u.is_banned
+                    ? <span style={{ ...tagStyle, color:C.red, background:'rgba(196,122,122,0.12)' }}>已停權</span>
+                    : <span style={{ ...tagStyle, color:C.green, background:'rgba(123,175,123,0.12)' }}>正常</span>
+                  }
+                </td>
                 <td style={tdStyle}>{fmtDate(u.created_at)}</td>
               </tr>
             ))}
@@ -165,11 +197,47 @@ function OverviewTab() {
   );
 }
 
+// ── 停權 Modal ────────────────────────────────────────────────────
+function BanModal({ user, onBan, onCancel }) {
+  const [reason, setReason] = useState('');
+  const [days,   setDays]   = useState('');
+  const inputSt = {
+    width:'100%', boxSizing:'border-box', padding:'9px 12px',
+    background:C.bgCard, border:`1px solid ${C.border}`, borderRadius:'8px',
+    color:C.text, fontSize:'13px', fontFamily:'"DM Sans","Noto Sans TC",sans-serif', outline:'none',
+  };
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)',
+      display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+      <div style={{ background:C.bgPanel, border:`1px solid ${C.border}`, borderRadius:'14px',
+        padding:'28px 32px', width:'360px', display:'flex', flexDirection:'column', gap:'16px' }}>
+        <h3 style={{ margin:0, fontSize:'16px', color:C.text }}>停權會員：{user.nickname}</h3>
+        <div>
+          <label style={{ fontSize:'11px', color:C.textDim, display:'block', marginBottom:'6px' }}>停權原因（必填）</label>
+          <input style={inputSt} value={reason} onChange={e => setReason(e.target.value)} placeholder="請填入停權原因" />
+        </div>
+        <div>
+          <label style={{ fontSize:'11px', color:C.textDim, display:'block', marginBottom:'6px' }}>停權天數（空白 = 永久）</label>
+          <input style={inputSt} type="number" min="1" value={days} onChange={e => setDays(e.target.value)} placeholder="例：7、30、90" />
+        </div>
+        <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
+          <button onClick={onCancel} style={btnStyle('ghost')}>取消</button>
+          <button onClick={() => onBan({ reason, days: days ? parseInt(days) : null })}
+            disabled={!reason.trim()} style={{ ...btnStyle('danger'), opacity: reason.trim() ? 1 : 0.5 }}>
+            確認停權
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 會員管理頁 ────────────────────────────────────────────────────
 function UsersTab() {
-  const [users,  setUsers]  = useState([]);
-  const [q,      setQ]      = useState('');
-  const [del,    setDel]    = useState(null); // { user_id, nickname }
+  const [users,    setUsers]    = useState([]);
+  const [q,        setQ]        = useState('');
+  const [del,      setDel]      = useState(null);
+  const [banning,  setBanning]  = useState(null);
 
   const load = useCallback(() => {
     adminFetch(`/users?q=${encodeURIComponent(q)}`).then(d => { if (Array.isArray(d)) setUsers(d); });
@@ -183,6 +251,17 @@ function UsersTab() {
     load();
   };
 
+  const handleBan = async ({ reason, days }) => {
+    await adminFetch(`/users/${banning.user_id}/ban`, { method:'PATCH', body: { reason, days } });
+    setBanning(null);
+    load();
+  };
+
+  const handleUnban = async (u) => {
+    await adminFetch(`/users/${u.user_id}/unban`, { method:'PATCH' });
+    load();
+  };
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -193,7 +272,7 @@ function UsersTab() {
       <div style={sectionStyle}>
         <table style={tableStyle}>
           <thead><tr>
-            {['暱稱','學號','Email','系所年級','膚質','加入時間','操作'].map(h => (
+            {['姓名','暱稱','學號','Email','系所年級','狀態','加入時間','操作'].map(h => (
               <th key={h} style={thStyle}>{h}</th>
             ))}
           </tr></thead>
@@ -204,18 +283,27 @@ function UsersTab() {
                 onMouseEnter={e => e.currentTarget.style.background = C.bgRowHover}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <td style={tdStyle}><strong style={{ color:C.text }}>{u.nickname}</strong></td>
+                <td style={tdStyle}><strong style={{ color:C.text }}>{u.real_name || '—'}</strong></td>
+                <td style={tdStyle}>{u.nickname}</td>
                 <td style={tdStyle}>{u.student_id}</td>
                 <td style={{ ...tdStyle, color:C.textSub, fontSize:'12px' }}>{u.email}</td>
                 <td style={tdStyle}>{u.department_grade || '—'}</td>
                 <td style={tdStyle}>
-                  <span style={{ ...tagStyle, color:C.accentText, background:C.accentDim }}>
-                    {SKIN_LABELS[u.skin_type] || u.skin_type || '未設定'}
-                  </span>
+                  {u.is_banned
+                    ? <span style={{ ...tagStyle, color:C.red, background:'rgba(196,122,122,0.12)' }}
+                        title={u.ban_reason || ''}>已停權</span>
+                    : <span style={{ ...tagStyle, color:C.green, background:'rgba(123,175,123,0.12)' }}>正常</span>
+                  }
                 </td>
                 <td style={tdStyle}>{fmtDate(u.created_at)}</td>
                 <td style={tdStyle}>
-                  <button onClick={() => setDel(u)} style={btnStyle('danger')}>刪除</button>
+                  <div style={{ display:'flex', gap:'6px' }}>
+                    {u.is_banned
+                      ? <button onClick={() => handleUnban(u)} style={btnStyle('success')}>解除停權</button>
+                      : <button onClick={() => setBanning(u)} style={btnStyle('ghost')}>停權</button>
+                    }
+                    <button onClick={() => setDel(u)} style={btnStyle('danger')}>刪除</button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -230,6 +318,9 @@ function UsersTab() {
           onConfirm={handleDelete}
           onCancel={() => setDel(null)}
         />
+      )}
+      {banning && (
+        <BanModal user={banning} onBan={handleBan} onCancel={() => setBanning(null)} />
       )}
     </div>
   );
@@ -340,13 +431,71 @@ function FilterChip({ label, count, active, onClick, color }) {
   );
 }
 
+function AddProductModal({ meta, onAdd, onCancel }) {
+  const [form, setForm] = useState({ name:'', brand:'', category: meta.categories[0] || '', sub_category: meta.sub_categories[0] || '' });
+  const [saving, setSaving] = useState(false);
+  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
+  const inputSt = { width:'100%', boxSizing:'border-box', padding:'9px 12px',
+    background:C.bgCard, border:`1px solid ${C.border}`, borderRadius:'8px',
+    color:C.text, fontSize:'13px', fontFamily:'"DM Sans","Noto Sans TC",sans-serif', outline:'none' };
+  const labelSt = { fontSize:'11px', color:C.textDim, letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:'6px', display:'block' };
+
+  const handleAdd = async () => {
+    if (!form.name.trim() || !form.brand.trim()) return;
+    setSaving(true);
+    const res = await adminFetch('/products', { method:'POST', body: form });
+    setSaving(false);
+    if (res.product) onAdd(res.product);
+  };
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.65)',
+      display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+      <div style={{ background:C.bgPanel, border:`1px solid ${C.border}`, borderRadius:'16px',
+        padding:'32px', width:'480px', display:'flex', flexDirection:'column', gap:'20px' }}>
+        <h3 style={{ margin:0, fontSize:'17px', fontWeight:600, color:C.text }}>新增產品</h3>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px' }}>
+          <div style={{ gridColumn:'1/-1' }}>
+            <label style={labelSt}>產品名稱</label>
+            <input style={inputSt} value={form.name} onChange={set('name')} placeholder="請輸入產品名稱" />
+          </div>
+          <div>
+            <label style={labelSt}>品牌</label>
+            <input style={inputSt} value={form.brand} onChange={set('brand')} placeholder="請輸入品牌名稱" />
+          </div>
+          <div>
+            <label style={labelSt}>分類</label>
+            <select style={inputSt} value={form.category} onChange={set('category')}>
+              {(meta.categories || []).map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelSt}>子分類</label>
+            <select style={inputSt} value={form.sub_category} onChange={set('sub_category')}>
+              {(meta.sub_categories || []).map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
+          <button onClick={onCancel} style={btnStyle('ghost')}>取消</button>
+          <button onClick={handleAdd} disabled={saving || !form.name.trim() || !form.brand.trim()}
+            style={{ ...btnStyle('accent'), opacity: saving || !form.name.trim() || !form.brand.trim() ? 0.5 : 1 }}>
+            {saving ? '新增中…' : '新增'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProductsTab() {
-  const [all,       setAll]      = useState([]);   // 全部產品（一次載入）
+  const [all,       setAll]      = useState([]);
   const [q,         setQ]        = useState('');
-  const [catFilter, setCatFilter] = useState('');  // '' = 全部
+  const [catFilter, setCatFilter] = useState('');
   const [subFilter, setSubFilter] = useState('');
   const [del,       setDel]      = useState(null);
   const [editing,   setEditing]  = useState(null);
+  const [adding,    setAdding]   = useState(false);
   const [meta,      setMeta]     = useState({ categories:[], sub_categories:[] });
 
   // 一次載入全部，之後只做 client-side 篩選
@@ -364,6 +513,11 @@ function ProductsTab() {
   const handleSave = (updated) => {
     setAll(prev => prev.map(p => p.product_id === updated.product_id ? { ...p, ...updated } : p));
     setEditing(null);
+  };
+
+  const handleAdd = (newProduct) => {
+    setAll(prev => [newProduct, ...prev]);
+    setAdding(false);
   };
 
   // client-side 篩選
@@ -394,9 +548,10 @@ function ProductsTab() {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <SearchBar value={q} onChange={v => { setQ(v); setCatFilter(''); setSubFilter(''); }}
           placeholder="搜尋名稱 / 品牌" />
-        <span style={{ fontSize:'13px', color:C.textSub }}>
-          顯示 {filtered.length} / {all.length} 筆
-        </span>
+        <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+          <span style={{ fontSize:'13px', color:C.textSub }}>顯示 {filtered.length} / {all.length} 筆</span>
+          <button onClick={() => setAdding(true)} style={btnStyle('accent')}>＋ 新增產品</button>
+        </div>
       </div>
 
       {/* 標籤篩選 */}
@@ -487,11 +642,10 @@ function ProductsTab() {
         />
       )}
       {editing && (
-        <EditProductModal
-          product={editing} meta={meta}
-          onSave={handleSave}
-          onCancel={() => setEditing(null)}
-        />
+        <EditProductModal product={editing} meta={meta} onSave={handleSave} onCancel={() => setEditing(null)} />
+      )}
+      {adding && (
+        <AddProductModal meta={meta} onAdd={handleAdd} onCancel={() => setAdding(false)} />
       )}
     </div>
   );
@@ -512,48 +666,84 @@ const CAT_COLORS_A = ['#C4897A','#7BAF7B','#7AAFC4','#C4B07A','#9B7AC4','#C47A9B
 function HBar({ label, value, max, color, suffix = '' }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'10px' }}>
-      <div style={{ width:'120px', fontSize:'12px', color:C.textSub, textAlign:'right', flexShrink:0,
+    <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
+      <div style={{ width:'100px', fontSize:'12px', color:C.textSub, flexShrink:0,
         whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{label}</div>
-      <div style={{ flex:1, background:C.bgCard, borderRadius:'999px', height:'8px', overflow:'hidden' }}>
+      <div style={{ flex:1, background:C.bgCard, borderRadius:'4px', height:'6px', overflow:'hidden' }}>
         <div style={{
-          width:`${pct}%`, height:'100%', borderRadius:'999px',
-          background:color, transition:'width 600ms cubic-bezier(0.16,1,0.3,1)',
+          width:`${pct}%`, height:'100%', borderRadius:'4px',
+          background:`linear-gradient(90deg, ${color}cc, ${color})`,
+          transition:'width 700ms cubic-bezier(0.16,1,0.3,1)',
         }} />
       </div>
-      <div style={{ width:'40px', fontSize:'12px', color, fontWeight:600, textAlign:'right' }}>
+      <div style={{ width:'36px', fontSize:'12px', color, fontWeight:600, textAlign:'right', flexShrink:0 }}>
         {value}{suffix}
       </div>
     </div>
   );
 }
 
-function WeeklyBar({ data, color, label }) {
+function WeeklyBar({ data, color, label, total }) {
   const max = Math.max(...data.map(d => d.count), 1);
+  const CHART_H = 160;
   return (
-    <div style={sectionStyle}>
-      <h3 style={sectionTitle}>{label}</h3>
-      <div style={{ padding:'0 20px 20px' }}>
-        {data.length === 0
-          ? <p style={{ color:C.textDim, fontSize:'13px', margin:0 }}>尚無足夠資料</p>
-          : (
-          <div style={{ display:'flex', alignItems:'flex-end', gap:'8px', height:'120px' }}>
+    <div style={{ ...sectionStyle, padding:'20px 24px 16px' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'20px' }}>
+        <div>
+          <p style={{ margin:0, fontSize:'11px', color:C.textDim, letterSpacing:'0.08em', textTransform:'uppercase' }}>{label}</p>
+          {total != null && (
+            <p style={{ margin:'4px 0 0', fontSize:'28px', fontWeight:700, color, fontFamily:'"DM Sans",sans-serif', lineHeight:1 }}>{total}</p>
+          )}
+        </div>
+        <span style={{ fontSize:'11px', color:C.textDim, marginTop:'2px' }}>近 12 週</span>
+      </div>
+      {data.length === 0 ? (
+        <p style={{ color:C.textDim, fontSize:'13px', margin:0, textAlign:'center', padding:'20px 0' }}>尚無足夠資料</p>
+      ) : (
+        <div style={{ position:'relative' }}>
+          {/* 格線 */}
+          {[0.25, 0.5, 0.75, 1].map(r => (
+            <div key={r} style={{
+              position:'absolute', left:0, right:0,
+              bottom: `${r * CHART_H}px`,
+              borderTop: `1px dashed ${C.border}`,
+              pointerEvents:'none',
+            }} />
+          ))}
+          <div style={{ display:'flex', alignItems:'flex-end', gap:'4px', height:`${CHART_H}px`, position:'relative' }}>
             {data.map((d, i) => {
-              const h = Math.max(Math.round((d.count / max) * 100), 4);
+              const h = Math.max(Math.round((d.count / max) * CHART_H), 3);
+              const isLast = i === data.length - 1;
               return (
-                <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'6px' }}>
-                  <span style={{ fontSize:'11px', color, fontWeight:600 }}>{d.count}</span>
+                <div key={i} title={`${d.week}: ${d.count}`}
+                  style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-end', height:'100%' }}>
                   <div style={{
-                    width:'100%', height:`${h}px`, borderRadius:'4px 4px 0 0',
-                    background:color, opacity:0.85, transition:'height 600ms',
-                  }} />
-                  <span style={{ fontSize:'10px', color:C.textDim }}>{d.week}</span>
+                    width:'100%', height:`${h}px`,
+                    borderRadius:'3px 3px 0 0',
+                    background: isLast
+                      ? `linear-gradient(180deg, ${color}, ${color}99)`
+                      : `${color}55`,
+                    transition:'height 600ms cubic-bezier(0.16,1,0.3,1)',
+                    position:'relative',
+                  }}>
+                    {isLast && d.count > 0 && (
+                      <span style={{
+                        position:'absolute', top:'-18px', left:'50%', transform:'translateX(-50%)',
+                        fontSize:'10px', fontWeight:700, color, whiteSpace:'nowrap',
+                      }}>{d.count}</span>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
-        )}
-      </div>
+          {/* X 軸標籤（只顯示首尾）*/}
+          <div style={{ display:'flex', justifyContent:'space-between', marginTop:'6px' }}>
+            <span style={{ fontSize:'10px', color:C.textDim }}>{data[0]?.week}</span>
+            <span style={{ fontSize:'10px', color:C.textDim }}>{data[data.length-1]?.week}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -567,64 +757,115 @@ function AnalyticsTab() {
 
   if (!data) return <Loading />;
 
-  const skinMax = Math.max(...(data.skinDist.map(d => d.count)), 1);
-  const subMax  = Math.max(...(data.subCatDist.map(d => d.count)), 1);
-  const tagMax  = Math.max(...(data.tagDist.map(d => d.count)), 1);
+  const skinMax  = Math.max(...data.skinDist.map(d => d.count), 1);
+  const subMax   = Math.max(...data.subCatDist.map(d => d.count), 1);
+  const tagMax   = Math.max(...data.tagDist.map(d => d.count), 1);
   const catTotal = data.categoryDist.reduce((s, d) => s + d.count, 0);
+  const totalUsers     = data.weeklyUsers.reduce((s, d) => s + d.count, 0);
+  const totalQuestions = data.weeklyQuestions.reduce((s, d) => s + d.count, 0);
+
+  const SectionHeader = ({ title }) => (
+    <div style={{ padding:'20px 24px 0', marginBottom:'16px' }}>
+      <p style={{ margin:0, fontSize:'13px', fontWeight:600, color:C.text,
+        fontFamily:'"DM Sans","Noto Sans TC",sans-serif' }}>{title}</p>
+    </div>
+  );
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:'24px' }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
 
-      {/* 週成長雙欄 */}
+      {/* 成長趨勢 */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
-        <WeeklyBar data={data.weeklyUsers}     color={C.accentText} label="週新增會員" />
-        <WeeklyBar data={data.weeklyQuestions} color={C.green}      label="週新增問答" />
+        <WeeklyBar data={data.weeklyUsers}     color={C.accentText} label="會員成長" total={totalUsers} />
+        <WeeklyBar data={data.weeklyQuestions} color={C.green}      label="問答成長" total={totalQuestions} />
       </div>
 
-      {/* 膚質分佈 + 產品分類 */}
+      {/* 膚質 + 熱門收藏 */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
-        {/* 膚質 */}
+
+        {/* 膚質分佈 */}
         <div style={sectionStyle}>
-          <h3 style={sectionTitle}>膚質分佈</h3>
-          <div style={{ padding:'4px 20px 20px' }}>
-            {data.skinDist.map(d => (
-              <HBar key={d.key}
-                label={SKIN_LABELS_FULL[d.key] || d.key}
-                value={d.count} max={skinMax}
-                color={SKIN_COLORS[d.key] || C.accent}
-              />
-            ))}
+          <SectionHeader title="膚質分佈" />
+          <div style={{ padding:'0 24px 20px' }}>
+            {data.skinDist.length === 0
+              ? <p style={{ color:C.textDim, fontSize:'13px', margin:0 }}>尚無資料</p>
+              : data.skinDist.map(d => (
+                <HBar key={d.key}
+                  label={SKIN_LABELS_FULL[d.key] || d.key}
+                  value={d.count} max={skinMax}
+                  color={SKIN_COLORS[d.key] || C.accent}
+                />
+              ))
+            }
           </div>
         </div>
 
+        {/* 熱門收藏 */}
+        <div style={sectionStyle}>
+          <SectionHeader title="熱門收藏 Top 8" />
+          <div style={{ padding:'0 24px 20px' }}>
+            {data.topWishlist.length === 0
+              ? <p style={{ color:C.textDim, fontSize:'13px', margin:0 }}>尚無資料</p>
+              : data.topWishlist.map((p, i) => (
+                <div key={i} style={{
+                  display:'flex', alignItems:'center', gap:'12px',
+                  padding:'9px 0',
+                  borderBottom: i < data.topWishlist.length - 1 ? `1px solid ${C.border}` : 'none',
+                }}>
+                  <span style={{
+                    width:'22px', height:'22px', borderRadius:'6px', flexShrink:0,
+                    background: i === 0 ? '#C4897A' : i === 1 ? '#A89990' : i === 2 ? '#B8966A' : C.bgCard,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    fontSize:'11px', fontWeight:700,
+                    color: i < 3 ? '#fff' : C.textDim,
+                  }}>{i + 1}</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <p style={{ margin:0, fontSize:'13px', color:C.text, fontWeight:500,
+                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</p>
+                    <p style={{ margin:'1px 0 0', fontSize:'11px', color:C.textSub }}>{p.brand}</p>
+                  </div>
+                  <div style={{ flexShrink:0, textAlign:'right' }}>
+                    <span style={{ fontSize:'15px', fontWeight:700, color: p.wishlist_count > 0 ? C.accentText : C.textDim,
+                      fontFamily:'"DM Sans",sans-serif' }}>{p.wishlist_count}</span>
+                    <p style={{ margin:'1px 0 0', fontSize:'10px', color:C.textDim }}>收藏</p>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* 產品分類 + 標籤 */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
+
         {/* 產品分類 */}
         <div style={sectionStyle}>
-          <h3 style={sectionTitle}>產品分類佔比</h3>
-          <div style={{ padding:'4px 20px 20px' }}>
+          <SectionHeader title="產品分類" />
+          <div style={{ padding:'0 24px 20px' }}>
             {data.categoryDist.map((d, i) => {
               const pct = catTotal > 0 ? Math.round((d.count / catTotal) * 100) : 0;
               return (
-                <div key={d.category} style={{ marginBottom:'16px' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'6px' }}>
-                    <span style={{ fontSize:'13px', color:C.text }}>{d.category}</span>
-                    <span style={{ fontSize:'13px', color:CAT_COLORS_A[i], fontWeight:600 }}>
-                      {d.count} 件 ({pct}%)
-                    </span>
+                <div key={d.category} style={{ marginBottom:'14px' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'5px' }}>
+                    <span style={{ fontSize:'13px', color:C.text, fontWeight:500 }}>{d.category}</span>
+                    <span style={{ fontSize:'12px', color:CAT_COLORS_A[i], fontWeight:600,
+                      fontFamily:'"DM Sans",sans-serif' }}>{pct}% · {d.count} 件</span>
                   </div>
-                  <div style={{ background:C.bgCard, borderRadius:'999px', height:'10px', overflow:'hidden' }}>
+                  <div style={{ background:C.bgCard, borderRadius:'4px', height:'6px', overflow:'hidden' }}>
                     <div style={{
-                      width:`${pct}%`, height:'100%', borderRadius:'999px',
-                      background:CAT_COLORS_A[i], transition:'width 600ms',
+                      width:`${pct}%`, height:'100%', borderRadius:'4px',
+                      background:`linear-gradient(90deg,${CAT_COLORS_A[i]}99,${CAT_COLORS_A[i]})`,
+                      transition:'width 700ms cubic-bezier(0.16,1,0.3,1)',
                     }} />
                   </div>
                 </div>
               );
             })}
-
             <div style={{ borderTop:`1px solid ${C.border}`, marginTop:'16px', paddingTop:'16px' }}>
-              <h4 style={{ margin:'0 0 12px', fontSize:'12px', color:C.textDim, textTransform:'uppercase', letterSpacing:'0.08em' }}>
+              <p style={{ margin:'0 0 12px', fontSize:'11px', color:C.textDim, textTransform:'uppercase', letterSpacing:'0.08em' }}>
                 子分類 Top 8
-              </h4>
+              </p>
               {data.subCatDist.map((d, i) => (
                 <HBar key={d.sub_category}
                   label={d.sub_category} value={d.count} max={subMax}
@@ -634,48 +875,14 @@ function AnalyticsTab() {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 熱門收藏 + 標籤分析 */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
-        {/* 熱門收藏 */}
+        {/* 熱門標籤 */}
         <div style={sectionStyle}>
-          <h3 style={sectionTitle}>熱門收藏排行 Top 8</h3>
-          <div style={{ padding:'0 20px 20px' }}>
-            {data.topWishlist.map((p, i) => (
-              <div key={i} style={{
-                display:'flex', alignItems:'center', gap:'12px',
-                padding:'10px 0', borderBottom: i < data.topWishlist.length-1 ? `1px solid ${C.border}` : 'none',
-              }}>
-                <span style={{
-                  width:'24px', height:'24px', borderRadius:'50%', flexShrink:0,
-                  background: i < 3 ? C.accent : C.bgCard,
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                  fontSize:'11px', fontWeight:700, color: i < 3 ? '#fff' : C.textDim,
-                }}>{i+1}</span>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <p style={{ margin:0, fontSize:'13px', color:C.text,
-                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</p>
-                  <p style={{ margin:'2px 0 0', fontSize:'11px', color:C.textSub }}>{p.brand}</p>
-                </div>
-                <div style={{ textAlign:'right', flexShrink:0 }}>
-                  <p style={{ margin:0, fontSize:'14px', fontWeight:700, color: p.wishlist_count > 0 ? C.accentText : C.textDim }}>
-                    {p.wishlist_count}
-                  </p>
-                  <p style={{ margin:'1px 0 0', fontSize:'10px', color:C.textDim }}>收藏</p>
-                </div>
-              </div>
-            ))}
-            {data.topWishlist.length === 0 && <p style={{ color:C.textDim, fontSize:'13px' }}>尚無收藏資料</p>}
-          </div>
-        </div>
-
-        {/* 問答標籤 */}
-        <div style={sectionStyle}>
-          <h3 style={sectionTitle}>問答熱門標籤</h3>
-          <div style={{ padding:'4px 20px 20px' }}>
-            {data.tagDist.length > 0
-              ? (
+          <SectionHeader title="問答熱門標籤" />
+          <div style={{ padding:'0 24px 20px' }}>
+            {data.tagDist.length === 0
+              ? <p style={{ color:C.textDim, fontSize:'13px', margin:0 }}>尚無資料</p>
+              : (
                 <>
                   {data.tagDist.map((d, i) => (
                     <HBar key={d.tag}
@@ -684,27 +891,230 @@ function AnalyticsTab() {
                       suffix=" 題"
                     />
                   ))}
-                  <div style={{ marginTop:'20px', display:'flex', flexWrap:'wrap', gap:'8px' }}>
+                  <div style={{ marginTop:'20px', display:'flex', flexWrap:'wrap', gap:'6px' }}>
                     {data.tagDist.map((d, i) => (
                       <span key={d.tag} style={{
-                        padding:'5px 14px', borderRadius:'999px',
-                        background:C.bgCard,
-                        border:`1px solid ${CAT_COLORS_A[i % CAT_COLORS_A.length]}40`,
+                        padding:'4px 12px', borderRadius:'6px',
+                        background:`${CAT_COLORS_A[i % CAT_COLORS_A.length]}12`,
+                        border:`1px solid ${CAT_COLORS_A[i % CAT_COLORS_A.length]}30`,
                         color:CAT_COLORS_A[i % CAT_COLORS_A.length],
                         fontSize:'12px', fontWeight:500,
                         fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
                       }}>
-                        #{d.tag} · {d.count}
+                        #{d.tag} <span style={{ opacity:0.6 }}>·</span> {d.count}
                       </span>
                     ))}
                   </div>
                 </>
               )
-              : <p style={{ color:C.textDim, fontSize:'13px' }}>尚無標籤資料</p>
             }
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── 成分管理頁 ────────────────────────────────────────────────────
+const SCORE_COLS = [
+  { key:'skin_oily', label:'油性' }, { key:'skin_dry', label:'乾性' },
+  { key:'skin_sensitive', label:'敏感' }, { key:'skin_normal', label:'中性' },
+  { key:'skin_combo', label:'混合' },
+];
+
+function IngredientsTab() {
+  const [ingredients, setIngredients] = useState([]);
+  const [q, setQ] = useState('');
+
+  const load = useCallback(() => {
+    adminFetch(`/ingredients?q=${encodeURIComponent(q)}`).then(d => { if (Array.isArray(d)) setIngredients(d); });
+  }, [q]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const scoreColor = (v) => {
+    if (v == null) return C.textDim;
+    if (v >= 3) return C.green;
+    if (v >= 1) return C.yellow;
+    return C.red;
+  };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <SearchBar value={q} onChange={setQ} placeholder="搜尋成分名稱" />
+        <span style={{ fontSize:'13px', color:C.textSub }}>{ingredients.length} 筆</span>
+      </div>
+      <div style={sectionStyle}>
+        <table style={tableStyle}>
+          <thead><tr>
+            {['成分名稱', '油性', '乾性', '敏感', '中性', '混合'].map(h => (
+              <th key={h} style={thStyle}>{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {ingredients.map(ing => (
+              <tr key={ing.ingredient_id}
+                style={{ borderBottom:`1px solid ${C.border}`, transition:'background 150ms' }}
+                onMouseEnter={e => e.currentTarget.style.background = C.bgRowHover}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <td style={{ ...tdStyle, color:C.text, fontWeight:500 }}>{ing.name}</td>
+                {SCORE_COLS.map(col => (
+                  <td key={col.key} style={{ ...tdStyle, textAlign:'center' }}>
+                    <span style={{ color: scoreColor(ing[col.key]), fontWeight:600, fontSize:'13px' }}>
+                      {ing[col.key] ?? '—'}
+                    </span>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {ingredients.length === 0 && <EmptyState text="沒有符合的成分" />}
+      </div>
+    </div>
+  );
+}
+
+// ── 貼文審核頁 ────────────────────────────────────────────────────
+function PostsTab() {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+      <div style={{
+        ...sectionStyle, padding:'60px 40px', textAlign:'center',
+        display:'flex', flexDirection:'column', alignItems:'center', gap:'16px',
+      }}>
+        <div style={{ fontSize:'40px', opacity:0.3 }}>◫</div>
+        <p style={{ margin:0, fontSize:'15px', color:C.text, fontWeight:500 }}>社群貼文審核</p>
+        <p style={{ margin:0, fontSize:'13px', color:C.textSub, maxWidth:'360px', lineHeight:1.6 }}>
+          Community 社群功能目前使用模擬資料。<br />
+          待社群貼文正式儲存至資料庫後，此頁面將顯示貼文列表、下架與恢復操作。
+        </p>
+        <span style={{ ...tagStyle, color:C.yellow, background:'rgba(196,176,122,0.12)',
+          fontSize:'11px', letterSpacing:'0.08em' }}>COMING SOON — v2</span>
+      </div>
+    </div>
+  );
+}
+
+// ── 檢舉管理頁 ────────────────────────────────────────────────────
+const REPORT_STATUS = {
+  pending:    { label:'待處理', color: C.yellow },
+  reviewing:  { label:'審核中', color: C.accentText },
+  resolved:   { label:'已成立', color: C.green },
+  dismissed:  { label:'不成立', color: C.textDim },
+};
+
+function ReportsTab() {
+  const [reports,   setReports]   = useState([]);
+  const [filter,    setFilter]    = useState('pending');
+  const [resolving, setResolving] = useState(null); // { report, action: 'resolve'|'dismiss' }
+  const [note,      setNote]      = useState('');
+
+  const load = useCallback(() => {
+    adminFetch(`/reports?status=${filter}`).then(d => { if (Array.isArray(d)) setReports(d); });
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleAction = async () => {
+    const path = resolving.action === 'resolve' ? 'resolve' : 'dismiss';
+    await adminFetch(`/reports/${resolving.report.report_id}/${path}`, {
+      method:'PATCH', body: { admin_note: note },
+    });
+    setResolving(null);
+    setNote('');
+    load();
+  };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+      <div style={{ display:'flex', gap:'8px' }}>
+        {['pending','reviewing','resolved','dismissed'].map(s => (
+          <FilterChip key={s} label={REPORT_STATUS[s].label} active={filter === s}
+            color={REPORT_STATUS[s].color} onClick={() => setFilter(s)} />
+        ))}
+      </div>
+
+      {reports.length === 0 ? (
+        <div style={{ ...sectionStyle, padding:'60px 40px', textAlign:'center' }}>
+          <p style={{ margin:0, color:C.textDim, fontSize:'13px' }}>
+            {filter === 'pending' ? '目前沒有待處理的檢舉（或 reports 資料表尚未建立）' : '沒有符合的紀錄'}
+          </p>
+        </div>
+      ) : (
+        <div style={sectionStyle}>
+          <table style={tableStyle}>
+            <thead><tr>
+              {['類型','內容預覽','原因','檢舉人','狀態','時間','操作'].map(h => (
+                <th key={h} style={thStyle}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {reports.map(r => {
+                const st = REPORT_STATUS[r.status] || REPORT_STATUS.pending;
+                return (
+                  <tr key={r.report_id}
+                    style={{ borderBottom:`1px solid ${C.border}`, transition:'background 150ms' }}
+                    onMouseEnter={e => e.currentTarget.style.background = C.bgRowHover}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <td style={tdStyle}><span style={{ ...tagStyle, color:C.accentText, background:C.accentDim }}>{r.target_type}</span></td>
+                    <td style={{ ...tdStyle, maxWidth:'160px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:C.text }}>
+                      #{r.target_id}
+                    </td>
+                    <td style={{ ...tdStyle, maxWidth:'140px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.reason}</td>
+                    <td style={tdStyle}>{r.reporter_name || '匿名'}</td>
+                    <td style={tdStyle}><span style={{ ...tagStyle, color:st.color, background:`${st.color}18` }}>{st.label}</span></td>
+                    <td style={tdStyle}>{fmtDate(r.created_at)}</td>
+                    <td style={tdStyle}>
+                      {r.status === 'pending' || r.status === 'reviewing' ? (
+                        <div style={{ display:'flex', gap:'6px' }}>
+                          <button onClick={() => { setResolving({ report:r, action:'resolve' }); setNote(''); }}
+                            style={btnStyle('danger')}>成立</button>
+                          <button onClick={() => { setResolving({ report:r, action:'dismiss' }); setNote(''); }}
+                            style={btnStyle('ghost')}>不成立</button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize:'12px', color:C.textDim }}>{r.admin_note || '—'}</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {resolving && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)',
+          display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+          <div style={{ background:C.bgPanel, border:`1px solid ${C.border}`, borderRadius:'14px',
+            padding:'28px 32px', width:'380px', display:'flex', flexDirection:'column', gap:'16px' }}>
+            <h3 style={{ margin:0, fontSize:'16px', color:C.text }}>
+              {resolving.action === 'resolve' ? '確認成立檢舉' : '關閉檢舉（不成立）'}
+            </h3>
+            <textarea
+              value={note} onChange={e => setNote(e.target.value)}
+              placeholder="處理備註（必填）"
+              style={{ width:'100%', boxSizing:'border-box', padding:'9px 12px', minHeight:'80px',
+                background:C.bgCard, border:`1px solid ${C.border}`, borderRadius:'8px',
+                color:C.text, fontSize:'13px', fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
+                outline:'none', resize:'vertical' }}
+            />
+            <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
+              <button onClick={() => setResolving(null)} style={btnStyle('ghost')}>取消</button>
+              <button onClick={handleAction} disabled={!note.trim()}
+                style={{ ...btnStyle(resolving.action === 'resolve' ? 'danger' : 'accent'),
+                  opacity: note.trim() ? 1 : 0.5 }}>
+                確認
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -883,7 +1293,7 @@ function AdminLogin({ onSuccess }) {
         <p style={{ margin:'0 0 4px', fontFamily:'"Cormorant Garamond",serif',
           fontSize:'36px', fontWeight:300, letterSpacing:'0.18em', color:C.text }}>GL&#332;W</p>
         <p style={{ margin:'0 0 32px', fontSize:'11px', letterSpacing:'0.2em',
-          color:C.accent, fontFamily:'"DM Sans",sans-serif' }}>ADMIN PANEL</p>
+          color:C.accent, fontFamily:'"DM Sans",sans-serif', fontWeight:500 }}>ADMIN PANEL</p>
         <input
           type="password"
           value={pw}
@@ -912,11 +1322,14 @@ function AdminLogin({ onSuccess }) {
 
 // ── 主元件 ────────────────────────────────────────────────────────
 const TABS = [
-  { key:'overview',   label:'概覽',    icon:'◈' },
-  { key:'analytics',  label:'行銷數據', icon:'◐' },
-  { key:'users',      label:'會員管理', icon:'◉' },
-  { key:'products',   label:'產品管理', icon:'◧' },
-  { key:'questions',  label:'問答管理', icon:'◫' },
+  { key:'overview',     label:'概覽',    icon:'▦' },
+  { key:'analytics',   label:'行銷數據', icon:'↗' },
+  { key:'users',       label:'會員管理', icon:'♡' },
+  { key:'products',    label:'產品管理', icon:'◻' },
+  { key:'ingredients', label:'成分管理', icon:'✦' },
+  { key:'questions',   label:'問答管理', icon:'?' },
+  { key:'posts',       label:'貼文審核', icon:'≡' },
+  { key:'reports',     label:'檢舉管理', icon:'!' },
 ];
 
 export default function Admin() {
@@ -964,14 +1377,21 @@ export default function Admin() {
                 onClick={() => setTab(t.key)}
                 style={{
                   display:'flex', alignItems:'center', gap:'10px',
-                  padding:'10px 14px', borderRadius:'8px', border:'none',
+                  padding:'9px 12px', borderRadius:'8px', border:'none',
                   background: active ? C.accentDim : 'transparent',
                   color: active ? C.accentText : C.textSub,
                   fontSize:'13px', fontFamily:'inherit', cursor:'pointer',
-                  textAlign:'left', transition:'all 150ms',
+                  textAlign:'left', transition:'all 150ms', width:'100%',
                 }}
               >
-                <span style={{ fontSize:'16px', opacity:0.8 }}>{t.icon}</span>
+                <span style={{
+                  width:'20px', height:'20px', flexShrink:0,
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  fontSize:'13px', fontWeight:600,
+                  background: active ? C.accent : C.bgCard,
+                  color: active ? '#fff' : C.textDim,
+                  borderRadius:'5px',
+                }}>{t.icon}</span>
                 {t.label}
               </button>
             );
@@ -1000,20 +1420,26 @@ export default function Admin() {
             {TABS.find(t => t.key === tab)?.label}
           </h1>
           <p style={{ margin:'4px 0 0', fontSize:'12px', color:C.textDim }}>
-            {tab === 'overview'   && 'GLŌW 平台數據總覽'}
-            {tab === 'analytics'  && '用戶行為、產品與內容的數據分析'}
-            {tab === 'users'      && '管理所有已註冊的輔大同學'}
-            {tab === 'products'   && '管理美妝產品資料庫'}
-            {tab === 'questions'  && '管理問答討論內容'}
+            {tab === 'overview'     && 'GLŌW 平台數據總覽'}
+            {tab === 'analytics'   && '用戶行為、產品與內容的數據分析'}
+            {tab === 'users'       && '管理所有已註冊的輔大同學，支援停權與刪除'}
+            {tab === 'products'    && '管理美妝產品資料庫，支援新增、編輯、刪除'}
+            {tab === 'ingredients' && '管理成分知識庫，查看各成分的膚質適合分數'}
+            {tab === 'questions'   && '管理問答討論內容'}
+            {tab === 'posts'       && '審核社群貼文，下架違規內容'}
+            {tab === 'reports'     && '處理用戶檢舉案件'}
           </p>
         </div>
 
         {/* 分頁內容 */}
-        {tab === 'overview'   && <OverviewTab />}
-        {tab === 'analytics'  && <AnalyticsTab />}
-        {tab === 'users'      && <UsersTab />}
-        {tab === 'products'   && <ProductsTab />}
-        {tab === 'questions'  && <QuestionsTab />}
+        {tab === 'overview'     && <OverviewTab />}
+        {tab === 'analytics'   && <AnalyticsTab />}
+        {tab === 'users'       && <UsersTab />}
+        {tab === 'products'    && <ProductsTab />}
+        {tab === 'ingredients' && <IngredientsTab />}
+        {tab === 'questions'   && <QuestionsTab />}
+        {tab === 'posts'       && <PostsTab />}
+        {tab === 'reports'     && <ReportsTab />}
       </main>
     </div>
   );

@@ -54,10 +54,14 @@ export default function QA() {
 
     Promise.all([publicFetch, mineFetch])
       .then(([publicData, mineData]) => {
-        // 建立「我自己的問題 ID」集合（包含匿名）
-        const myIds = new Set((Array.isArray(mineData) ? mineData : []).map(q => q.question_id));
+        // API 回傳 { data: [...], total, page, limit }，需取 .data
+        const pubArr = publicData?.data ?? (Array.isArray(publicData) ? publicData : []);
+        const mineArr = mineData?.data ?? (Array.isArray(mineData) ? mineData : []);
 
-        const formatted = (Array.isArray(publicData) ? publicData : []).map((q) => ({
+        // 建立「我自己的問題 ID」集合（包含匿名）
+        const myIds = new Set(mineArr.map(q => q.question_id));
+
+        const formatted = pubArr.map((q) => ({
           id: q.question_id,
           is_anonymous: q.is_anonymous,
           title: q.title,
@@ -161,7 +165,7 @@ export default function QA() {
       </div>
 
       {/* ── Body ── */}
-      <div style={s.body}>
+      <div style={s.body} className="qa-body">
 
         {/* ── Main ── */}
         <main style={s.main}>
@@ -216,7 +220,7 @@ export default function QA() {
         </main>
 
         {/* ── Sidebar ── */}
-        <aside style={s.sidebar}>
+        <aside style={s.sidebar} className="qa-sidebar">
 
           {/* 三層回答說明 */}
           <div style={s.sideCard} className="g-reveal">

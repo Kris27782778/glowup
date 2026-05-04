@@ -366,16 +366,16 @@ function LoggedInHome({ user }) {
     : MOCK_POSTS;
 
   return (
-    <div style={H.page}>
+    <div style={H.page} className="home-page">
 
       {/* ── 輪播 Banner ── */}
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: '0 24px', width: '100%', boxSizing: 'border-box' }}
-        className="g-fade-up gd-1">
+        className="g-fade-up gd-1 home-banner-wrap">
         <BannerCarousel />
       </div>
 
       {/* ── 主體 ── */}
-      <div style={H.body}>
+      <div style={H.body} className="home-body">
 
         {/* 左欄：Feed */}
         <main style={H.main}>
@@ -429,7 +429,7 @@ function LoggedInHome({ user }) {
         </main>
 
         {/* 右欄：Sidebar */}
-        <aside style={H.sidebar}>
+        <aside style={H.sidebar} className="home-sidebar">
 
           {/* 近期活動 */}
           <div style={H.sideSection} className="g-reveal">
@@ -777,25 +777,25 @@ function LandingPage() {
   return (
     <div style={L.page}>
 
-      <section style={L.hero}>
+      <section style={L.hero} className="hero-section">
         <InteractiveBg />
-        <div style={L.heroInner}>
-          <div style={L.heroLeft}>
+        <div style={L.heroInner} className="hero-inner">
+          <div style={L.heroLeft} className="hero-left">
             <p style={L.heroEyebrow} className="g-fade-in gd-0">{t('輔仁大學 · 美妝知識平台')}</p>
-            <h1 style={L.heroTitle} className="g-fade-up gd-1">
+            <h1 style={L.heroTitle} className="g-fade-up gd-1 hero-title">
               {t('成分透明，')}<br /><em>{t('才是真正的')}</em><br />{t('美妝自由')}
             </h1>
             <p style={L.heroDesc} className="g-fade-up gd-2">
               {t('GLŌW 是專為輔大學生打造的美妝知識平台。')}<br />
               {t('查成分、看評價、找同學討論，讓每一瓶都擦得安心。')}
             </p>
-            <div style={L.heroCtas} className="g-fade-up gd-3">
+            <div style={L.heroCtas} className="g-fade-up gd-3 hero-ctas">
               <button style={L.ctaPrimary} onClick={() => navigate('/register')}>{t('立即加入')}</button>
               <button style={L.ctaGhost}  onClick={() => navigate('/products')}>{t('探索成分庫 →')}</button>
             </div>
           </div>
 
-          <div style={L.heroRight} className="g-scale-in gd-2">
+          <div style={L.heroRight} className="g-scale-in gd-2 hero-right">
             <div style={L.heroCard} className="g-float">
               {/* 成分內容：淡入淡出 */}
               <div style={{ opacity: fading ? 0 : 1, transition: 'opacity 300ms ease' }}>
@@ -848,12 +848,12 @@ function LandingPage() {
         </div>
       </div>
 
-      <section style={L.features}>
+      <section style={L.features} className="features-section">
         <div style={L.featuresHeader}>
           <p style={L.sectionEyebrow} className="g-reveal">WHAT WE OFFER</p>
           <h2 style={L.sectionTitle} className="g-reveal delay-1">{t('三個理由加入 GLŌW')}</h2>
         </div>
-        <div style={L.featureGrid} className="g-reveal delay-2">
+        <div style={L.featureGrid} className="g-reveal delay-2 feature-grid">
           {FEATURES.map(f => (
             <div key={f.num} style={L.featureCard} className="g-feature-card" onClick={() => navigate(f.to)}>
               <p style={L.featureNum}>{f.num}</p>
@@ -865,9 +865,9 @@ function LandingPage() {
         </div>
       </section>
 
-      <section style={L.topics}>
-        <div style={L.topicsInner}>
-          <div style={L.topicsHeader}>
+      <section style={L.topics} className="topics-section">
+        <div style={L.topicsInner} className="topics-inner">
+          <div style={L.topicsHeader} className="topics-header">
             <div>
               <p style={L.sectionEyebrow} className="g-reveal">TRENDING</p>
               <h2 style={L.sectionTitleLight} className="g-reveal delay-1">{t('熱門討論')}</h2>
@@ -876,12 +876,12 @@ function LandingPage() {
           </div>
           <div style={L.topicList}>
             {SKIN_TOPICS.map((topic, i) => (
-              <div key={i} style={L.topicItem} className={`g-topic-item g-reveal delay-${i + 1}`}>
+              <div key={i} style={L.topicItem} className={`g-topic-item g-reveal delay-${i + 1} topic-item`}>
                 <div style={L.topicLeft}>
                   <span style={L.topicTag}>{t(topic.tag)}</span>
                   <p style={L.topicTitle} className="g-topic-title">{topic.title}</p>
                 </div>
-                <div style={L.topicRight}>
+                <div style={L.topicRight} className="topic-right">
                   <span style={L.topicReads}>{topic.reads} {t('閱讀')}</span>
                   <span style={L.topicArrow} className="g-topic-arrow">→</span>
                 </div>
@@ -891,10 +891,10 @@ function LandingPage() {
         </div>
       </section>
 
-      <section style={L.ctaBanner}>
+      <section style={L.ctaBanner} className="cta-banner-section">
         <div style={L.ctaBannerInner} className="g-reveal">
           <p style={L.ctaBannerEyebrow}>JOIN GLŌW</p>
-          <h2 style={L.ctaBannerTitle}>{t('用知識武裝你的')}<br />{t('保養日常')}</h2>
+          <h2 style={L.ctaBannerTitle} className="cta-banner-title">{t('用知識武裝你的')}<br />{t('保養日常')}</h2>
           <p style={L.ctaBannerSub}>{t('免費加入，使用輔大校務帳號即可註冊')}</p>
           <div style={L.ctaBannerBtns}>
             <button style={L.ctaBannerPrimary} onClick={() => navigate('/register')}>{t('立即註冊')}</button>

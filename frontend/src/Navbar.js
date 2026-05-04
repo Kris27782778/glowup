@@ -14,11 +14,15 @@ const NAV_KEYS = [
 function Navbar() {
   const [user,        setUser]        = useState(null);
   const [menuOpen,    setMenuOpen]    = useState(false);
+  const [mobileOpen,  setMobileOpen]  = useState(false);
   const [scrolled,    setScrolled]    = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const menuRef                 = useRef(null);
   const navigate                = useNavigate();
   const location                = useLocation();
+
+  // 路由切換時關閉 mobile 選單
+  useEffect(() => { setMobileOpen(false); }, [location]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -69,14 +73,15 @@ function Navbar() {
   const initial = user?.nickname?.[0]?.toUpperCase() || '?';
 
   return (
+    <>
     <nav style={styles.nav} className={scrolled ? 'navbar-scrolled' : ''}>
-      <div style={styles.inner}>
+      <div style={styles.inner} className="nav-inner">
 
         {/* ── 左側：Logo + 導覽 ── */}
         <div style={styles.left}>
           <Link to="/" style={styles.logo}>GLŌW</Link>
-          <div style={styles.divider} />
-          <div style={styles.navLinks}>
+          <div style={styles.divider} className="nav-divider" />
+          <div style={styles.navLinks} className="nav-links">
             {NAV_KEYS.map(({ key, to }) => (
               <Link
                 key={key}
@@ -103,12 +108,31 @@ function Navbar() {
         <div style={styles.right}>
           {user && (
             <button
+              className="nav-post-btn"
               style={styles.postBtn}
               onClick={() => navigate('/community')}
             >
               + {t('發布貼文')}
             </button>
           )}
+
+          {/* 漢堡按鈕（手機） */}
+          <button
+            className="nav-hamburger"
+            onClick={() => setMobileOpen(o => !o)}
+            aria-label="選單"
+          >
+            {mobileOpen ? (
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M4 4L16 16M16 4L4 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            )}
+          </button>
+
           {user ? (
             <div style={styles.userMenu} ref={menuRef}>
               {/* 觸發按鈕 */}
@@ -118,7 +142,7 @@ function Navbar() {
                 aria-expanded={menuOpen}
               >
                 <div style={styles.avatar}>{initial}</div>
-                <span style={styles.nickname}>{user.nickname}</span>
+                <span style={styles.nickname} className="nav-nickname">{user.nickname}</span>
                 <ChevronIcon open={menuOpen} />
               </button>
 
@@ -154,6 +178,19 @@ function Navbar() {
                     {t('帳號設定')}
                   </button>
 
+                  {user?.is_admin && (
+                    <>
+                      <div style={styles.dropSeparator} />
+                      <button
+                        style={{ ...styles.dropItem, color: '#C4897A' }}
+                        onClick={() => { navigate('/admin'); setMenuOpen(false); }}
+                      >
+                        <DropIcon type="admin" />
+                        平台管理
+                      </button>
+                    </>
+                  )}
+
                   <div style={styles.dropSeparator} />
 
                   <button style={{ ...styles.dropItem, ...styles.dropItemDanger }} onClick={handleLogout}>
@@ -172,6 +209,55 @@ function Navbar() {
 
       </div>
     </nav>
+
+    {/* ── Mobile Menu ── */}
+    {mobileOpen && (
+      <>
+        <div className="nav-mobile-overlay" onClick={() => setMobileOpen(false)} />
+        <div className="nav-mobile-menu">
+          {NAV_KEYS.map(({ key, to }) => (
+            <Link
+              key={key}
+              to={to}
+              className="nav-mobile-link"
+              onClick={() => setMobileOpen(false)}
+            >
+              {t(key)}
+              {key === '問答' && unreadCount > 0 && (
+                <span style={{ ...styles.badge, position: 'static', display: 'inline-flex', marginLeft: '8px', verticalAlign: 'middle' }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
+          ))}
+          <div className="nav-mobile-divider" />
+          {user ? (
+            <>
+              <button className="nav-mobile-link" onClick={() => { navigate('/dashboard'); setMobileOpen(false); }}>{t('個人主頁')}</button>
+              <button className="nav-mobile-link" onClick={() => { navigate('/settings'); setMobileOpen(false); }}>{t('帳號設定')}</button>
+              {user?.is_admin && (
+                <button className="nav-mobile-link" style={{ color: '#C4897A' }} onClick={() => { navigate('/admin'); setMobileOpen(false); }}>平台管理</button>
+              )}
+              <div className="nav-mobile-divider" />
+              <button className="nav-mobile-post-btn" onClick={() => { navigate('/community'); setMobileOpen(false); }}>
+                + {t('發布貼文')}
+              </button>
+              <button
+                className="nav-mobile-link"
+                style={{ color: '#C0504A', marginTop: '4px' }}
+                onClick={handleLogout}
+              >{t('登出')}</button>
+            </>
+          ) : (
+            <div className="nav-auth-mobile">
+              <Link to="/register" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{t('註冊')}</Link>
+              <Link to="/login" style={{ backgroundColor: 'var(--bg-inverse)', color: 'var(--text-inverse)' }}>{t('登入')}</Link>
+            </div>
+          )}
+        </div>
+      </>
+    )}
+    </>
   );
 }
 
@@ -188,6 +274,12 @@ function DropIcon({ type }) {
       <circle cx="7" cy="7" r="2" stroke={color} strokeWidth="1.2"/>
       <path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M10.01 10.01l1.06 1.06M2.93 11.07l1.06-1.06M10.01 3.99l1.06-1.06"
         stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  );
+  if (type === 'admin') return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M7 1.5L2 4v3c0 2.76 2.13 5.34 5 5.97C9.87 12.34 12 9.76 12 7V4L7 1.5z"
+        stroke="#C4897A" strokeWidth="1.2" strokeLinejoin="round"/>
     </svg>
   );
   return null;
