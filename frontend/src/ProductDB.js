@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLang } from './hooks/useLang';
 import API_BASE from './config';
+import ProductPopover from './components/ProductPopover'; //
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -35,6 +36,8 @@ function ProductDB() {
   const [loading,     setLoading]     = useState(false);
   const [page,        setPage]        = useState(1);
   const [favorites,   setFavorites]   = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null); 
+  const [anchorRect, setAnchorRect] = useState(null);// 
   const PAGE_SIZE = 10;
 
   const currentUser = (() => {
@@ -110,8 +113,9 @@ const fetchProducts = async () => {
     if (search.trim()) params.append('search', search.trim());
 
     const res  = await fetch(`${API_BASE}/api/products?${params}`);
-    const data = await res.json();
-    setProducts(Array.isArray(data) ? data : []);
+const json = await res.json();
+const list = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : []);
+setProducts(list);
   } catch (err) {
     console.error('撈取產品失敗', err);
     setProducts([]);
@@ -267,7 +271,22 @@ const fetchProducts = async () => {
                       const scorePct = isNaN(scoreNum) ? 0 : Math.min(100, Math.max(0, scoreNum * 10));
                       const scoreColor = scorePct >= 80 ? '#7BAF7B' : scorePct >= 50 ? T.accent : T.textTertiary;
                       return (
-                        <div key={p.product_id} style={{ ...styles.productCard, position: 'relative' }}>
+                        <div
+                        key={p.product_id}
+                        style={{ ...styles.productCard, position: 'relative', cursor: 'pointer' }}
+                        onClick={e => {
+                          setAnchorRect(e.currentTarget.getBoundingClientRect());
+                          setSelectedProduct(p);
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)';
+                          e.currentTarget.style.transform = 'translateY(-3px)';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.boxShadow = 'none';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
                           {/* 品牌 + 品項 */}
                           <div style={styles.cardHeader}>
                             <span style={styles.productBrand}>{p.brand}</span>
@@ -309,8 +328,8 @@ const fetchProducts = async () => {
 
                           {/* 收藏愛心 */}
                           <button
-                            style={styles.favoriteBtn}
-                            onClick={() => toggleFavorite(p.product_id)}
+                          style={styles.favoriteBtn}
+                          onClick={e => { e.stopPropagation(); toggleFavorite(p.product_id); }}
                             title={favorites.includes(p.product_id) ? '取消收藏' : '加入收藏'}
                           >
                             <svg width="18" height="18" viewBox="0 0 24 24" fill={favorites.includes(p.product_id) ? T.accent : 'none'} stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -357,6 +376,14 @@ const fetchProducts = async () => {
           )}
         </main>
       </div>
+      {/* 產品詳細 Modal */}
+      {selectedProduct && (
+        <ProductPopover
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          currentUser={currentUser}
+        />
+      )}
     </div>
   );
 }
@@ -602,12 +629,12 @@ const styles = {
     backgroundColor: 'var(--bg-surface)',
     borderRadius: '16px',
     border: '1px solid var(--border)',
-    padding: '24px',
+    padding: '24px 24px 52px 24px',
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
     transition: 'box-shadow 200ms, transform 200ms',
-    cursor: 'default',
+    cursor: 'pointer',
   },
   cardHeader: {
     display: 'flex',
