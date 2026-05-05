@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('answers')
-      .select('answer_id, user_id, content, created_at, users(nickname, department_grade)')
+      .select('answer_id, user_id, content, created_at')
       .eq('question_id', id)
       .order('created_at', { ascending: true });
     if (error) return res.status(400).json({ error: error.message });
