@@ -65,7 +65,7 @@ export default function ProductPopover({ product, onClose, currentUser }) {
     const handler = e => e.key === 'Escape' && handleClose();
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [handleClose]);
 
   if (!product) return null;
 

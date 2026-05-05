@@ -37,7 +37,8 @@ function ProductDB() {
   const [page,        setPage]        = useState(1);
   const [favorites,   setFavorites]   = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null); 
-  const [anchorRect, setAnchorRect] = useState(null);// 
+  // eslint-disable-next-line no-unused-vars
+  const [anchorRect, setAnchorRect] = useState(null);
   const PAGE_SIZE = 10;
 
   const currentUser = (() => {
