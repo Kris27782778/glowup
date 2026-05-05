@@ -283,7 +283,12 @@ export default function QA() {
                   <button
                     key={q.id}
                     style={s.unlitItem}
-                    onClick={() => { setExpandedId(q.id); window.scrollTo({ top: 300, behavior: 'smooth' }); }}
+                    onClick={() => {
+        setExpandedId(q.id);
+        setTimeout(() => {
+          document.getElementById(`question-${q.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+      }}
                   >
                     <span style={s.unlitDot} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -378,7 +383,7 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
   };
 
   return (
-    <div style={{ ...s.card, animationDelay: `${idx * 60}ms` }} className="g-fade-up">
+    <div id={`question-${q.id}`} style={{ ...s.card, animationDelay: `${idx * 60}ms` }} className="g-fade-up">
 
       {/* ── 橫向主體：狀態條 + 內容 + 右側統計 ── */}
       <div style={s.cardInner}>
