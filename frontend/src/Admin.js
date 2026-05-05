@@ -340,13 +340,23 @@ function EditProductModal({ product, meta, onSave, onCancel }) {
     category:     product.category,
     sub_category: product.sub_category,
   });
+  const [rawText, setRawText] = useState(
+    (product.raw_ingredients || []).join(', ')
+  );
   const [saving, setSaving] = useState(false);
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
   const handleSave = async () => {
     setSaving(true);
-    const res = await adminFetch(`/products/${product.product_id}`, { method:'PATCH', body: form });
+    const raw_ingredients = rawText
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    const res = await adminFetch(`/products/${product.product_id}`, {
+      method: 'PATCH',
+      body: { ...form, raw_ingredients },
+    });
     setSaving(false);
     if (res.product) onSave(res.product);
   };
@@ -394,6 +404,18 @@ function EditProductModal({ product, meta, onSave, onCancel }) {
             <select style={inputSt} value={form.sub_category} onChange={set('sub_category')}>
               {(meta.sub_categories || []).map(s => <option key={s} value={s}>{s}</option>)}
             </select>
+          </div>
+          <div style={{ gridColumn:'1/-1' }}>
+            <label style={labelSt}>完整成分清單（逗號分隔）</label>
+            <textarea
+              style={{ ...inputSt, resize:'vertical', minHeight:'80px', lineHeight:1.6 }}
+              value={rawText}
+              onChange={e => setRawText(e.target.value)}
+              placeholder="Water, Glycerin, Niacinamide, ..."
+            />
+            <p style={{ margin:'4px 0 0', fontSize:'11px', color:C.textDim }}>
+              用逗號分隔每個成分，儲存後自動轉為清單
+            </p>
           </div>
         </div>
 

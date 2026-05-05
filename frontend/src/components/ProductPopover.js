@@ -218,18 +218,43 @@ export default function ProductPopover({ product, onClose, currentUser }) {
             </p>
           )}
 
-          {/* 成分標籤 */}
+          {/* 推薦成分標籤（評分用） */}
           {product.product_ingredients?.length > 0 && (
-            <div style={{ display:'flex', flexWrap:'wrap', gap:'6px',
-              paddingTop:'12px', borderTop:`1px solid ${T.border}` }}>
-              {product.product_ingredients.map(pi => (
-                <span key={pi.ingredient_id}
-                  style={{ fontSize:'12px', color:T.textSecondary,
-                    backgroundColor:T.bgSubtle, borderRadius:'999px',
-                    padding:'3px 10px', border:`1px solid ${T.border}` }}>
-                  {pi.ingredients?.name}
-                </span>
-              ))}
+            <div style={{ paddingTop:'12px', borderTop:`1px solid ${T.border}` }}>
+              <p style={{ margin:'0 0 8px', fontSize:'11px', fontWeight:600,
+                color:T.textTertiary, letterSpacing:'0.08em', textTransform:'uppercase' }}>
+                推薦依據成分
+              </p>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                {product.product_ingredients.map(pi => (
+                  <span key={pi.ingredient_id}
+                    style={{ fontSize:'12px', color:T.textSecondary,
+                      backgroundColor:T.bgSubtle, borderRadius:'999px',
+                      padding:'3px 10px', border:`1px solid ${T.border}` }}>
+                    {pi.ingredients?.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 完整成分清單 */}
+          {product.raw_ingredients?.length > 0 && (
+            <div style={{ paddingTop:'12px', borderTop:`1px solid ${T.border}` }}>
+              <p style={{ margin:'0 0 8px', fontSize:'11px', fontWeight:600,
+                color:T.textTertiary, letterSpacing:'0.08em', textTransform:'uppercase' }}>
+                完整成分
+              </p>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                {product.raw_ingredients.map((name, i) => (
+                  <span key={i}
+                    style={{ fontSize:'12px', color:T.textSecondary,
+                      backgroundColor:T.bgSubtle, borderRadius:'999px',
+                      padding:'3px 10px', border:`1px solid ${T.border}` }}>
+                    {name}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
