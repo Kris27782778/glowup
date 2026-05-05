@@ -54,6 +54,18 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: '缺少 user_id 或 product_id' });
   }
   try {
+    // 檢查是否已收藏
+    const { data: existing } = await supabase
+      .from('wishlists')
+      .select('wishlist_id')
+      .eq('user_id', user_id)
+      .eq('product_id', product_id)
+      .maybeSingle();
+
+    if (existing) {
+      return res.status(400).json({ error: '已收藏過此產品' });
+    }
+
     const { data, error } = await supabase
       .from('wishlists')
       .insert({ user_id, product_id })
