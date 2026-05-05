@@ -46,10 +46,10 @@ export default function ProductPopover({ product, onClose, currentUser }) {
     requestAnimationFrame(() => setVisible(true));
   }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setVisible(false);
-    setTimeout(onClose, 280); // 等動畫結束再 unmount
-  };
+    setTimeout(onClose, 280);
+  }, [onClose]);
 
   const loadReviews = useCallback(() => {
     if (!product?.product_id) return;
@@ -65,7 +65,7 @@ export default function ProductPopover({ product, onClose, currentUser }) {
     const handler = e => e.key === 'Escape' && handleClose();
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [handleClose]);
 
   if (!product) return null;
 
