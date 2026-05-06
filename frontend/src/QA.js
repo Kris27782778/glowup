@@ -6,7 +6,9 @@ import API_BASE from './config';
 
 
 
-const ALL_TAGS = ['成分討論', '油性肌', '敏感肌', '混合性肌', '保濕', '防曬推薦', '抗老', '屏障修護', '去角質', '抗痘'];
+const SKIN_TAGS  = ['油性肌', '乾肌', '敏感肌', '混合性肌', '中性'];
+const TOPIC_TAGS = ['成分討論', '保濕', '防曬推薦', '抗老', '屏障修護', '去角質', '抗痘'];
+const ALL_TAGS   = [...SKIN_TAGS, ...TOPIC_TAGS];
 
 const COLORS = ['#C4897A', '#9E8A7A', '#7BAF7B', '#7AAFC4', '#C4B07A', '#9B7AC4'];
 const ANON_COLOR = '#A89990';
@@ -187,26 +189,60 @@ export default function QA() {
           </div>
 
           {/* 標籤 filter */}
-          <div style={s.tagRow}>
-            <button
-              style={{ ...s.tagChip, ...(activeTags.size === 0 ? s.tagChipActive : {}) }}
-              onClick={() => setActiveTags(new Set())}
-            >
-              {t('全部') || '全部'}
-            </button>
-            {ALL_TAGS.map(tag => (
-              <button
-                key={tag}
-                style={{ ...s.tagChip, ...(activeTags.has(tag) ? s.tagChipActive : {}) }}
-                onClick={() => setActiveTags(prev => {
-                  const next = new Set(prev);
-                  if (next.has(tag)) next.delete(tag); else next.add(tag);
-                  return next;
-                })}
-              >
-                {t(tag) || tag}
-              </button>
-            ))}
+          <div style={s.tagFilterWrap}>
+            {/* 膚質群組 */}
+            <div style={s.tagGroup}>
+              <span style={s.tagGroupLabel}>膚質</span>
+              <div style={s.tagRow}>
+                {SKIN_TAGS.map(tag => (
+                  <button
+                    key={tag}
+                    style={{ ...s.tagChip, ...(activeTags.has(tag) ? s.tagChipActive : {}) }}
+                    onClick={() => setActiveTags(prev => {
+                      const next = new Set(prev);
+                      if (next.has(tag)) next.delete(tag); else next.add(tag);
+                      return next;
+                    })}
+                  >
+                    {t(tag) || tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={s.tagGroupDivider} />
+
+            {/* 主題群組 */}
+            <div style={s.tagGroup}>
+              <span style={s.tagGroupLabel}>主題</span>
+              <div style={s.tagRow}>
+                {TOPIC_TAGS.map(tag => (
+                  <button
+                    key={tag}
+                    style={{ ...s.tagChip, ...(activeTags.has(tag) ? s.tagChipActive : {}) }}
+                    onClick={() => setActiveTags(prev => {
+                      const next = new Set(prev);
+                      if (next.has(tag)) next.delete(tag); else next.add(tag);
+                      return next;
+                    })}
+                  >
+                    {t(tag) || tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 已選提示 + 清除 */}
+            {activeTags.size > 0 && (
+              <div style={s.tagSelectedRow}>
+                <span style={s.tagSelectedLabel}>
+                  已選 {activeTags.size} 個：{[...activeTags].join(' · ')}
+                </span>
+                <button style={s.tagClearBtn} onClick={() => setActiveTags(new Set())}>
+                  清除
+                </button>
+              </div>
+            )}
           </div>
 
           {/* 問題列表 */}
@@ -849,7 +885,58 @@ const s = {
   },
 
   /* Tag filter */
+  tagFilterWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  tagGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    flexWrap: 'wrap',
+  },
+  tagGroupLabel: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '10px',
+    fontWeight: 600,
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    color: 'var(--text-tertiary)',
+    whiteSpace: 'nowrap',
+    width: '28px',
+    flexShrink: 0,
+  },
+  tagGroupDivider: {
+    height: '1px',
+    backgroundColor: 'var(--border)',
+    opacity: 0.5,
+  },
   tagRow: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
+  tagSelectedRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    paddingTop: '4px',
+    borderTop: '1px solid var(--border)',
+  },
+  tagSelectedLabel: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '11px',
+    color: 'var(--accent)',
+    flex: 1,
+  },
+  tagClearBtn: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '11px',
+    color: 'var(--text-tertiary)',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '0',
+    textDecoration: 'underline',
+    whiteSpace: 'nowrap',
+  },
   tagChip: {
     height: '28px',
     padding: '0 12px',
