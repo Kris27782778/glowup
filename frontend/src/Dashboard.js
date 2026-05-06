@@ -61,7 +61,7 @@ function Dashboard() {
       .catch(() => {});
     fetch(`${API_BASE}/api/questions?user_id=${parsed.user_id}&include_anonymous=true`)
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setMyQuestions(data); })
+      .then(data => { if (Array.isArray(data?.data)) setMyQuestions(data.data); })
       .catch(() => {});
     fetch(`${API_BASE}/api/reviews/user/${parsed.user_id}`)   // ← 加這段
       .then(r => r.json())

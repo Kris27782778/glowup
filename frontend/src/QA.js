@@ -6,7 +6,7 @@ import API_BASE from './config';
 
 
 
-const ALL_TAGS = ['全部', '成分討論', '油性肌', '敏感肌', '混合性肌', '保濕', '防曬推薦', '抗老', '屏障修護'];
+const ALL_TAGS = ['成分討論', '油性肌', '敏感肌', '混合性肌', '保濕', '防曬推薦', '抗老', '屏障修護', '去角質', '抗痘'];
 
 const COLORS = ['#C4897A', '#9E8A7A', '#7BAF7B', '#7AAFC4', '#C4B07A', '#9B7AC4'];
 const ANON_COLOR = '#A89990';
@@ -25,7 +25,7 @@ export default function QA() {
   const { t } = useLang();
   const [questions,   setQuestions]   = useState([]);
   const [tab,         setTab]         = useState('all');
-  const [activeTag,   setActiveTag]   = useState('全部');
+  const [activeTags,  setActiveTags]  = useState(new Set());
   const [search,      setSearch]      = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
   const [expandedId,  setExpandedId]  = useState(null);
@@ -115,7 +115,7 @@ export default function QA() {
 
   const filtered = questions
     .filter(q => tab === 'mine' ? q._mine === true : true)
-    .filter(q => activeTag === '全部' || q.tags.includes(activeTag))
+    .filter(q => activeTags.size === 0 || [...activeTags].every(t => q.tags.includes(t)))
     .filter(q => !search || q.title.includes(search) || q.excerpt.includes(search));
 
   const handleToggle = (id) => setExpandedId(prev => prev === id ? null : id);
@@ -188,11 +188,21 @@ export default function QA() {
 
           {/* 標籤 filter */}
           <div style={s.tagRow}>
+            <button
+              style={{ ...s.tagChip, ...(activeTags.size === 0 ? s.tagChipActive : {}) }}
+              onClick={() => setActiveTags(new Set())}
+            >
+              {t('全部') || '全部'}
+            </button>
             {ALL_TAGS.map(tag => (
               <button
                 key={tag}
-                style={{ ...s.tagChip, ...(activeTag === tag ? s.tagChipActive : {}) }}
-                onClick={() => setActiveTag(tag)}
+                style={{ ...s.tagChip, ...(activeTags.has(tag) ? s.tagChipActive : {}) }}
+                onClick={() => setActiveTags(prev => {
+                  const next = new Set(prev);
+                  if (next.has(tag)) next.delete(tag); else next.add(tag);
+                  return next;
+                })}
               >
                 {t(tag) || tag}
               </button>
