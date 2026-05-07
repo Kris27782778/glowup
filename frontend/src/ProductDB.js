@@ -21,8 +21,10 @@ const CATEGORIES  = ['化妝品', '保養品'];
 const SKIN_TYPES  = ['油性肌', '乾性肌', '混合性肌', '敏感性肌', '中性肌'];
 const MAKEUP_EFFECTS   = ['保濕', '控油', '舒緩修復'];
 const SKINCARE_EFFECTS = ['保濕', '控油', '舒緩修復', '抗痘', '去角質'];
-const MAKEUP_ITEMS    = ['粉底液', '遮瑕', '防曬'];
-const SKINCARE_ITEMS  = ['化妝水', '乳液', '霜'];
+const MAKEUP_ITEMS     = ['粉底液', '遮瑕'];
+const SKINCARE_ITEMS   = ['化妝水', '乳液', '霜'];
+const FINISH_OPTIONS   = ['霧面', '自然', '光澤'];
+const COVERAGE_OPTIONS = ['輕薄', '中等', '全遮蓋'];
 
 function ProductDB() {
   const { t } = useLang();
@@ -30,6 +32,8 @@ function ProductDB() {
   const [skinType,  setSkinType]  = useState(null);
   const [effect,    setEffect]    = useState(null);
   const [item,      setItem]      = useState(null);
+  const [finish,    setFinish]    = useState(null);
+  const [coverage,  setCoverage]  = useState(null);
   const [search,    setSearch]    = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
   const [products,    setProducts]    = useState([]);
@@ -75,16 +79,15 @@ function ProductDB() {
     }
   };
 
-  const itemOptions = category === '化妝品' ? MAKEUP_ITEMS : SKINCARE_ITEMS;
-  const hasFilter   = category || skinType || effect || item || search.trim();
-  const activeTags  = [category, item, skinType, effect].filter(Boolean);
+  const itemOptions   = category === '化妝品' ? MAKEUP_ITEMS : SKINCARE_ITEMS;
+  const hasFilter     = category || skinType || effect || item || finish || coverage || search.trim();
+  const activeTags    = [category, item, skinType, effect, finish, coverage].filter(Boolean);
 
   const totalPages   = Math.ceil(products.length / PAGE_SIZE);
   const pagedProducts = products.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const itemMap = {
   '粉底液': '粉底液',
   '遮瑕':   '遮瑕',
-  '防曬':   '防曬',
   '化妝水': '化妝水',
   '乳液':   '乳液',
   '霜':     '霜',
@@ -93,7 +96,7 @@ function ProductDB() {
 useEffect(() => {
   setPage(1);
   fetchProducts();
-}, [category, item, skinType, effect]); // eslint-disable-line react-hooks/exhaustive-deps
+}, [category, item, skinType, effect, finish, coverage]); // eslint-disable-line react-hooks/exhaustive-deps
 
 useEffect(() => {
   const timer = setTimeout(() => {
@@ -112,6 +115,8 @@ const fetchProducts = async () => {
     if (item)          params.append('sub_category', itemMap[item] || item);
     if (skinType)      params.append('skin_type', skinType);
     if (effect)        params.append('effect', effect);
+    if (finish)        params.append('finish', finish);
+    if (coverage)      params.append('coverage', coverage);
     if (search.trim()) params.append('search', search.trim());
 
     const res  = await fetch(`${API_BASE}/api/products?${params}`);
@@ -125,10 +130,9 @@ const fetchProducts = async () => {
   }
 };
 
-
-
   const clearAll = () => {
     setCategory(null); setSkinType(null); setEffect(null); setItem(null);
+    setFinish(null); setCoverage(null);
   };
 
   return (
@@ -178,6 +182,26 @@ const fetchProducts = async () => {
             </div>
           </div>
 
+          {category && (
+            <>
+              <div style={styles.filterDivider} />
+              <div style={styles.filterSection}>
+                <p style={styles.filterTitle}>{t('品項')}</p>
+                <div style={styles.filterGroup}>
+                  {itemOptions.map(i => (
+                    <button
+                      key={i}
+                      style={{ ...styles.filterChip, ...(item === i ? styles.filterChipActive : {}) }}
+                      onClick={() => { setItem(item === i ? null : i); setFinish(null); setCoverage(null); }}
+                    >
+                      {t(i)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
           <div style={styles.filterDivider} />
 
           <div style={styles.filterSection}>
@@ -197,39 +221,53 @@ const fetchProducts = async () => {
 
           <div style={styles.filterDivider} />
 
-          <div style={styles.filterSection}>
-            <p style={styles.filterTitle}>{t('功效')}</p>
-            <div style={styles.filterGroup}>
-             {(category === '化妝品' ? MAKEUP_EFFECTS : SKINCARE_EFFECTS).map(e => (
-                <button
-                  key={e}
-                  style={{ ...styles.filterChip, ...(effect === e ? styles.filterChipActive : {}) }}
-                  onClick={() => setEffect(effect === e ? null : e)}
-                >
-                  {t(e)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {category && (
+          {category === '化妝品' ? (
             <>
+              <div style={styles.filterSection}>
+                <p style={styles.filterTitle}>妝感</p>
+                <div style={styles.filterGroup}>
+                  {FINISH_OPTIONS.map(f => (
+                    <button
+                      key={f}
+                      style={{ ...styles.filterChip, ...(finish === f ? styles.filterChipActive : {}) }}
+                      onClick={() => setFinish(finish === f ? null : f)}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div style={styles.filterDivider} />
               <div style={styles.filterSection}>
-                <p style={styles.filterTitle}>{t('品項')}</p>
+                <p style={styles.filterTitle}>遮蓋度</p>
                 <div style={styles.filterGroup}>
-                  {itemOptions.map(i => (
+                  {COVERAGE_OPTIONS.map(c => (
                     <button
-                      key={i}
-                      style={{ ...styles.filterChip, ...(item === i ? styles.filterChipActive : {}) }}
-                      onClick={() => setItem(item === i ? null : i)}
+                      key={c}
+                      style={{ ...styles.filterChip, ...(coverage === c ? styles.filterChipActive : {}) }}
+                      onClick={() => setCoverage(coverage === c ? null : c)}
                     >
-                      {t(i)}
+                      {c}
                     </button>
                   ))}
                 </div>
               </div>
             </>
+          ) : (
+            <div style={styles.filterSection}>
+              <p style={styles.filterTitle}>{t('功效')}</p>
+              <div style={styles.filterGroup}>
+                {(category === '化妝品' ? MAKEUP_EFFECTS : SKINCARE_EFFECTS).map(e => (
+                  <button
+                    key={e}
+                    style={{ ...styles.filterChip, ...(effect === e ? styles.filterChipActive : {}) }}
+                    onClick={() => setEffect(effect === e ? null : e)}
+                  >
+                    {t(e)}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {hasFilter && (

@@ -23,12 +23,13 @@ const effectMap = {
 };
 
 router.get('/', async (req, res) => {
-  const { category, sub_category, skin_type, effect, search, page = 1, limit = 24 } = req.query;
+  const { category, sub_category, skin_type, effect, finish, coverage, search, page = 1, limit = 24 } = req.query;
   const pageNum = Math.max(1, parseInt(page));
   const pageSize = Math.min(48, Math.max(1, parseInt(limit)));
   const from = (pageNum - 1) * pageSize;
   const to = from + pageSize - 1;
 
+  const isMakeupItem = sub_category === '粉底液' || sub_category === '遮瑕';
   const skinCol   = skinMap[skin_type];
   const effectCol = effectMap[effect];
 
@@ -49,12 +50,16 @@ router.get('/', async (req, res) => {
 
     if (category)     query = query.eq('category', category);
     if (sub_category) query = query.eq('sub_category', sub_category);
+    if (finish)       query = query.eq('finish', finish);
+    if (coverage)     query = query.eq('coverage', coverage);
     if (search)       query = query.or(`name.ilike.%${search}%,brand.ilike.%${search}%`);
 
     const { data, error, count } = await query;
     if (error) return res.status(400).json({ error: error.message });
 
     const scored = data.map(product => {
+      // 粉底液/遮瑕：屬性直接過濾，不跑成分評分
+      if (isMakeupItem) return { ...product, score: 3 };
       let score = 3;
       product.product_ingredients?.forEach(pi => {
         const ing = pi.ingredients;
@@ -65,7 +70,7 @@ router.get('/', async (req, res) => {
       return { ...product, score };
     });
 
-    const filtered = (skinCol || effectCol)
+    const filtered = (!isMakeupItem && (skinCol || effectCol))
       ? scored.filter(p => p.score >= 3)
       : scored;
 

@@ -333,12 +333,18 @@ const P_CAT_COLOR = {
 };
 const P_SUB_COLORS = ['#C4897A','#7BAF7B','#7AAFC4','#C4B07A','#9B7AC4','#C47A9B'];
 
+const MAKEUP_ATTR_ITEMS = ['粉底液', '遮瑕'];
+const FINISH_OPTIONS    = ['霧面', '自然', '光澤'];
+const COVERAGE_OPTIONS  = ['輕薄', '中等', '全遮蓋'];
+
 function EditProductModal({ product, meta, onSave, onCancel }) {
   const [form, setForm] = useState({
     name:         product.name,
     brand:        product.brand,
     category:     product.category,
     sub_category: product.sub_category,
+    finish:       product.finish   || '',
+    coverage:     product.coverage || '',
   });
   const [rawText, setRawText] = useState(
     (product.raw_ingredients || []).join(', ')
@@ -346,6 +352,7 @@ function EditProductModal({ product, meta, onSave, onCancel }) {
   const [saving, setSaving] = useState(false);
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
+  const isMakeupAttr = MAKEUP_ATTR_ITEMS.includes(form.sub_category);
 
   const handleSave = async () => {
     setSaving(true);
@@ -353,9 +360,11 @@ function EditProductModal({ product, meta, onSave, onCancel }) {
       .split(',')
       .map(s => s.trim())
       .filter(Boolean);
+    const body = { ...form, raw_ingredients };
+    if (!isMakeupAttr) { body.finish = null; body.coverage = null; }
     const res = await adminFetch(`/products/${product.product_id}`, {
       method: 'PATCH',
-      body: { ...form, raw_ingredients },
+      body,
     });
     setSaving(false);
     if (res.product) onSave(res.product);
@@ -405,6 +414,24 @@ function EditProductModal({ product, meta, onSave, onCancel }) {
               {(meta.sub_categories || []).map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
+          {isMakeupAttr && (
+            <>
+              <div>
+                <label style={labelSt}>妝感</label>
+                <select style={inputSt} value={form.finish} onChange={set('finish')}>
+                  <option value="">-- 未設定 --</option>
+                  {FINISH_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelSt}>遮蓋度</label>
+                <select style={inputSt} value={form.coverage} onChange={set('coverage')}>
+                  <option value="">-- 未設定 --</option>
+                  {COVERAGE_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </>
+          )}
           <div style={{ gridColumn:'1/-1' }}>
             <label style={labelSt}>完整成分清單（逗號分隔）</label>
             <textarea

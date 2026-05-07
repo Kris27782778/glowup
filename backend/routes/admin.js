@@ -124,7 +124,7 @@ router.get('/products', async (req, res) => {
 
 // ── 編輯產品 PATCH /api/admin/products/:id ────────────────────
 router.patch('/products/:id', async (req, res) => {
-  const { name, brand, category, sub_category, raw_ingredients } = req.body;
+  const { name, brand, category, sub_category, raw_ingredients, finish, coverage } = req.body;
   try {
     const fields = []; const values = []; let idx = 1;
     if (name            !== undefined) { fields.push(`name             = $${idx++}`); values.push(name); }
@@ -132,6 +132,8 @@ router.patch('/products/:id', async (req, res) => {
     if (category        !== undefined) { fields.push(`category         = $${idx++}`); values.push(category); }
     if (sub_category    !== undefined) { fields.push(`sub_category     = $${idx++}`); values.push(sub_category); }
     if (raw_ingredients !== undefined) { fields.push(`raw_ingredients  = $${idx++}`); values.push(raw_ingredients); }
+    if (finish          !== undefined) { fields.push(`finish           = $${idx++}`); values.push(finish || null); }
+    if (coverage        !== undefined) { fields.push(`coverage         = $${idx++}`); values.push(coverage || null); }
     if (fields.length === 0) return res.status(400).json({ error: '沒有需要更新的欄位' });
     values.push(req.params.id);
     const result = await pool.query(
