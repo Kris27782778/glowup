@@ -19,7 +19,6 @@ const T = {
 
 const CATEGORIES  = ['保養品', '化妝品'];
 const SKIN_TYPES  = ['油性肌', '乾性肌', '混合性肌', '敏感性肌', '中性肌'];
-const MAKEUP_EFFECTS   = ['保濕', '控油', '舒緩修復'];
 const SKINCARE_EFFECTS = ['保濕', '控油', '舒緩修復', '抗痘', '去角質'];
 const MAKEUP_ITEMS     = ['粉底液', '遮瑕'];
 const SKINCARE_ITEMS   = ['化妝水', '乳液', '霜'];
@@ -40,9 +39,7 @@ function ProductDB() {
   const [loading,     setLoading]     = useState(false);
   const [page,        setPage]        = useState(1);
   const [favorites,   setFavorites]   = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null); 
-  // eslint-disable-next-line no-unused-vars
-  const [anchorRect, setAnchorRect] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const PAGE_SIZE = 10;
 
   const currentUser = (() => {
@@ -174,7 +171,7 @@ const fetchProducts = async () => {
                 <button
                   key={cat}
                   style={{ ...styles.filterChip, ...(category === cat ? styles.filterChipActive : {}) }}
-                  onClick={() => { setCategory(category === cat ? null : cat); setItem(null); setSkinType(null); }}
+                  onClick={() => { setCategory(category === cat ? null : cat); setItem(null); setSkinType(null); setEffect(null); setFinish(null); setCoverage(null); }}
                 >
                   {cat === '化妝品' ? '💄 ' : '🧴 '}{t(cat)}
                 </button>
@@ -260,7 +257,7 @@ const fetchProducts = async () => {
             <div style={styles.filterSection}>
               <p style={styles.filterTitle}>{t('功效')}</p>
               <div style={styles.filterGroup}>
-                {(category === '化妝品' ? MAKEUP_EFFECTS : SKINCARE_EFFECTS).map(e => (
+                {SKINCARE_EFFECTS.map(e => (
                   <button
                     key={e}
                     style={{ ...styles.filterChip, ...(effect === e ? styles.filterChipActive : {}) }}
@@ -316,10 +313,7 @@ const fetchProducts = async () => {
                         <div
                         key={p.product_id}
                         style={{ ...styles.productCard, position: 'relative', cursor: 'pointer' }}
-                        onClick={e => {
-                          setAnchorRect(e.currentTarget.getBoundingClientRect());
-                          setSelectedProduct(p);
-                        }}
+                        onClick={() => setSelectedProduct(p)}
                         onMouseEnter={e => {
                           e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)';
                           e.currentTarget.style.transform = 'translateY(-3px)';
