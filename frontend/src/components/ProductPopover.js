@@ -181,7 +181,7 @@ export default function ProductPopover({ product, onClose, currentUser }) {
           </p>
 
           {/* 推薦分數 */}
-          {hasScore && (
+          {hasScore && product.category !== '化妝品' && (
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'6px' }}>
                 <span style={{ fontSize:'11px', color:T.textTertiary, letterSpacing:'0.06em' }}>推薦分數</span>
@@ -219,7 +219,7 @@ export default function ProductPopover({ product, onClose, currentUser }) {
           )}
 
           {/* 推薦成分標籤（評分用） */}
-          {product.product_ingredients?.length > 0 && (
+          {product.product_ingredients?.length > 0 && product.category !== '化妝品' && (
             <div style={{ paddingTop:'12px', borderTop:`1px solid ${T.border}` }}>
               <p style={{ margin:'0 0 8px', fontSize:'11px', fontWeight:600,
                 color:T.textTertiary, letterSpacing:'0.08em', textTransform:'uppercase' }}>

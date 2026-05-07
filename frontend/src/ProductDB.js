@@ -348,7 +348,7 @@ const fetchProducts = async (pageNum = page) => {
                           <p style={styles.productName}>{p.name}</p>
 
                           {/* 推薦分數進度條 */}
-                          {(skinType || effect) && !isNaN(scoreNum) && (
+                          {(skinType || effect) && !isNaN(scoreNum) && p.category !== '化妝品' && (
                             <div style={styles.scoreSection}>
                               <div style={styles.scoreLabelRow}>
                                 <span style={styles.scoreLabel}>{t('推薦分數')}</span>
@@ -367,7 +367,7 @@ const fetchProducts = async (pageNum = page) => {
                           )}
 
                           {/* 成分標籤 */}
-                          {p.product_ingredients?.length > 0 && (
+                          {p.product_ingredients?.length > 0 && p.category !== '化妝品' && (
                             <div style={styles.ingredientRow}>
                               {p.product_ingredients.map(pi => (
                                 <span key={pi.ingredient_id} style={styles.conditionTag}>
