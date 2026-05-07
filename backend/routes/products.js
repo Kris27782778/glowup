@@ -41,12 +41,12 @@ router.get('/', async (req, res) => {
         product_ingredients (
           ingredient_id,
           ingredients (
-            ingredient_id, name,
-            ${skinCol   ? skinCol + ',' : ''}
-            ${effectCol ? effectCol     : 'skin_oily'}
+            ingredient_id, name
+            ${skinCol   ? ',' + skinCol   : ''}
+            ${effectCol ? ',' + effectCol : ''}
           )
         )
-      `, { count: 'exact' });
+      `);
 
     if (category)     query = query.eq('category', category);
     if (sub_category) query = query.eq('sub_category', sub_category);
@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
     if (coverage)     query = query.eq('coverage', coverage);
     if (search)       query = query.or(`name.ilike.%${search}%,brand.ilike.%${search}%`);
 
-    const { data, error, count } = await query;
+    const { data, error } = await query;
     if (error) return res.status(400).json({ error: error.message });
 
     const scored = data.map(product => {
@@ -79,7 +79,7 @@ router.get('/', async (req, res) => {
     const paged = filtered.slice(from, to + 1);
 
     res.set('Cache-Control', 'public, max-age=60');
-    res.json({ data: paged, total: count, page: pageNum, limit: pageSize });
+    res.json({ data: paged, total: filtered.length, page: pageNum, limit: pageSize });
 
   } catch (err) {
     console.error(err);

@@ -86,17 +86,25 @@ function Dashboard() {
   };
 
   const handleProfileSave = async (patch) => {
-    const updated = { ...user, ...patch };
-    localStorage.setItem('user', JSON.stringify(updated));
-    setUser(updated);
+    const optimistic = { ...user, ...patch };
+    localStorage.setItem('user', JSON.stringify(optimistic));
+    setUser(optimistic);
     setShowEdit(false);
     try {
-      await fetch(API_BASE + '/api/auth/profile', {
+      const res = await fetch(API_BASE + '/api/auth/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.user_id, ...patch }),
       });
-    } catch { /* 靜默失敗 */ }
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          const synced = { ...optimistic, ...data.user };
+          localStorage.setItem('user', JSON.stringify(synced));
+          setUser(synced);
+        }
+      }
+    } catch { /* 樂觀更新已套用，靜默失敗 */ }
   };
 
   const handleRemoveFavorite = async (wishlistId, productId) => {

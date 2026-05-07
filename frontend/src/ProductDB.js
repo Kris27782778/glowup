@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLang } from './hooks/useLang';
 import API_BASE from './config';
 import ProductPopover from './components/ProductPopover'; //
@@ -36,10 +36,12 @@ function ProductDB() {
   const [search,    setSearch]    = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
   const [products,    setProducts]    = useState([]);
+  const [totalCount,  setTotalCount]  = useState(0);
   const [loading,     setLoading]     = useState(false);
   const [page,        setPage]        = useState(1);
   const [favorites,   setFavorites]   = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const skipNextPageEffect = useRef(false);
   const PAGE_SIZE = 10;
 
   const currentUser = (() => {
@@ -80,8 +82,8 @@ function ProductDB() {
   const hasFilter     = category || skinType || effect || item || finish || coverage || search.trim();
   const activeTags    = [category, item, skinType, effect, finish, coverage].filter(Boolean);
 
-  const totalPages   = Math.ceil(products.length / PAGE_SIZE);
-  const pagedProducts = products.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages    = Math.ceil(totalCount / PAGE_SIZE);
+  const pagedProducts = products; // backend returns exactly one page
   const itemMap = {
   '粉底液': '粉底液',
   '遮瑕':   '遮瑕',
@@ -91,20 +93,29 @@ function ProductDB() {
 };
 
 useEffect(() => {
+  skipNextPageEffect.current = true;
   setPage(1);
-  fetchProducts();
+  fetchProducts(1);
 }, [category, item, skinType, effect, finish, coverage]); // eslint-disable-line react-hooks/exhaustive-deps
 
 useEffect(() => {
   const timer = setTimeout(() => {
+    skipNextPageEffect.current = true;
     setPage(1);
-    fetchProducts();
+    fetchProducts(1);
   }, 400);
   return () => clearTimeout(timer);
 }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
 
-const fetchProducts = async () => {
-  if (!category && !item && !search.trim()) { setProducts([]); return; }
+// 分頁按鈕觸發：page 改變時重新撈取（filter/search 重置 page 時跳過，避免重複請求）
+useEffect(() => {
+  if (skipNextPageEffect.current) { skipNextPageEffect.current = false; return; }
+  if (!category && !item && !search.trim()) return;
+  fetchProducts(page);
+}, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+const fetchProducts = async (pageNum = page) => {
+  if (!category && !item && !search.trim()) { setProducts([]); setTotalCount(0); return; }
   setLoading(true);
   try {
     const params = new URLSearchParams();
@@ -115,13 +126,17 @@ const fetchProducts = async () => {
     if (finish)        params.append('finish', finish);
     if (coverage)      params.append('coverage', coverage);
     if (search.trim()) params.append('search', search.trim());
+    params.append('page', pageNum);
+    params.append('limit', PAGE_SIZE);
 
     const res  = await fetch(`${API_BASE}/api/products?${params}`);
     const data = await res.json();
-    setProducts(Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []));
+    setProducts(Array.isArray(data?.data) ? data.data : []);
+    setTotalCount(typeof data?.total === 'number' ? data.total : 0);
   } catch (err) {
     console.error('撈取產品失敗', err);
     setProducts([]);
+    setTotalCount(0);
   } finally {
     setLoading(false);
   }
@@ -301,7 +316,7 @@ const fetchProducts = async () => {
               ) : (
                 <>
                   <p style={styles.resultCount}>
-                    {t('共')} {products.length} {t('項結果')}
+                    {t('共')} {totalCount} {t('項結果')}
                     {totalPages > 1 && `，第 ${page} / ${totalPages} 頁`}
                   </p>
                   <div style={styles.productGrid}>

@@ -117,7 +117,7 @@ export default function QA() {
 
   const filtered = questions
     .filter(q => tab === 'mine' ? q._mine === true : true)
-    .filter(q => activeTags.size === 0 || [...activeTags].every(t => q.tags.includes(t)))
+    .filter(q => activeTags.size === 0 || [...activeTags].every(tag => q.tags.includes(tag)))
     .filter(q => !search || q.title.includes(search) || q.excerpt.includes(search));
 
   const handleToggle = (id) => setExpandedId(prev => prev === id ? null : id);

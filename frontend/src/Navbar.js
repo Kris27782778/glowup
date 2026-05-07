@@ -47,7 +47,7 @@ function Navbar() {
     fetchUnread(u);
 
     // 每 60 秒自動重新查詢
-    const timer = setInterval(() => fetchUnread(u), 10000);
+    const timer = setInterval(() => fetchUnread(u), 60000);
     return () => clearInterval(timer);
   }, [location]);
 

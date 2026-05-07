@@ -3,45 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useLang } from './hooks/useLang';
 import API_BASE from './config';
 
-/* ─── 相似問題比對資料庫（同 QA.js mock data）─── */
-const SIMILAR_POOL = [
-  {
-    id: 1, title: '乳酸和杏仁酸可以交替使用嗎？濃度怎麼配？',
-    excerpt: '我目前有一瓶 8% 乳酸和一瓶 6% 杏仁酸，想了解這兩種果酸交替使用的邏輯…',
-    tags: ['成分討論', '敏感肌'], solved: true, views: 312,
-    answers: 4,
-  },
-  {
-    id: 2, title: 'A 醇初學者從多少濃度開始？搭配什麼保濕品比較不刺激？',
-    excerpt: '想嘗試視黃醇但超怕刺激，看過很多說法都不太一樣…',
-    tags: ['抗老', '成分討論'], solved: false, views: 589,
-    answers: 4,
-  },
-  {
-    id: 3, title: '油性肌夏天還需要用乳液嗎？還是只擦化妝水就夠了？',
-    excerpt: '夏天臉超油，擦完乳液更悶，但又擔心不擦會缺水…',
-    tags: ['油性肌', '保濕'], solved: false, views: 187,
-    answers: 3,
-  },
-  {
-    id: 4, title: '混合肌用物理防曬還是化學防曬比較合適？',
-    excerpt: '試過幾款化學防曬都覺得油油的，物理防曬又容易卡粉…',
-    tags: ['防曬推薦', '混合性肌'], solved: true, views: 423,
-    answers: 4,
-  },
-  {
-    id: 5, title: '過度清潔造成屏障受損，修復期間要停用所有活性成分嗎？',
-    excerpt: '上個月換了洗臉機，臉開始乾癢脫皮…',
-    tags: ['屏障修護', '敏感肌'], solved: true, views: 754,
-    answers: 5,
-  },
-  {
-    id: 6, title: '玻尿酸塗完反而更乾？用法或濃度哪裡出問題？',
-    excerpt: '不管先濕後乾還是乾著直接塗，感覺到最後都更乾燥…',
-    tags: ['成分討論', '保濕'], solved: true, views: 891,
-    answers: 4,
-  },
-];
 
 const ASKABLE_TAGS = ['成分討論', '油性肌', '乾肌', '敏感肌', '混合性肌', '中性', '保濕', '防曬推薦', '抗老', '屏障修護', '去角質', '抗痘'];
 
@@ -52,19 +13,6 @@ const TIPS = [
   { icon: '✦', text: '附上皮膚反應的症狀與持續時間' },
 ];
 
-/* ─── 相似度計算 ─── */
-function findSimilar(title) {
-  if (title.trim().length < 4) return [];
-  const words = title.trim().split(/[\s，,。？！、]+/).filter(w => w.length >= 2);
-  if (!words.length) return [];
-  const scored = SIMILAR_POOL.map(q => {
-    const s = words.reduce((acc, w) =>
-      acc + (q.title.includes(w) ? 2 : 0) + (q.excerpt.includes(w) ? 1 : 0) + (q.tags.some(t => t.includes(w)) ? 1 : 0)
-    , 0);
-    return { ...q, _score: s };
-  }).filter(q => q._score > 0).sort((a, b) => b._score - a._score);
-  return scored.slice(0, 3);
-}
 
 /* ─── 主元件 ─── */
 export default function AskQuestion() {
@@ -85,14 +33,31 @@ export default function AskQuestion() {
   const [submitted,   setSubmitted]   = useState(false);
   const debounceRef = useRef(null);
 
-  /* 標題變動 → debounce 計算相似 */
+  /* 標題變動 → debounce → 查詢真實問題資料庫找相似問題 */
   useEffect(() => {
     clearTimeout(debounceRef.current);
     if (title.trim().length < 4) { setSimilar([]); setAiLoading(false); return; }
     setAiLoading(true);
-    debounceRef.current = setTimeout(() => {
-      setSimilar(findSimilar(title));
-      setAiLoading(false);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const keyword = title.trim().slice(0, 30);
+        const res = await fetch(`${API_BASE}/api/questions?search=${encodeURIComponent(keyword)}&limit=5`);
+        const data = await res.json();
+        const list = (data?.data ?? []).slice(0, 3).map(q => ({
+          id:      q.question_id,
+          title:   q.title,
+          excerpt: q.detail || '',
+          tags:    q.tags || [],
+          solved:  q.solved,
+          views:   q.views || 0,
+          answers: q.answer_count ?? 0,
+        }));
+        setSimilar(list);
+      } catch {
+        setSimilar([]);
+      } finally {
+        setAiLoading(false);
+      }
     }, 600);
     return () => clearTimeout(debounceRef.current);
   }, [title]);

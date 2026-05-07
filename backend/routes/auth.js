@@ -118,7 +118,7 @@ router.post('/register', async (req, res) => {
 
 // ── 更新個人資料 PATCH /api/auth/profile ──────────────────────────
 router.patch('/profile', async (req, res) => {
-  const { user_id, skin_type, nickname } = req.body;
+  const { user_id, skin_type, nickname, bio } = req.body;
   if (!user_id) return res.status(400).json({ error: '缺少 user_id' });
 
   try {
@@ -128,13 +128,14 @@ router.patch('/profile', async (req, res) => {
 
     if (skin_type !== undefined) { fields.push(`skin_type = $${idx++}`); values.push(skin_type); }
     if (nickname  !== undefined) { fields.push(`nickname  = $${idx++}`); values.push(nickname);  }
+    if (bio       !== undefined) { fields.push(`bio       = $${idx++}`); values.push(bio);       }
 
     if (fields.length === 0) return res.status(400).json({ error: '沒有需要更新的欄位' });
 
     values.push(user_id);
     const result = await pool.query(
       `UPDATE users SET ${fields.join(', ')} WHERE user_id = $${idx} RETURNING
-         user_id, student_id, nickname, department_grade, email, skin_type`,
+         user_id, student_id, nickname, department_grade, email, skin_type, bio`,
       values
     );
 
@@ -158,6 +159,9 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
       return res.status(401).json({ error: '學號或密碼錯誤' });
+    }
+    if (user.is_banned) {
+      return res.status(403).json({ error: '此帳號已被停用，請聯絡管理員' });
     }
     res.json({
       message: '登入成功',
