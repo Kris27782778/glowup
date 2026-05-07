@@ -17,7 +17,7 @@ const T = {
   border:        '#E5DDD9',
 };
 
-const CATEGORIES  = ['化妝品', '保養品'];
+const CATEGORIES  = ['保養品', '化妝品'];
 const SKIN_TYPES  = ['油性肌', '乾性肌', '混合性肌', '敏感性肌', '中性肌'];
 const MAKEUP_EFFECTS   = ['保濕', '控油', '舒緩修復'];
 const SKINCARE_EFFECTS = ['保濕', '控油', '舒緩修復', '抗痘', '去角質'];
@@ -174,7 +174,7 @@ const fetchProducts = async () => {
                 <button
                   key={cat}
                   style={{ ...styles.filterChip, ...(category === cat ? styles.filterChipActive : {}) }}
-                  onClick={() => { setCategory(category === cat ? null : cat); setItem(null); }}
+                  onClick={() => { setCategory(category === cat ? null : cat); setItem(null); setSkinType(null); }}
                 >
                   {cat === '化妝品' ? '💄 ' : '🧴 '}{t(cat)}
                 </button>
@@ -202,22 +202,25 @@ const fetchProducts = async () => {
             </>
           )}
 
-          <div style={styles.filterDivider} />
-
-          <div style={styles.filterSection}>
-            <p style={styles.filterTitle}>{t('適合膚質')}</p>
-            <div style={styles.filterGroup}>
-              {SKIN_TYPES.map(s => (
-                <button
-                  key={s}
-                  style={{ ...styles.filterChip, ...(skinType === s ? styles.filterChipActive : {}) }}
-                  onClick={() => setSkinType(skinType === s ? null : s)}
-                >
-                  {t(s)}
-                </button>
-              ))}
-            </div>
-          </div>
+          {category !== '化妝品' && (
+            <>
+              <div style={styles.filterDivider} />
+              <div style={styles.filterSection}>
+                <p style={styles.filterTitle}>{t('適合膚質')}</p>
+                <div style={styles.filterGroup}>
+                  {SKIN_TYPES.map(s => (
+                    <button
+                      key={s}
+                      style={{ ...styles.filterChip, ...(skinType === s ? styles.filterChipActive : {}) }}
+                      onClick={() => setSkinType(skinType === s ? null : s)}
+                    >
+                      {t(s)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           <div style={styles.filterDivider} />
 
