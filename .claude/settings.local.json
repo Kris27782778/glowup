@@ -28,7 +28,12 @@
       "Bash(git stash *)",
       "Bash(git push *)",
       "Bash(git commit *)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Bash(\"/Users/xuan/Desktop/Glow-Up demo/glow-platform/glowup/frontend/node_modules/.bin/react-scripts\" start)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(npx react-scripts *)",
+      "Bash(kill 34670 34667)",
+      "Bash(BROWSER=none /Users/xuan/.nvm/versions/node/v20.20.1/bin/node /Users/xuan/.nvm/versions/node/v20.20.1/bin/npx react-scripts start)"
     ]
   }
 }
