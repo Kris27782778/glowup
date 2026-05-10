@@ -45,7 +45,7 @@ function Register() {
   const navigate = useNavigate();
   const { t } = useLang();
   const [step, setStep] = useState(0);
-  const [, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusField, setFocusField] = useState(null);
   const [success] = useState(false);
@@ -54,8 +54,12 @@ function Register() {
   // 電子郵件驗證
   const [otpDigits, setOtpDigits] = useState(Array(6).fill(''));
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [otpAttempts, setOtpAttempts] = useState(0);
   const otpRefs = useRef([]);
   const cooldownRef = useRef(null);
+  const isSendingRef = useRef(false);
+
+  const MAX_OTP_ATTEMPTS = 3;
 
   // 進入驗證步驟時啟動倒計時
   useEffect(() => {
@@ -142,20 +146,27 @@ function Register() {
   const fullEmail = `${form.email}@cloud.fju.edu.tw`;
 
   const sendVerification = async () => {
-    const res = await fetch(`${API_BASE}/api/auth/send-verification`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: fullEmail }),
-    });
-    const text = await res.text();
-    let data;
-    try { data = JSON.parse(text); } catch { throw new Error('驗證碼寄送失敗，伺服器回應異常'); }
-    if (!res.ok) throw new Error(data.error || '驗證碼寄送失敗');
+    if (isSendingRef.current) return;
+    isSendingRef.current = true;
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/send-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: fullEmail }),
+      });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { throw new Error('驗證碼寄送失敗，伺服器回應異常'); }
+      if (!res.ok) throw new Error(data.error || '驗證碼寄送失敗');
+    } finally {
+      isSendingRef.current = false;
+    }
   };
 
   const handleResend = async () => {
     setError('');
     setOtpDigits(Array(6).fill(''));
+    setOtpAttempts(0);
     try {
       await sendVerification();
       startCooldown();
@@ -187,6 +198,7 @@ function Register() {
   };
 
   const handleNext = async () => {
+    if (loading) return;
     const err = validateStep();
     if (err) { setError(err); return; }
     setError('');
@@ -196,6 +208,7 @@ function Register() {
       setLoading(true);
       try {
         await sendVerification();
+        setOtpAttempts(0);
         setStep(2);
       } catch (e) {
         setError(e.message);
@@ -207,6 +220,7 @@ function Register() {
 
     // 步驟 2 → 3：驗證 OTP
     if (step === 2) {
+      if (otpAttempts >= MAX_OTP_ATTEMPTS) return;
       setLoading(true);
       try {
         const otp = otpDigits.join('');
@@ -216,7 +230,17 @@ function Register() {
           body: JSON.stringify({ email: fullEmail, otp }),
         });
         const data = await res.json();
-        if (!res.ok) { setError(data.error || '驗證失敗'); return; }
+        if (!res.ok) {
+          if (data.tooManyAttempts) {
+            setOtpAttempts(MAX_OTP_ATTEMPTS);
+            setError('驗證碼已達輸入上限（3/3），請重新傳送驗證碼');
+          } else {
+            const newAttempts = otpAttempts + 1;
+            setOtpAttempts(newAttempts);
+            setError(data.error || '驗證碼錯誤');
+          }
+          return;
+        }
         setStep(3);
       } catch {
         setError('無法連接伺服器，請稍後再試');
@@ -597,14 +621,21 @@ function Register() {
                 ))}
               </div>
 
-              {/* 重新發送 */}
+              {/* 嘗試次數提示 */}
+              {otpAttempts > 0 && otpAttempts < MAX_OTP_ATTEMPTS && (
+                <p style={verifyStyles.attemptsHint}>
+                  已輸入錯誤 {otpAttempts} / {MAX_OTP_ATTEMPTS} 次
+                </p>
+              )}
+
+              {/* 重新傳送 */}
               <div style={verifyStyles.resendRow}>
-                <span style={verifyStyles.resendHint}>{t('沒有收到信件？') || '沒有收到信件？'}</span>
+                <span style={verifyStyles.resendHint}>沒收到驗證碼嗎？</span>
                 {resendCooldown > 0 ? (
-                  <span style={verifyStyles.cooldownText}>{resendCooldown}{t('秒後重新發送')}</span>
+                  <span style={verifyStyles.cooldownText}>{resendCooldown} 秒後可重新傳送</span>
                 ) : (
                   <button style={verifyStyles.resendBtn} onClick={handleResend} type="button">
-                    {t('重新發送')}
+                    重新傳送
                   </button>
                 )}
               </div>
@@ -640,13 +671,30 @@ function Register() {
                   style={styles.backBtn}
                   onClick={() => { setStep(s => s - 1); setError(''); }}
                   type="button"
+                  disabled={loading}
                 >
                   {t('上一步')}
                 </button>
               )}
-              <button style={{ ...styles.btn, flex: 1 }} onClick={handleNext} type="button">
-                {step === 2 ? (t('驗證並繼續') || '驗證並繼續') : t('下一步')}
-              </button>
+              {(() => {
+                const isOtpLocked = step === 2 && otpAttempts >= MAX_OTP_ATTEMPTS;
+                const isDisabled = loading || isOtpLocked;
+                let label;
+                if (loading && step === 1) label = '發送中...';
+                else if (loading && step === 2) label = '驗證中...';
+                else if (step === 2) label = '驗證並繼續';
+                else label = t('下一步');
+                return (
+                  <button
+                    style={{ ...styles.btn, flex: 1, ...(isDisabled ? styles.btnDisabled : {}) }}
+                    onClick={handleNext}
+                    type="button"
+                    disabled={isDisabled}
+                  >
+                    {label}
+                  </button>
+                );
+              })()}
             </div>
           )}
 
@@ -1113,6 +1161,13 @@ const verifyStyles = {
   otpInputFilled: {
     borderColor: tokens.accent,
     boxShadow: `0 0 0 3px rgba(196,137,122,0.12)`,
+  },
+  attemptsHint: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '12px',
+    color: '#C4614A',
+    textAlign: 'center',
+    margin: 0,
   },
   resendRow: {
     display: 'flex',

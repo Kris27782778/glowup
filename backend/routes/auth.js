@@ -10,6 +10,12 @@ function generateOTP() {
   return String(crypto.randomInt(100000, 999999));
 }
 
+// 記錄每個 email 的 OTP 輸入失敗次數（伺服器重啟後重置，可接受）
+const otpAttemptMap = new Map(); // email -> failCount
+
+const OTP_COOLDOWN_MS = 60 * 1000;  // 重送間隔 60 秒
+const MAX_OTP_ATTEMPTS = 3;          // 最多嘗試次數
+
 // ── 寄送驗證碼 POST /api/auth/send-verification ───────────────────
 router.post('/send-verification', async (req, res) => {
   const { email } = req.body;
@@ -17,11 +23,26 @@ router.post('/send-verification', async (req, res) => {
     return res.status(400).json({ error: '請提供有效的電子郵件' });
   }
 
-  const otp = generateOTP();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 分鐘後
-
   try {
-    // 刪除同一 email 的舊驗證紀錄，避免累積
+    // 速率限制：60 秒內只能送一次，防止重複點擊寄出多封信
+    const recent = await pool.query(
+      `SELECT created_at FROM email_verifications
+       WHERE email = $1
+       ORDER BY created_at DESC LIMIT 1`,
+      [email]
+    );
+    if (recent.rows.length > 0) {
+      const elapsed = Date.now() - new Date(recent.rows[0].created_at).getTime();
+      if (elapsed < OTP_COOLDOWN_MS) {
+        const remaining = Math.ceil((OTP_COOLDOWN_MS - elapsed) / 1000);
+        return res.status(429).json({ error: `請等待 ${remaining} 秒後再重新傳送` });
+      }
+    }
+
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 分鐘後
+
+    // 刪除同一 email 的舊驗證紀錄（確保同時間只有最新驗證碼有效）
     await pool.query('DELETE FROM email_verifications WHERE email = $1', [email]);
 
     // 存入新的 OTP
@@ -32,6 +53,9 @@ router.post('/send-verification', async (req, res) => {
 
     // 寄信
     await sendVerificationEmail(email, otp);
+
+    // 新驗證碼寄出後重置嘗試計數
+    otpAttemptMap.delete(email);
 
     res.json({ message: '驗證碼已寄出' });
   } catch (err) {
@@ -47,25 +71,44 @@ router.post('/verify-otp', async (req, res) => {
     return res.status(400).json({ error: '缺少必要欄位' });
   }
 
+  // 伺服器端嘗試次數守衛
+  const failCount = otpAttemptMap.get(email) || 0;
+  if (failCount >= MAX_OTP_ATTEMPTS) {
+    return res.status(429).json({ error: '驗證次數已達上限，請重新傳送驗證碼', tooManyAttempts: true });
+  }
+
   try {
+    // 只取最新一筆（舊碼因 send-verification 的 DELETE 已清除，此為防禦性查詢）
     const result = await pool.query(
       `SELECT * FROM email_verifications
-       WHERE email = $1 AND otp = $2 AND verified_at IS NULL
+       WHERE email = $1 AND verified_at IS NULL
        ORDER BY created_at DESC LIMIT 1`,
-      [email, otp]
+      [email]
     );
 
     if (result.rows.length === 0) {
-      return res.status(400).json({ error: '驗證碼錯誤' });
+      return res.status(400).json({ error: '驗證碼不存在或已過期，請重新傳送' });
     }
 
     const record = result.rows[0];
 
     if (new Date() > new Date(record.expires_at)) {
-      return res.status(400).json({ error: '驗證碼已過期，請重新寄送' });
+      return res.status(400).json({ error: '驗證碼已過期，請重新傳送', tooManyAttempts: true });
     }
 
-    // 標記為已驗證
+    // 比對最新驗證碼
+    if (record.otp !== otp) {
+      const newCount = failCount + 1;
+      otpAttemptMap.set(email, newCount);
+      const remaining = MAX_OTP_ATTEMPTS - newCount;
+      if (remaining <= 0) {
+        return res.status(400).json({ error: '驗證碼錯誤，請重新傳送驗證碼', tooManyAttempts: true });
+      }
+      return res.status(400).json({ error: `驗證碼錯誤，剩餘 ${remaining} 次機會` });
+    }
+
+    // 驗證成功：清除失敗計數，標記已驗證
+    otpAttemptMap.delete(email);
     await pool.query(
       'UPDATE email_verifications SET verified_at = NOW() WHERE id = $1',
       [record.id]
