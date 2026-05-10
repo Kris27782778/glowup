@@ -1,0 +1,11 @@
+{
+  "git.ignoredRepositories": [],
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.git/objects/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true
+  },
+  "git.autoRepositoryDetection": false
+}
