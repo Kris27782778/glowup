@@ -13,6 +13,7 @@ const ProductDB = lazy(() => import('./ProductDB'));
 const Dashboard = lazy(() => import('./Dashboard'));
 const Settings = lazy(() => import('./Settings'));
 const Community = lazy(() => import('./Community'));
+const CommunityPost = lazy(() => import('./CommunityPost'));
 const QA = lazy(() => import('./QA'));
 const AskQuestion = lazy(() => import('./AskQuestion'));
 const Admin = lazy(() => import('./Admin'));
@@ -96,6 +97,7 @@ function Layout() {
             <Route path="/login"     element={<Login />} />
             <Route path="/register"  element={<Register />} />
             <Route path="/community" element={<RequireAuth feature="community"><Community /></RequireAuth>} />
+            <Route path="/community/post/:id" element={<RequireAuth feature="community"><CommunityPost /></RequireAuth>} />
             <Route path="/qa"         element={<RequireAuth feature="qa"><QA /></RequireAuth>} />
             <Route path="/qa/ask"    element={<RequireAuth feature="qa"><AskQuestion /></RequireAuth>} />
             <Route path="/products"  element={<RequireAuth feature="products"><ProductDB /></RequireAuth>} />
