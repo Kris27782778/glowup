@@ -17,6 +17,8 @@ const CommunityPost = lazy(() => import('./CommunityPost'));
 const QA = lazy(() => import('./QA'));
 const AskQuestion = lazy(() => import('./AskQuestion'));
 const Admin = lazy(() => import('./Admin'));
+const Reverify       = lazy(() => import('./Reverify'));
+const ForgotPassword = lazy(() => import('./ForgotPassword'));
 
 function RequireAuth({ feature, children }) {
   const user = localStorage.getItem('user');
@@ -96,6 +98,8 @@ function Layout() {
             <Route path="/"          element={<Hero />} />
             <Route path="/login"     element={<Login />} />
             <Route path="/register"  element={<Register />} />
+            <Route path="/reverify"        element={<Reverify />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/community" element={<RequireAuth feature="community"><Community /></RequireAuth>} />
             <Route path="/community/post/:id" element={<RequireAuth feature="community"><CommunityPost /></RequireAuth>} />
             <Route path="/qa"         element={<RequireAuth feature="qa"><QA /></RequireAuth>} />

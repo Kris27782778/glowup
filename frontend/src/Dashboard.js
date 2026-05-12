@@ -30,12 +30,12 @@ const SKIN_LABELS = {
   sensitive:  { label: '敏感性肌',     desc: '屏障較弱，選擇成分單純配方' },
 };
 
-const TAB_KEYS   = ['帖子', '問答', '收藏', '成分筆記', '歷史評論'];
+const TAB_KEYS   = ['帖子', '問答', '收藏', '我的筆記', '歷史評論'];
 const EMPTY_KEYS = [
   { title: '還沒有貼文',       sub: '分享你的保養心得，讓社群看見你的經驗' },
   { title: '還沒有問答記錄',   sub: '向社群提出你的保養疑問' },
   { title: '收藏夾是空的',     sub: '收藏喜歡的貼文、成分與產品' },
-  { title: '成分筆記尚未建立', sub: '標記你用過的成分，記錄使用心得' },
+  { title: '我的筆記尚未建立', sub: '標記你用過的成分，記錄使用心得' },
   { title: '還沒有評論記錄', sub: '對產品留下評論，記錄你的使用心得' },
 ];
 
@@ -46,7 +46,11 @@ function Dashboard() {
   const [showEdit, setShowEdit]   = useState(false);
   const [wishlist,     setWishlist]     = useState([]);
   const [myQuestions,  setMyQuestions]  = useState([]);
-  const [myReviews, setMyReviews] = useState([]);
+  const [myReviews,  setMyReviews]  = useState([]);
+  const [deletingId,         setDeletingId]         = useState(null);
+  const [deletingQuestionId, setDeletingQuestionId] = useState(null);
+  const [editingReview,      setEditingReview]      = useState(null);
+  const [wishlistFilter,     setWishlistFilter]     = useState(null);
   const navigate = useNavigate();
   const { t } = useLang();
 
@@ -123,14 +127,72 @@ function Dashboard() {
     }
   };
 
+  const handleDeleteReview = async (reviewId) => {
+    setMyReviews(prev => prev.filter(r => r.review_id !== reviewId));
+    setDeletingId(null);
+    try {
+      await fetch(`${API_BASE}/api/reviews/${reviewId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.user_id }),
+      });
+    } catch {
+      fetch(`${API_BASE}/api/reviews/user/${user.user_id}`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setMyReviews(data); })
+        .catch(() => {});
+    }
+  };
+
+  const handleSaveReview = async ({ review_id, product_id, rating, content }) => {
+    setMyReviews(prev => prev.map(r =>
+      r.review_id === review_id ? { ...r, rating, content } : r
+    ));
+    setEditingReview(null);
+    try {
+      await fetch(`${API_BASE}/api/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.user_id, product_id, rating, content }),
+      });
+    } catch {
+      fetch(`${API_BASE}/api/reviews/user/${user.user_id}`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setMyReviews(data); })
+        .catch(() => {});
+    }
+  };
+
   if (!user) return null;
 
   const initial  = user.nickname?.[0]?.toUpperCase() || '?';
   const skinInfo = SKIN_LABELS[user.skin_type] || null;
   const skinLabel = skinInfo?.label || user.skin_type || null;
 
+  const verifyDaysLeft = (() => {
+    if (!user.last_verified_at) return null;
+    const elapsed = Date.now() - new Date(user.last_verified_at).getTime();
+    const days = Math.floor((365 * 24 * 60 * 60 * 1000 - elapsed) / (24 * 60 * 60 * 1000));
+    return days <= 30 ? days : null;
+  })();
+
   return (
     <div style={styles.page}>
+
+      {/* ══ 年度驗證到期警告 ══ */}
+      {verifyDaysLeft !== null && (
+        <div style={{
+          position: 'fixed', top: '64px', left: 0, right: 0, zIndex: 900,
+          backgroundColor: verifyDaysLeft <= 7 ? '#B97070' : '#C4A35A',
+          color: '#fff', textAlign: 'center',
+          padding: '10px 16px', fontSize: '13px',
+          fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+        }}>
+          {verifyDaysLeft <= 0
+            ? '帳號驗證已到期，請重新驗證學校信箱'
+            : `你的帳號將於 ${verifyDaysLeft} 天後到期，請至「設定 → 重新驗證信箱」完成年度驗證`}
+        </div>
+      )}
 
       {/* ══ 編輯個人資料 Modal ══ */}
       {showEdit && (
@@ -226,9 +288,9 @@ function Dashboard() {
           {/* 數據列 */}
           <div style={styles.statsCard} className="g-reveal delay-2">
             {[
-              { num: '0', label: '貼文' },
-              { num: '0', label: '追蹤者' },
-              { num: '0', label: '追蹤中' },
+              { num: String(myQuestions.length), label: '問答' },
+              { num: String(wishlist.length),    label: '收藏' },
+              { num: String(myReviews.length),   label: '評論' },
             ].map((s, i, arr) => (
 
               <div key={s.label} style={styles.statItem}>
@@ -292,7 +354,11 @@ function Dashboard() {
                 ) : (
                   <div style={wishlistStyle.grid}>
                     {myQuestions.map(q => (
-                      <div key={q.question_id} style={wishlistStyle.card}>
+                      <div
+                        key={q.question_id}
+                        style={{ ...wishlistStyle.card, cursor: 'pointer' }}
+                        onClick={() => navigate('/qa', { state: { expandId: q.question_id } })}
+                      >
                         <div style={wishlistStyle.cardHeader}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={wishlistStyle.brand}>{new Date(q.created_at).toLocaleDateString('zh-TW')}</span>
@@ -312,24 +378,7 @@ function Dashboard() {
                             <button
                               style={wishlistStyle.deleteBtn}
                               title="刪除問題"
-                              onClick={async () => {
-                                if (!window.confirm('確定要刪除這個問題嗎？')) return;
-                                try {
-                                  const res = await fetch(`${API_BASE}/api/questions/${q.question_id}`, {
-                                    method: 'DELETE',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ user_id: user.user_id }),
-                                  });
-                                  const data = await res.json();
-                                  if (res.ok) {
-                                    setMyQuestions(prev => prev.filter(x => x.question_id !== q.question_id));
-                                  } else {
-                                    alert(data.error || '刪除失敗');
-                                  }
-                                } catch {
-                                  alert('刪除失敗，請確認後端是否啟動');
-                                }
-                              }}
+                              onClick={e => { e.stopPropagation(); setDeletingQuestionId(q.question_id); }}
                             >
                               ✕
                             </button>
@@ -341,6 +390,42 @@ function Dashboard() {
                             <span key={tag} style={wishlistStyle.tag}>{tag}</span>
                           ))}
                         </div>
+
+                        {deletingQuestionId === q.question_id ? (
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }} onClick={e => e.stopPropagation()}>
+                            <button
+                              onClick={() => setDeletingQuestionId(null)}
+                              style={{ flex: 1, padding: '6px', fontSize: '12px', cursor: 'pointer',
+                                background: 'none', border: `1px solid ${T.border}`, borderRadius: '8px', color: T.textSecondary }}
+                            >取消</button>
+                            <button
+                              onClick={async () => {
+                                setMyQuestions(prev => prev.filter(x => x.question_id !== q.question_id));
+                                setDeletingQuestionId(null);
+                                try {
+                                  const res = await fetch(`${API_BASE}/api/questions/${q.question_id}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ user_id: user.user_id }),
+                                  });
+                                  if (!res.ok) {
+                                    fetch(`${API_BASE}/api/questions?user_id=${user.user_id}&include_anonymous=true`)
+                                      .then(r => r.json())
+                                      .then(data => { if (Array.isArray(data?.data)) setMyQuestions(data.data); })
+                                      .catch(() => {});
+                                  }
+                                } catch {
+                                  fetch(`${API_BASE}/api/questions?user_id=${user.user_id}&include_anonymous=true`)
+                                    .then(r => r.json())
+                                    .then(data => { if (Array.isArray(data?.data)) setMyQuestions(data.data); })
+                                    .catch(() => {});
+                                }
+                              }}
+                              style={{ flex: 1, padding: '6px', fontSize: '12px', cursor: 'pointer',
+                                background: '#B97070', border: 'none', borderRadius: '8px', color: '#fff' }}
+                            >確定刪除</button>
+                          </div>
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -352,8 +437,24 @@ function Dashboard() {
                     sub={t(EMPTY_KEYS[2].sub)}
                   />
                 ) : (
+                  <div>
+                    <div style={{ display: 'flex', gap: '8px', padding: '16px 24px 0', flexWrap: 'wrap' }}>
+                      {[null, '保養品', '化妝品'].map(cat => (
+                        <button
+                          key={cat ?? 'all'}
+                          onClick={() => setWishlistFilter(cat)}
+                          style={{
+                            padding: '5px 14px', fontSize: '12px', cursor: 'pointer',
+                            borderRadius: '20px', border: `1px solid ${wishlistFilter === cat ? T.accent : T.border}`,
+                            background: wishlistFilter === cat ? T.accent : 'none',
+                            color: wishlistFilter === cat ? '#fff' : T.textSecondary,
+                            transition: 'all 180ms ease',
+                          }}
+                        >{cat ?? '全部'}</button>
+                      ))}
+                    </div>
                   <div style={wishlistStyle.grid}>
-                    {wishlist.map(w => {
+                    {wishlist.filter(w => !wishlistFilter || w.products?.category === wishlistFilter).map(w => {
                       const p = w.products;
                       if (!p) return null;
                       return (
@@ -387,6 +488,7 @@ function Dashboard() {
                       );
                     })}
                   </div>
+                  </div>
                 )
               ) : tab === 4 ? (
                 myReviews.length === 0 ? (
@@ -410,19 +512,57 @@ function Dashboard() {
                             <span style={wishlistStyle.badge}>{p?.sub_category}</span>
                           </div>
                           <p style={wishlistStyle.name}>{p?.name}</p>
-                          <div style={{ display: 'flex', gap: '2px' }}>
-                            {[1,2,3,4,5].map(n => (
-                              <span key={n} style={{ fontSize: '13px', color: n <= r.rating ? '#F5A623' : T.border }}>★</span>
-                            ))}
-                          </div>
-                          {r.content && (
-                            <p style={{
-                              margin: '4px 0 0', fontSize: '13px', color: T.textSecondary,
-                              lineHeight: 1.6, padding: '8px 10px',
-                              backgroundColor: T.bgSubtle, borderRadius: '8px',
-                            }}>
-                              {r.content}
-                            </p>
+
+                          {editingReview?.review_id === r.review_id ? (
+                            <ReviewEditor
+                              initial={editingReview}
+                              onSave={handleSaveReview}
+                              onCancel={() => setEditingReview(null)}
+                            />
+                          ) : (
+                            <>
+                              <div style={{ display: 'flex', gap: '2px' }}>
+                                {[1,2,3,4,5].map(n => (
+                                  <span key={n} style={{ fontSize: '13px', color: n <= r.rating ? '#F5A623' : T.border }}>★</span>
+                                ))}
+                              </div>
+                              {r.content && (
+                                <p style={{
+                                  margin: '4px 0 0', fontSize: '13px', color: T.textSecondary,
+                                  lineHeight: 1.6, padding: '8px 10px',
+                                  backgroundColor: T.bgSubtle, borderRadius: '8px',
+                                }}>
+                                  {r.content}
+                                </p>
+                              )}
+                              {deletingId === r.review_id ? (
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                  <button
+                                    onClick={() => setDeletingId(null)}
+                                    style={{ flex: 1, padding: '6px', fontSize: '12px', cursor: 'pointer',
+                                      background: 'none', border: `1px solid ${T.border}`, borderRadius: '8px', color: T.textSecondary }}
+                                  >取消</button>
+                                  <button
+                                    onClick={() => handleDeleteReview(r.review_id)}
+                                    style={{ flex: 1, padding: '6px', fontSize: '12px', cursor: 'pointer',
+                                      background: '#B97070', border: 'none', borderRadius: '8px', color: '#fff' }}
+                                  >確定刪除</button>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', gap: '6px', marginTop: '6px', alignSelf: 'flex-end' }}>
+                                  <button
+                                    onClick={() => { setDeletingId(null); setEditingReview({ review_id: r.review_id, product_id: r.product_id, rating: r.rating, content: r.content || '' }); }}
+                                    style={{ padding: '4px 10px', fontSize: '11px', cursor: 'pointer',
+                                      background: 'none', border: `1px solid ${T.accent}`, borderRadius: '6px', color: T.accent }}
+                                  >編輯</button>
+                                  <button
+                                    onClick={() => setDeletingId(r.review_id)}
+                                    style={{ padding: '4px 10px', fontSize: '11px', cursor: 'pointer',
+                                      background: 'none', border: `1px solid ${T.border}`, borderRadius: '6px', color: T.textTertiary }}
+                                  >刪除</button>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       );
@@ -444,17 +584,67 @@ function Dashboard() {
   );
 }
 
+// ── 評論 inline 編輯器 ──────────────────────────────────────
+function ReviewEditor({ initial, onSave, onCancel }) {
+  const [rating,  setRating]  = useState(initial.rating);
+  const [hover,   setHover]   = useState(0);
+  const [content, setContent] = useState(initial.content);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+      <div style={{ display: 'flex', gap: '4px' }}>
+        {[1,2,3,4,5].map(n => (
+          <span
+            key={n}
+            onMouseEnter={() => setHover(n)}
+            onMouseLeave={() => setHover(0)}
+            onClick={() => setRating(n)}
+            style={{ fontSize: '20px', cursor: 'pointer', color: n <= (hover || rating) ? '#F5A623' : T.border, transition: 'color 120ms' }}
+          >★</span>
+        ))}
+      </div>
+      <textarea
+        value={content}
+        onChange={e => setContent(e.target.value)}
+        rows={3}
+        style={{
+          width: '100%', boxSizing: 'border-box', padding: '8px 10px',
+          fontSize: '13px', lineHeight: 1.6, resize: 'vertical',
+          border: `1px solid ${T.border}`, borderRadius: '8px',
+          background: T.bgSubtle, color: T.textPrimary, outline: 'none',
+          fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+        }}
+      />
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button
+          onClick={onCancel}
+          style={{ flex: 1, padding: '6px', fontSize: '12px', cursor: 'pointer',
+            background: 'none', border: `1px solid ${T.border}`, borderRadius: '8px', color: T.textSecondary }}
+        >取消</button>
+        <button
+          onClick={() => onSave({ ...initial, rating, content })}
+          style={{ flex: 1, padding: '6px', fontSize: '12px', cursor: 'pointer',
+            background: T.accent, border: 'none', borderRadius: '8px', color: '#fff' }}
+        >儲存</button>
+      </div>
+    </div>
+  );
+}
+
 // ── 編輯個人資料 Modal ──────────────────────────────────────
 function EditProfileModal({ user, onSave, onClose, t }) {
-  const [nickname, setNickname] = useState(user.nickname || '');
-  const [bio,      setBio]      = useState(user.bio      || '');
+  const [nickname, setNickname] = useState(user.nickname  || '');
+  const [bio,      setBio]      = useState(user.bio       || '');
+  const [skinType, setSkinType] = useState(user.skin_type || '');
   const [error,    setError]    = useState('');
 
   const initial = nickname?.[0]?.toUpperCase() || '?';
 
   const handleSave = () => {
     if (!nickname.trim()) { setError(t('暱稱不能為空')); return; }
-    onSave({ nickname: nickname.trim(), bio: bio.trim() });
+    const patch = { nickname: nickname.trim(), bio: bio.trim() };
+    if (skinType) patch.skin_type = skinType;
+    onSave(patch);
   };
 
   return (
@@ -511,6 +701,24 @@ function EditProfileModal({ user, onSave, onClose, t }) {
               placeholder={t('簡短介紹自己（選填）')}
             />
             <p style={ep.charCount}>{bio.length} / 120</p>
+          </div>
+
+          {/* 膚質 */}
+          <div style={ep.field}>
+            <label style={ep.label}>{t('膚質')}</label>
+            <select
+              value={skinType}
+              onChange={e => setSkinType(e.target.value)}
+              style={{ ...ep.input, cursor: 'pointer', appearance: 'auto' }}
+            >
+              <option value="">{t('尚未設定')}</option>
+              {Object.entries(SKIN_LABELS).map(([key, { label }]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <p style={{ ...ep.charCount, color: 'var(--text-tertiary)' }}>
+              {skinType ? SKIN_LABELS[skinType]?.desc : t('可隨時更改，不需重做測驗')}
+            </p>
           </div>
 
           {/* 唯讀欄位 */}

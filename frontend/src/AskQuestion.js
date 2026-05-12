@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useLang } from './hooks/useLang';
 import API_BASE from './config';
 
@@ -349,7 +349,13 @@ export default function AskQuestion() {
                 <div style={s.similarList}>
                   <p style={s.similarNote}>這些問題可能已有解答，請確認後再發問：</p>
                   {similar.map(q => (
-                    <div key={q.id} style={s.similarCard}>
+                    <Link
+                      key={q.id}
+                      to="/qa"
+                      state={{ expandId: q.id }}
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                    <div style={s.similarCard}>
                       <div style={s.similarCardTop}>
                         <span style={{ ...s.similarStatus, ...(q.solved ? s.similarSolved : s.similarUnsolved) }}>
                           {q.solved ? '已解決' : '待解決'}
@@ -364,6 +370,7 @@ export default function AskQuestion() {
                         <span style={s.similarAnswers}>{q.answers} 則回答</span>
                       </div>
                     </div>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -388,7 +395,6 @@ export default function AskQuestion() {
               <div style={s.tierList}>
                 {[
                   { color: '#6B8CBA', label: 'GLŌW AI', desc: '成分科學分析' },
-                  { color: '#C4A35A', label: '認證專家', desc: '專業背景回答' },
                   { color: '#5A9E7A', label: '社群回答', desc: '真實使用經驗' },
                 ].map(tier => (
                   <div key={tier.label} style={s.tierRow}>

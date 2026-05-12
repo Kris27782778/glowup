@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useReveal } from './hooks/useReveal';
 import { useLang } from './hooks/useLang';
 import API_BASE from './config';
+import ReportModal from './components/ReportModal';
 
 
 
@@ -31,6 +32,7 @@ export default function QA() {
   const [search,      setSearch]      = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
   const [expandedId,  setExpandedId]  = useState(null);
+  const [reportTarget, setReportTarget] = useState(null);
   useReveal();
 
   /* 頁面載入時從後端拿問題，並處理從 AskQuestion 帶回的新問題 */
@@ -44,6 +46,13 @@ export default function QA() {
     const nq = location.state?.newQuestion;
     if (nq) {
       setQuestions([nq]);
+      setTab('mine');
+      window.history.replaceState({}, '');
+    }
+
+    const expandId = location.state?.expandId;
+    if (expandId) {
+      setExpandedId(expandId);
       setTab('mine');
       window.history.replaceState({}, '');
     }
@@ -260,6 +269,7 @@ export default function QA() {
                 t={t}
                 expanded={expandedId === q.id}
                 onToggle={() => handleToggle(q.id)}
+                onReport={(id, type) => setReportTarget({ id, type })}
               />
             ))
           )}
@@ -365,12 +375,19 @@ export default function QA() {
 
         </aside>
       </div>
+      {reportTarget && (
+        <ReportModal
+          targetType={reportTarget.type}
+          targetId={reportTarget.id}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
     </div>
   );
 }
 
 /* ─── 問題卡片（含三層回答展開） ───────────────────────── */
-function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
+function QuestionCard({ question: q, idx, t, expanded, onToggle, onReport }) {
   const [answers,        setAnswers]        = useState([]);
   const [showReplyForm,  setShowReplyForm]  = useState(false);
   const [replyText,      setReplyText]      = useState('');
@@ -383,6 +400,7 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
       .then(r => r.json())
       .then(data => {
         setAnswers(data.map((a) => ({
+          id:      a.answer_id,
           initial: a.users?.nickname?.[0]?.toUpperCase() || '匿',
           color:   userColor(a.user_id),
           name:    a.users?.nickname || '匿名用戶',
@@ -473,6 +491,27 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
               style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }}>
               <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); onReport(q.id, 'question'); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '4px',
+              padding: '5px 11px',
+              border: '1px solid rgba(196,137,122,0.35)',
+              borderRadius: '999px',
+              background: 'rgba(196,137,122,0.07)',
+              color: 'var(--text-secondary)',
+              fontSize: '11px',
+              fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+              cursor: 'pointer',
+              letterSpacing: '0.02em',
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+              <line x1="4" y1="22" x2="4" y2="15"/>
+            </svg>
+            檢舉
           </button>
         </div>
       </div>
@@ -571,6 +610,28 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle }) {
                       </svg>
                       {c.likes}
                     </button>
+                    {c.id && (
+                      <button
+                        onClick={e => { e.stopPropagation(); onReport(c.id, 'answer'); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                          padding: '4px 10px',
+                          border: '1px solid rgba(196,137,122,0.35)',
+                          borderRadius: '999px',
+                          background: 'rgba(196,137,122,0.07)',
+                          color: 'var(--text-secondary)',
+                          fontSize: '11px',
+                          fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                          <line x1="4" y1="22" x2="4" y2="15"/>
+                        </svg>
+                        檢舉
+                      </button>
+                    )}
                   </div>
                   <p style={s.communityText}>{c.text}</p>
                 </div>

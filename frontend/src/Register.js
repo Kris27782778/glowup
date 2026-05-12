@@ -48,8 +48,6 @@ function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusField, setFocusField] = useState(null);
-  const [success] = useState(false);
-  const [registeredInfo] = useState(null);
 
   // 電子郵件驗證
   const [otpDigits, setOtpDigits] = useState(Array(6).fill(''));
@@ -302,62 +300,6 @@ function Register() {
     ...styles.input,
     ...(focusField === field ? styles.inputFocus : {}),
   });
-
-  /* ── 成功畫面 ── */
-  if (success && registeredInfo) {
-    return (
-      <div style={styles.page}>
-        <div style={styles.decorPanel}>
-          <div style={styles.decorCircle1} />
-          <div style={styles.decorCircle2} />
-          <div style={styles.decorCircle3} />
-          <div style={styles.decorInner}>
-            <div style={styles.decorLogoBlock}>
-              <p style={styles.decorEyebrow}>FU JEN CATHOLIC UNIVERSITY</p>
-              <p style={styles.decorLogo}>GLŌW</p>
-              <div style={styles.decorDivider} />
-              <p style={styles.decorTagline}>
-                {t('了解你擦在')}<br />{t('臉上的一切')}
-              </p>
-            </div>
-            <p style={styles.decorFooter}>清晰就是美 · CLARITY IS BEAUTY</p>
-          </div>
-        </div>
-        <div style={styles.formPanel}>
-          <div style={styles.card}>
-            <div style={successStyles.iconWrap}>
-              <div style={successStyles.iconCircle}>✓</div>
-            </div>
-            <div style={styles.cardHeader}>
-              <p style={styles.eyebrow}>REGISTRATION COMPLETE</p>
-              <h1 style={styles.title}>{t('註冊成功！')}</h1>
-              <p style={styles.subtitle}>{t('歡迎加入 GLŌW，以下是你的帳號資訊')}</p>
-            </div>
-            <div style={successStyles.infoCard}>
-              {[
-                { label: '暱稱', value: registeredInfo.nickname },
-                { label: '學號', value: registeredInfo.studentId },
-                { label: '電子郵件', value: registeredInfo.email },
-                { label: '系級', value: registeredInfo.departmentGrade },
-                { label: '膚質', value: registeredInfo.skinType },
-              ].map(({ label, value }, idx, arr) => (
-                <div key={label} style={{
-                  ...successStyles.infoRow,
-                  ...(idx === arr.length - 1 ? { borderBottom: 'none' } : {}),
-                }}>
-                  <span style={successStyles.infoLabel}>{t(label)}</span>
-                  <span style={successStyles.infoValue}>{value}</span>
-                </div>
-              ))}
-            </div>
-            <button style={styles.btn} onClick={() => navigate('/')}>
-              {t('進入 GLŌW')}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={styles.page} className="auth-layout">
@@ -1226,53 +1168,5 @@ const pwStyles = {
   },
 };
 
-const successStyles = {
-  iconWrap: {
-    display: 'flex',
-    justifyContent: 'center',
-    marginBottom: '4px',
-  },
-  iconCircle: {
-    width: '64px',
-    height: '64px',
-    borderRadius: '50%',
-    backgroundColor: 'rgba(76,175,80,0.12)',
-    border: '2px solid #4CAF50',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '28px',
-    color: '#4CAF50',
-    fontWeight: 600,
-  },
-  infoCard: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0',
-    border: `1px solid ${tokens.border}`,
-    borderRadius: '10px',
-    overflow: 'hidden',
-  },
-  infoRow: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '12px 16px',
-    borderBottom: `1px solid ${tokens.border}`,
-    gap: '12px',
-  },
-  infoLabel: {
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '12px',
-    fontWeight: 500,
-    letterSpacing: '0.06em',
-    color: tokens.accent,
-    minWidth: '60px',
-  },
-  infoValue: {
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '14px',
-    color: tokens.textPrimary,
-  },
-};
 
 export default Register;

@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useLang } from './hooks/useLang';
 import API_BASE from './config';
-import ProductPopover from './components/ProductPopover'; //
+import ProductPopover from './components/ProductPopover';
+import ReportModal from './components/ReportModal';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -27,6 +29,7 @@ const COVERAGE_OPTIONS = ['輕薄', '中等', '全遮蓋'];
 
 function ProductDB() {
   const { t } = useLang();
+  const location = useLocation();
   const [category,  setCategory]  = useState(null);
   const [skinType,  setSkinType]  = useState(null);
   const [effect,    setEffect]    = useState(null);
@@ -41,6 +44,12 @@ function ProductDB() {
   const [page,        setPage]        = useState(1);
   const [favorites,   setFavorites]   = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [reportTarget,    setReportTarget]    = useState(null); // { id, type }
+  const [hoveredCard,     setHoveredCard]     = useState(null);
+  const [sort,            setSort]            = useState('score'); // 'score' | 'newest' | 'name_asc'
+  const [showScoreInfo,   setShowScoreInfo]   = useState(false);
+  const [tourStep,        setTourStep]        = useState(null); // null | 0 | 1 | 2
+  const tourRefs = useRef([]);
   const skipNextPageEffect = useRef(false);
   const PAGE_SIZE = 10;
 
@@ -92,11 +101,19 @@ function ProductDB() {
   '霜':     '霜',
 };
 
+// 從 Dashboard 帶來的產品直接開 Popover
+useEffect(() => {
+  if (location.state?.openProduct) {
+    setSelectedProduct(location.state.openProduct);
+    window.history.replaceState({}, '');
+  }
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
 useEffect(() => {
   skipNextPageEffect.current = true;
   setPage(1);
   fetchProducts(1);
-}, [category, item, skinType, effect, finish, coverage]); // eslint-disable-line react-hooks/exhaustive-deps
+}, [category, item, skinType, effect, finish, coverage, sort]); // eslint-disable-line react-hooks/exhaustive-deps
 
 useEffect(() => {
   const timer = setTimeout(() => {
@@ -126,6 +143,7 @@ const fetchProducts = async (pageNum = page) => {
     if (finish)        params.append('finish', finish);
     if (coverage)      params.append('coverage', coverage);
     if (search.trim()) params.append('search', search.trim());
+    params.append('sort', sort);
     params.append('page', pageNum);
     params.append('limit', PAGE_SIZE);
 
@@ -177,9 +195,9 @@ const fetchProducts = async (pageNum = page) => {
       {/* 主體：篩選 + 結果 */}
       <div style={styles.body}>
         {/* 側欄篩選 */}
-        <aside style={styles.sidebar}>
+        <aside style={styles.sidebar} ref={el => (tourRefs.current[1] = el)}>
 
-          <div style={styles.filterSection}>
+          <div style={styles.filterSection} ref={el => (tourRefs.current[0] = el)}>
             <p style={styles.filterTitle}>{t('探索領域')}</p>
             <div style={styles.filterGroup}>
               {CATEGORIES.map(cat => (
@@ -293,7 +311,7 @@ const fetchProducts = async (pageNum = page) => {
         </aside>
 
         {/* 結果區 */}
-        <main style={styles.results}>
+        <main style={styles.results} ref={el => (tourRefs.current[2] = el)}>
           {hasFilter ? (
             <>
               {/* 已選標籤 */}
@@ -315,10 +333,61 @@ const fetchProducts = async (pageNum = page) => {
                 </div>
               ) : (
                 <>
-                  <p style={styles.resultCount}>
-                    {t('共')} {totalCount} {t('項結果')}
-                    {totalPages > 1 && `，第 ${page} / ${totalPages} 頁`}
-                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '4px' }}>
+                    <p style={{ ...styles.resultCount, margin: 0 }}>
+                      {t('共')} {totalCount} {t('項結果')}
+                      {totalPages > 1 && `，第 ${page} / ${totalPages} 頁`}
+                    </p>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      {[
+                        { key: 'score',    label: '推薦分數' },
+                        { key: 'newest',   label: '最新'     },
+                        { key: 'name_asc', label: '名稱 A-Z' },
+                      ].map(opt => (
+                        <button
+                          key={opt.key}
+                          onClick={() => setSort(opt.key)}
+                          style={{
+                            padding: '4px 10px', borderRadius: '999px', fontSize: '11px',
+                            fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+                            cursor: 'pointer', letterSpacing: '0.02em',
+                            border: sort === opt.key ? `1px solid ${T.accent}` : `1px solid ${T.border}`,
+                            backgroundColor: sort === opt.key ? 'rgba(196,137,122,0.1)' : 'transparent',
+                            color: sort === opt.key ? T.accent : T.textTertiary,
+                            transition: 'all 150ms',
+                          }}
+                        >{t(opt.label) || opt.label}</button>
+                      ))}
+                      <div style={{ position: 'relative' }}>
+                        <button
+                          onMouseEnter={() => setShowScoreInfo(true)}
+                          onMouseLeave={() => setShowScoreInfo(false)}
+                          style={{
+                            width: '18px', height: '18px', borderRadius: '50%', fontSize: '11px',
+                            fontFamily: '"DM Sans",sans-serif', fontWeight: 600,
+                            border: `1px solid ${T.border}`, background: 'none',
+                            color: T.textTertiary, cursor: 'default', lineHeight: 1,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}
+                        >?</button>
+                        {showScoreInfo && (
+                          <div style={{
+                            position: 'absolute', right: 0, top: '24px', zIndex: 100,
+                            width: '220px', padding: '12px 14px',
+                            background: T.bgSurface, border: `1px solid ${T.border}`,
+                            borderRadius: '10px', boxShadow: '0 4px 16px rgba(28,25,23,0.10)',
+                          }}>
+                            <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: 600, color: T.textPrimary, fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>
+                              推薦分數說明
+                            </p>
+                            <p style={{ margin: 0, fontSize: '11px', color: T.textSecondary, lineHeight: 1.65, fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>
+                              基礎分 3 分，依你選擇的<strong>膚質</strong>與<strong>功效</strong>篩選條件，累加產品中每個成分的對應評分。分數反映該產品對目前篩選條件的契合程度，未選篩選時所有產品同分。
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   <div style={styles.productGrid}>
                     {pagedProducts.map(p => {
                       const scoreNum = parseFloat(p.score);
@@ -332,10 +401,12 @@ const fetchProducts = async (pageNum = page) => {
                         onMouseEnter={e => {
                           e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)';
                           e.currentTarget.style.transform = 'translateY(-3px)';
+                          setHoveredCard(p.product_id);
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.boxShadow = 'none';
                           e.currentTarget.style.transform = 'translateY(0)';
+                          setHoveredCard(null);
                         }}
                       >
                           {/* 品牌 + 品項 */}
@@ -387,6 +458,21 @@ const fetchProducts = async (pageNum = page) => {
                               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                             </svg>
                           </button>
+                          {/* 檢舉 */}
+                          <button
+                            style={{
+                              ...styles.reportBtn,
+                              opacity: hoveredCard === p.product_id ? 1 : 0,
+                              pointerEvents: hoveredCard === p.product_id ? 'auto' : 'none',
+                            }}
+                            onClick={e => { e.stopPropagation(); setReportTarget({ id: p.product_id, type: 'product' }); }}
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                              <line x1="4" y1="22" x2="4" y2="15"/>
+                            </svg>
+                            檢舉
+                          </button>
                         </div>
                       );
                     })}
@@ -420,9 +506,81 @@ const fetchProducts = async (pageNum = page) => {
               )}
             </>
           ) : (
-            <div style={styles.emptyState}>
-              <p style={styles.emptyTitle}>{t('從左側設定篩選條件')}</p>
-              <p style={styles.emptySub}>{t('選擇探索領域、膚質、功效，找到最適合你的產品')}</p>
+            <div style={styles.onboardWrap}>
+              <h2 style={styles.onboardTitle}>{t('探索你的完美美妝')}</h2>
+
+              <button
+                onClick={() => setTourStep(0)}
+                style={{
+                  marginBottom: '8px',
+                  padding: '10px 24px',
+                  background: T.accent,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '999px',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                開始引導 →
+              </button>
+
+              <div style={styles.onboardSteps}>
+                {[
+                  {
+                    num: '01',
+                    icon: (
+                      <svg width="30" height="30" viewBox="0 0 28 28" fill="none">
+                        <rect x="2" y="6" width="11" height="16" rx="3" stroke={T.accent} strokeWidth="1.3"/>
+                        <rect x="15" y="6" width="11" height="16" rx="3" stroke={T.accent} strokeWidth="1.3" strokeDasharray="3 2"/>
+                        <path d="M7.5 12h4M7.5 15h2.5" stroke={T.accent} strokeWidth="1.2" strokeLinecap="round"/>
+                      </svg>
+                    ),
+                    title: t('選擇領域'),
+                  },
+                  {
+                    num: '02',
+                    icon: (
+                      <svg width="30" height="30" viewBox="0 0 28 28" fill="none">
+                        <line x1="4" y1="9"  x2="24" y2="9"  stroke={T.accent} strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="4" y1="14" x2="24" y2="14" stroke={T.accent} strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="4" y1="19" x2="24" y2="19" stroke={T.accent} strokeWidth="1.3" strokeLinecap="round"/>
+                        <circle cx="10" cy="9"  r="2.5" fill={T.bgBase} stroke={T.accent} strokeWidth="1.3"/>
+                        <circle cx="18" cy="14" r="2.5" fill={T.bgBase} stroke={T.accent} strokeWidth="1.3"/>
+                        <circle cx="10" cy="19" r="2.5" fill={T.bgBase} stroke={T.accent} strokeWidth="1.3"/>
+                      </svg>
+                    ),
+                    title: t('設定條件'),
+                  },
+                  {
+                    num: '03',
+                    icon: (
+                      <svg width="30" height="30" viewBox="0 0 28 28" fill="none">
+                        <rect x="3" y="5" width="22" height="14" rx="3" stroke={T.accent} strokeWidth="1.3"/>
+                        <path d="M8 11h5M8 14.5h3" stroke={T.accent} strokeWidth="1.2" strokeLinecap="round"/>
+                        <rect x="16" y="8" width="5" height="8" rx="1.5" fill={T.accent} fillOpacity="0.15" stroke={T.accent} strokeWidth="1.2"/>
+                        <path d="M9 22l10 0" stroke={T.accent} strokeWidth="1.2" strokeLinecap="round"/>
+                      </svg>
+                    ),
+                    title: t('查看推薦'),
+                  },
+                ].map((step, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <div style={styles.onboardCircle}>{step.icon}</div>
+                      <p style={styles.onboardNum}>{step.num}</p>
+                      <p style={styles.onboardCardTitle}>{step.title}</p>
+                    </div>
+                    {i < 2 && (
+                      <svg width="36" height="12" viewBox="0 0 24 10" fill="none" style={{ marginBottom: '52px', flexShrink: 0 }}>
+                        <path d="M0 5h20M16 1l4 4-4 4" stroke={T.accentLight} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </main>
@@ -435,6 +593,130 @@ const fetchProducts = async (pageNum = page) => {
           currentUser={currentUser}
         />
       )}
+      {reportTarget && (
+        <ReportModal
+          targetType={reportTarget.type}
+          targetId={reportTarget.id}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
+      {tourStep !== null && (
+        <TourOverlay
+          step={tourStep}
+          targetRefs={tourRefs}
+          onNext={() => tourStep < TOUR_STEPS.length - 1 ? setTourStep(tourStep + 1) : setTourStep(null)}
+          onSkip={() => setTourStep(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── 引導遊覽 Overlay ───────────────────────────────────────────────
+const TOUR_STEPS = [
+  { title: '選擇探索領域', desc: '先決定要找保養品還是化妝品，後續篩選條件會自動切換。' },
+  { title: '設定篩選條件', desc: '選擇膚質、功效或妝感，條件越多推薦越精準。' },
+  { title: '查看推薦清單', desc: '篩選後結果出現在這裡，依成分評分由高到低排列。' },
+];
+
+function TourOverlay({ step, targetRefs, onNext, onSkip }) {
+  const [rect, setRect] = useState(null);
+
+  useEffect(() => {
+    const el = targetRefs.current?.[step];
+    if (!el) return;
+    const update = () => setRect(el.getBoundingClientRect());
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [step, targetRefs]);
+
+  if (!rect) return null;
+
+  const PAD = 10;
+  const TW  = 230;
+  const info = TOUR_STEPS[step];
+
+  const spotLeft = rect.left - PAD;
+  const spotTop  = rect.top  - PAD;
+  const spotW    = rect.width  + PAD * 2;
+  const spotH    = rect.height + PAD * 2;
+
+  // tooltip: 右邊放得下就右邊，否則左邊
+  const spaceRight = window.innerWidth - rect.right - PAD - 20;
+  const tooltipLeft = spaceRight >= TW
+    ? rect.right + PAD + 12
+    : rect.left  - PAD - 12 - TW;
+  const tooltipTop  = Math.min(rect.top, window.innerHeight - 200);
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 1000 }}
+      onClick={onSkip}
+    >
+      {/* spotlight */}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'fixed',
+          left:   spotLeft,
+          top:    spotTop,
+          width:  spotW,
+          height: spotH,
+          borderRadius: '12px',
+          boxShadow: '0 0 0 9999px rgba(28,25,23,0.6)',
+          zIndex: 1001,
+          pointerEvents: 'none',
+          transition: 'left 350ms ease, top 350ms ease, width 350ms ease, height 350ms ease',
+        }}
+      />
+
+      {/* tooltip */}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'fixed',
+          left:    tooltipLeft,
+          top:     tooltipTop,
+          width:   TW,
+          zIndex:  1002,
+          background: '#FFFFFF',
+          borderRadius: '14px',
+          padding: '18px 20px',
+          boxShadow: '0 12px 40px rgba(28,25,23,0.14)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+          transition: 'left 350ms ease, top 350ms ease',
+        }}
+      >
+        <span style={{ fontSize: '10px', letterSpacing: '0.14em', color: T.accent }}>
+          {step + 1} / {TOUR_STEPS.length}
+        </span>
+        <p style={{ margin: 0, fontSize: '14px', fontWeight: 500, color: T.textPrimary }}>
+          {info.title}
+        </p>
+        <p style={{ margin: 0, fontSize: '12px', color: T.textSecondary, lineHeight: 1.65 }}>
+          {info.desc}
+        </p>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+          <button
+            onClick={onSkip}
+            style={{ flex: 1, padding: '8px', background: 'none', border: `1px solid ${T.border}`,
+              borderRadius: '8px', fontSize: '12px', cursor: 'pointer', color: T.textSecondary }}
+          >
+            跳過
+          </button>
+          <button
+            onClick={onNext}
+            style={{ flex: 2, padding: '8px', background: T.accent, border: 'none',
+              borderRadius: '8px', fontSize: '12px', cursor: 'pointer', color: '#fff' }}
+          >
+            {step < TOUR_STEPS.length - 1 ? '下一步 →' : '完成 ✓'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -665,6 +947,60 @@ const styles = {
     margin: 0,
     textAlign: 'center',
   },
+  onboardWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '64px 24px 56px',
+    gap: '6px',
+  },
+  onboardEyebrow: {
+    margin: 0,
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '10px',
+    fontWeight: 400,
+    letterSpacing: '0.18em',
+    color: T.accent,
+    opacity: 0.8,
+  },
+  onboardTitle: {
+    margin: '0 0 40px',
+    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '26px',
+    fontWeight: 400,
+    color: T.textPrimary,
+  },
+  onboardSteps: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  onboardCircle: {
+    width: '96px',
+    height: '96px',
+    borderRadius: '50%',
+    border: `1px solid rgba(196,137,122,0.35)`,
+    backgroundColor: T.bgSurface,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onboardNum: {
+    margin: 0,
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '11px',
+    fontWeight: 400,
+    letterSpacing: '0.16em',
+    color: T.accent,
+    opacity: 0.6,
+  },
+  onboardCardTitle: {
+    margin: 0,
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    fontWeight: 400,
+    color: T.textSecondary,
+  },
   resultCount: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '13px',
@@ -769,6 +1105,26 @@ const styles = {
     cursor: 'pointer',
     padding: 0,
     transition: 'border-color 150ms, transform 150ms',
+  },
+  reportBtn: {
+    position: 'absolute',
+    bottom: '14px',
+    left: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '4px 10px',
+    border: `1px solid rgba(196,137,122,0.4)`,
+    borderRadius: '999px',
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    backdropFilter: 'blur(6px)',
+    color: T.textSecondary,
+    fontSize: '11px',
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    cursor: 'pointer',
+    letterSpacing: '0.02em',
+    transition: 'opacity 180ms ease, background-color 150ms',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
   },
   ingredientRow: {
     display: 'flex',

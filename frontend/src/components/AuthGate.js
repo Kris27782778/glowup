@@ -260,7 +260,7 @@ function DashboardPreview() {
         </div>
         <div style={dv.main}>
           <div style={dv.tabBar}>
-            {['帖子', '問答', '收藏', '成分筆記'].map((t, i) => (
+            {['帖子', '問答', '收藏', '我的筆記'].map((t, i) => (
               <div key={t} style={{ ...dv.tab, ...(i === 0 ? dv.tabActive : {}) }}>{t}</div>
             ))}
           </div>

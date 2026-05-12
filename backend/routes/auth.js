@@ -141,8 +141,8 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      `INSERT INTO users (student_id, password, nickname, real_name, department_grade, email, skin_type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      `INSERT INTO users (student_id, password, nickname, real_name, department_grade, email, skin_type, last_verified_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING *`,
       [student_id, hashedPassword, nickname, real_name || null, department_grade, email, skin_type]
     );
 
@@ -206,6 +206,37 @@ router.post('/login', async (req, res) => {
     if (user.is_banned) {
       return res.status(403).json({ error: '此帳號已被停用，請聯絡管理員' });
     }
+
+    // 年度重驗檢查
+    const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+    const WARN_DAYS = 30;
+    const lastVerified = user.last_verified_at ? new Date(user.last_verified_at) : null;
+    if (lastVerified) {
+      const elapsed = Date.now() - lastVerified.getTime();
+      if (elapsed > YEAR_MS) {
+        return res.status(403).json({
+          error: '帳號年度驗證已到期，請重新驗證學校信箱以繼續使用',
+          code: 'REVERIFY_REQUIRED',
+          email: user.email,
+          student_id: user.student_id,
+        });
+      }
+      const daysLeft = Math.floor((YEAR_MS - elapsed) / (24 * 60 * 60 * 1000));
+      if (daysLeft <= WARN_DAYS) {
+        return res.json({
+          message: '登入成功',
+          warning: { daysLeft },
+          user: {
+            user_id: user.user_id, student_id: user.student_id,
+            nickname: user.nickname, department_grade: user.department_grade,
+            email: user.email, skin_type: user.skin_type,
+            is_admin: user.is_admin || false,
+            last_verified_at: user.last_verified_at,
+          },
+        });
+      }
+    }
+
     res.json({
       message: '登入成功',
       user: {
@@ -216,11 +247,113 @@ router.post('/login', async (req, res) => {
         email: user.email,
         skin_type: user.skin_type,
         is_admin: user.is_admin || false,
-      }
+        last_verified_at: user.last_verified_at,
+      },
     });
   } catch (err) {
     console.error('[login]', err.message);
     res.status(500).json({ error: '登入失敗' });
+  }
+});
+
+// ── 重設密碼 POST /api/auth/reset-password ───────────────────
+router.post('/reset-password', async (req, res) => {
+  const { email, new_password } = req.body;
+  if (!email || !new_password) return res.status(400).json({ error: '缺少必要欄位' });
+  if (new_password.length < 6) return res.status(400).json({ error: '密碼至少需要 6 個字元' });
+  try {
+    const verified = await pool.query(
+      `SELECT id FROM email_verifications
+       WHERE email = $1 AND verified_at IS NOT NULL
+         AND verified_at > NOW() - INTERVAL '30 minutes'
+       ORDER BY verified_at DESC LIMIT 1`,
+      [email]
+    );
+    if (verified.rows.length === 0) {
+      return res.status(400).json({ error: '驗證已過期，請重新操作' });
+    }
+    const hashed = await bcrypt.hash(new_password, 10);
+    const result = await pool.query(
+      'UPDATE users SET password = $1 WHERE email = $2 RETURNING user_id',
+      [hashed, email]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: '找不到此信箱對應的帳號' });
+    await pool.query('DELETE FROM email_verifications WHERE email = $1', [email]);
+    res.json({ message: '密碼已成功重設' });
+  } catch (err) {
+    console.error('[reset-password]', err.message);
+    res.status(500).json({ error: '重設密碼失敗' });
+  }
+});
+
+// ── 更改密碼 PATCH /api/auth/password ────────────────────────
+router.patch('/password', async (req, res) => {
+  const { user_id, current_password, new_password } = req.body;
+  if (!user_id || !current_password || !new_password) return res.status(400).json({ error: '缺少必要欄位' });
+  if (new_password.length < 6) return res.status(400).json({ error: '新密碼至少需要 6 個字元' });
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [user_id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: '找不到使用者' });
+    const match = await bcrypt.compare(current_password, result.rows[0].password);
+    if (!match) return res.status(401).json({ error: '目前密碼輸入錯誤' });
+    const hashed = await bcrypt.hash(new_password, 10);
+    await pool.query('UPDATE users SET password = $1 WHERE user_id = $2', [hashed, user_id]);
+    res.json({ message: '密碼已更新' });
+  } catch (err) {
+    console.error('[change-password]', err.message);
+    res.status(500).json({ error: '更新密碼失敗' });
+  }
+});
+
+// ── 年度重驗 POST /api/auth/reverify ─────────────────────────────
+router.post('/reverify', async (req, res) => {
+  const { student_id, email, otp } = req.body;
+  if (!student_id || !email || !otp) {
+    return res.status(400).json({ error: '缺少必要欄位' });
+  }
+
+  const failCount = otpAttemptMap.get(email) || 0;
+  if (failCount >= MAX_OTP_ATTEMPTS) {
+    return res.status(429).json({ error: '驗證失敗次數過多，請重新發送驗證碼' });
+  }
+
+  try {
+    const record = await pool.query(
+      `SELECT * FROM email_verifications
+       WHERE email = $1 AND verified_at IS NULL AND expires_at > NOW()
+       ORDER BY created_at DESC LIMIT 1`,
+      [email]
+    );
+    if (record.rows.length === 0) {
+      return res.status(400).json({ error: '驗證碼不存在或已過期，請重新發送' });
+    }
+    if (record.rows[0].otp !== otp) {
+      const newCount = failCount + 1;
+      otpAttemptMap.set(email, newCount);
+      const remaining = MAX_OTP_ATTEMPTS - newCount;
+      return res.status(400).json({ error: `驗證碼錯誤，還有 ${remaining} 次機會` });
+    }
+
+    otpAttemptMap.delete(email);
+    await pool.query('UPDATE email_verifications SET verified_at = NOW() WHERE id = $1', [record.rows[0].id]);
+    await pool.query('UPDATE users SET last_verified_at = NOW() WHERE student_id = $1', [student_id]);
+    await pool.query('DELETE FROM email_verifications WHERE email = $1', [email]);
+
+    const userResult = await pool.query('SELECT * FROM users WHERE student_id = $1', [student_id]);
+    const user = userResult.rows[0];
+    res.json({
+      message: '驗證成功',
+      user: {
+        user_id: user.user_id, student_id: user.student_id,
+        nickname: user.nickname, department_grade: user.department_grade,
+        email: user.email, skin_type: user.skin_type,
+        is_admin: user.is_admin || false,
+        last_verified_at: user.last_verified_at,
+      },
+    });
+  } catch (err) {
+    console.error('[reverify]', err.message);
+    res.status(500).json({ error: '驗證失敗' });
   }
 });
 

@@ -1103,6 +1103,7 @@ function ReportsTab() {
             <tbody>
               {reports.map(r => {
                 const st = REPORT_STATUS[r.status] || REPORT_STATUS.pending;
+                const preview = r.preview_text || `#${r.target_id}`;
                 return (
                   <tr key={r.report_id}
                     style={{ borderBottom:`1px solid ${C.border}`, transition:'background 150ms' }}
@@ -1110,10 +1111,19 @@ function ReportsTab() {
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
                     <td style={tdStyle}><span style={{ ...tagStyle, color:C.accentText, background:C.accentDim }}>{r.target_type}</span></td>
-                    <td style={{ ...tdStyle, maxWidth:'160px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:C.text }}>
-                      #{r.target_id}
+                    <td style={{ ...tdStyle, maxWidth:'220px', color:C.text }}>
+                      <span title={preview} style={{ display:'block', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {preview}
+                      </span>
                     </td>
-                    <td style={{ ...tdStyle, maxWidth:'140px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.reason}</td>
+                    <td style={{ ...tdStyle, maxWidth:'160px' }}>
+                      <div>{r.reason}</div>
+                      {r.description && (
+                        <div style={{ fontSize:'11px', color:C.textDim, marginTop:'2px', wordBreak:'break-all' }}>
+                          {r.description}
+                        </div>
+                      )}
+                    </td>
                     <td style={tdStyle}>{r.reporter_name || '匿名'}</td>
                     <td style={tdStyle}><span style={{ ...tagStyle, color:st.color, background:`${st.color}18` }}>{st.label}</span></td>
                     <td style={tdStyle}>{fmtDate(r.created_at)}</td>
@@ -1141,23 +1151,55 @@ function ReportsTab() {
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)',
           display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
           <div style={{ background:C.bgPanel, border:`1px solid ${C.border}`, borderRadius:'14px',
-            padding:'28px 32px', width:'380px', display:'flex', flexDirection:'column', gap:'16px' }}>
+            padding:'28px 32px', width:'440px', display:'flex', flexDirection:'column', gap:'16px' }}>
             <h3 style={{ margin:0, fontSize:'16px', color:C.text }}>
               {resolving.action === 'resolve' ? '確認成立檢舉' : '關閉檢舉（不成立）'}
             </h3>
+            {resolving.action === 'resolve' && (
+              <p style={{ margin:0, fontSize:'12px', padding:'8px 12px', borderRadius:'6px',
+                background:'rgba(185,112,112,0.1)', color:'#B97070', lineHeight:1.6 }}>
+                ⚠️ 成立後將自動刪除被檢舉的
+                {resolving.report.target_type === 'question' ? '問題及其所有回覆' : '社群回覆'}，此操作不可還原。
+              </p>
+            )}
+
+            {/* 案件摘要 */}
+            <div style={{ background:C.bgCard, border:`1px solid ${C.border}`, borderRadius:'8px', padding:'12px 14px',
+              display:'flex', flexDirection:'column', gap:'6px' }}>
+              <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+                <span style={{ ...tagStyle, color:C.accentText, background:C.accentDim, flexShrink:0 }}>
+                  {resolving.report.target_type}
+                </span>
+                <span style={{ fontSize:'12px', color:C.textDim }}>原因：{resolving.report.reason}</span>
+                <span style={{ fontSize:'12px', color:C.textDim, marginLeft:'auto' }}>
+                  by {resolving.report.reporter_name || '匿名'}
+                </span>
+              </div>
+              {resolving.report.preview_text && (
+                <p style={{ margin:0, fontSize:'13px', color:C.text, lineHeight:1.6,
+                  borderTop:`1px solid ${C.border}`, paddingTop:'8px', wordBreak:'break-all' }}>
+                  {resolving.report.preview_text}
+                </p>
+              )}
+              {resolving.report.description && (
+                <p style={{ margin:0, fontSize:'12px', color:C.textDim, fontStyle:'italic', wordBreak:'break-all' }}>
+                  補充：{resolving.report.description}
+                </p>
+              )}
+            </div>
+
             <textarea
               value={note} onChange={e => setNote(e.target.value)}
-              placeholder="處理備註（必填）"
-              style={{ width:'100%', boxSizing:'border-box', padding:'9px 12px', minHeight:'80px',
+              placeholder="處理備註（選填）"
+              style={{ width:'100%', boxSizing:'border-box', padding:'9px 12px', minHeight:'70px',
                 background:C.bgCard, border:`1px solid ${C.border}`, borderRadius:'8px',
                 color:C.text, fontSize:'13px', fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
                 outline:'none', resize:'vertical' }}
             />
             <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
               <button onClick={() => setResolving(null)} style={btnStyle('ghost')}>取消</button>
-              <button onClick={handleAction} disabled={!note.trim()}
-                style={{ ...btnStyle(resolving.action === 'resolve' ? 'danger' : 'accent'),
-                  opacity: note.trim() ? 1 : 0.5 }}>
+              <button onClick={handleAction}
+                style={btnStyle(resolving.action === 'resolve' ? 'danger' : 'accent')}>
                 確認
               </button>
             </div>

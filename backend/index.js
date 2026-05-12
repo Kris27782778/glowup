@@ -22,7 +22,8 @@ const adminRoutes     = require('./routes/admin');
 const questionRoutes  = require('./routes/questions');
 const answerRoutes       = require('./routes/answers');
 const notificationRoutes = require('./routes/notifications');
-const reviewRoutes = require('./routes/reviews');  //
+const reviewRoutes = require('./routes/reviews');
+const reportRoutes = require('./routes/reports');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
@@ -37,7 +38,8 @@ app.use('/api/admin',     adminRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/questions/:id/answers', answerRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/reviews', reviewRoutes);  // 
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/reports', reportRoutes);
 // 測試路由
 app.get('/', (req, res) => {
   res.json({ message: 'Glow Up 後端啟動成功 🌸' });

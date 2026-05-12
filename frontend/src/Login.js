@@ -1,6 +1,6 @@
 import API_BASE from "./config";
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useLang } from './hooks/useLang';
 
 const T = {
@@ -33,7 +33,9 @@ function Login() {
   // 頁面載入時的 splash：'in' → 'exit' → 'done'
   const [splash, setSplash] = useState('in');
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLang();
+  const resetSuccess = location.state?.resetSuccess || false;
 
   useEffect(() => {
     const t1 = setTimeout(() => setSplash('exit'), 2000);
@@ -53,8 +55,9 @@ function Login() {
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        // 由 App.js 的 GlobalSplash 負責播放動畫，這裡直接跳轉
         navigate('/', { state: { showSplash: true } });
+      } else if (res.status === 403 && data.code === 'REVERIFY_REQUIRED') {
+        navigate('/reverify', { state: { student_id: studentId, email: data.email } });
       } else {
         setError(data.error || '登入失敗，請確認帳號密碼');
       }
@@ -170,6 +173,13 @@ function Login() {
             </div>
           </div>
 
+          {/* 重設密碼成功提示 */}
+          {resetSuccess && (
+            <div style={{ backgroundColor: 'rgba(123,175,123,0.1)', border: '1px solid rgba(123,175,123,0.3)', borderRadius: '8px', padding: '10px 14px' }}>
+              <span style={{ fontFamily: '"DM Sans","Noto Sans TC",sans-serif', fontSize: '13px', color: '#5A9E6A' }}>密碼已重設成功，請重新登入</span>
+            </div>
+          )}
+
           {/* 錯誤 */}
           {error && (
             <div style={styles.errorBox}>
@@ -177,7 +187,7 @@ function Login() {
             </div>
           )}
 
-          {/* 登入按鈕 */}
+          {/* 登入按鈕 + 忘記密碼 */}
           <button
             style={{ ...styles.loginBtn, ...(loading ? styles.loginBtnDisabled : {}) }}
             onClick={handleLogin}
@@ -185,6 +195,11 @@ function Login() {
           >
             {loading ? t('登入中…') : t('登入')}
           </button>
+          <div style={{ textAlign: 'right' }}>
+            <Link to="/forgot-password" style={{ fontFamily: '"DM Sans","Noto Sans TC",sans-serif', fontSize: '13px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
+              {t('忘記密碼？') || '忘記密碼？'}
+            </Link>
+          </div>
 
           {/* 分隔 */}
           <div style={styles.divider}>

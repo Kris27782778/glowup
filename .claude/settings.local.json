@@ -33,7 +33,28 @@
       "Bash(echo \"PID: $!\")",
       "Bash(npx react-scripts *)",
       "Bash(kill 34670 34667)",
-      "Bash(BROWSER=none /Users/xuan/.nvm/versions/node/v20.20.1/bin/node /Users/xuan/.nvm/versions/node/v20.20.1/bin/npx react-scripts start)"
+      "Bash(BROWSER=none /Users/xuan/.nvm/versions/node/v20.20.1/bin/node /Users/xuan/.nvm/versions/node/v20.20.1/bin/npx react-scripts start)",
+      "Bash(git fetch *)",
+      "Bash(cat package.json)",
+      "Bash(cat frontend/package.json)",
+      "Bash(npm run *)",
+      "Bash(lsof -ti:5001)",
+      "Bash(kill -9 697 23203)",
+      "Bash(curl -s http://localhost:5001/)",
+      "Bash(node test-sprint1.mjs)",
+      "Bash(curl -s \"http://localhost:5001/api/products?category=保養品\")",
+      "Bash(node -e \"require\\('pg'\\)\")",
+      "Bash(xargs kill *)",
+      "Bash(lsof -ti:3000)",
+      "Bash(echo \"Backend PID: $!\")",
+      "Bash(echo \"Frontend PID: $!\")",
+      "Bash(curl -s http://localhost:5001/api/products?limit=1)",
+      "Bash(curl -s 'http://localhost:5001/api/products?limit=1')",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(kill -9 24459 24766)",
+      "Bash(curl -s \"http://localhost:5001/api/products?category=化妝品&sub_category=粉底液&coverage=輕薄\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); console.log\\('總筆數:', j.data?.length, '第一筆:', j.data?.[0]?.name, j.data?.[0]?.coverage\\)\")",
+      "Bash(curl -s \"http://localhost:5001/api/products?category=%E5%8C%96%E5%A6%9D%E5%93%81&sub_category=%E7%B2%89%E5%BA%95%E6%B6%B2&coverage=%E8%BC%95%E8%96%84\")"
     ]
   }
 }

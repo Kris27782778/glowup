@@ -283,17 +283,21 @@ router.patch('/ingredients/:id', async (req, res) => {
 // ── 檢舉列表 GET /api/admin/reports ──────────────────────────────
 router.get('/reports', async (req, res) => {
   const { status = '' } = req.query;
+  const baseSql = `
+    SELECT r.*, u.nickname AS reporter_name,
+      COALESCE(q.title, pr.name, LEFT(a.content, 120)) AS preview_text
+    FROM reports r
+    LEFT JOIN users u    ON u.user_id    = r.reporter_id
+    LEFT JOIN questions q ON r.target_type = 'question' AND q.question_id = r.target_id
+    LEFT JOIN products pr ON r.target_type = 'product'  AND pr.product_id  = r.target_id
+    LEFT JOIN answers  a  ON r.target_type = 'answer'   AND a.answer_id    = r.target_id
+  `;
   try {
-    let sql = `SELECT r.*, u.nickname AS reporter_name
-               FROM reports r LEFT JOIN users u ON u.user_id = r.reporter_id
-               ORDER BY r.created_at DESC LIMIT 50`;
     const params = [];
-    if (status) {
-      sql = `SELECT r.*, u.nickname AS reporter_name
-             FROM reports r LEFT JOIN users u ON u.user_id = r.reporter_id
-             WHERE r.status = $1 ORDER BY r.created_at DESC LIMIT 50`;
-      params.push(status);
-    }
+    const sql = status
+      ? baseSql + ` WHERE r.status = $1 ORDER BY r.created_at DESC LIMIT 50`
+      : baseSql + ` ORDER BY r.created_at DESC LIMIT 50`;
+    if (status) params.push(status);
     const result = await pool.query(sql, params);
     res.json(result.rows);
   } catch (err) {
@@ -307,12 +311,27 @@ router.get('/reports', async (req, res) => {
 router.patch('/reports/:id/resolve', async (req, res) => {
   const { admin_note } = req.body;
   try {
+    const { rows } = await pool.query(
+      `SELECT target_type, target_id FROM reports WHERE report_id = $1`,
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: '找不到案件' });
+
+    const { target_type, target_id } = rows[0];
+    if (target_type === 'question') {
+      await pool.query(`DELETE FROM answers   WHERE question_id = $1`, [target_id]);
+      await pool.query(`DELETE FROM questions WHERE question_id = $1`, [target_id]);
+    } else if (target_type === 'answer') {
+      await pool.query(`DELETE FROM answers WHERE answer_id = $1`, [target_id]);
+    }
+
     await pool.query(
       `UPDATE reports SET status = 'resolved', admin_note = $1, resolved_at = NOW() WHERE report_id = $2`,
       [admin_note || null, req.params.id]
     );
     res.json({ message: '已處理' });
   } catch (err) {
+    console.error('[resolve report]', err.message);
     res.status(500).json({ error: '更新失敗' });
   }
 });

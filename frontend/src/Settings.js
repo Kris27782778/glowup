@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from './hooks/useSettings';
+import API_BASE from './config';
 
 const LANG = {
   'zh-TW': {
@@ -11,6 +13,11 @@ const LANG = {
     language: '語言',
     langLabel: '介面語言',
     langs: { 'zh-TW': '繁體中文', en: 'English' },
+    security: '帳號安全',
+    changePw: '更改密碼',
+    currentPw: '目前密碼',
+    newPw: '新密碼',
+    confirmPw: '確認新密碼',
     account: '帳號',
     logout: '登出',
     version: '版本',
@@ -24,6 +31,11 @@ const LANG = {
     language: 'Language',
     langLabel: 'Interface Language',
     langs: { 'zh-TW': 'Traditional Chinese', en: 'English' },
+    security: 'Account Security',
+    changePw: 'Change Password',
+    currentPw: 'Current Password',
+    newPw: 'New Password',
+    confirmPw: 'Confirm New Password',
     account: 'Account',
     logout: 'Sign Out',
     version: 'Version',
@@ -35,9 +47,41 @@ function Settings() {
   const { settings, update } = useSettings();
   const t = LANG[settings.language] || LANG['zh-TW'];
 
+  const [showPwForm, setShowPwForm] = useState(false);
+  const [currentPw,  setCurrentPw]  = useState('');
+  const [newPw,      setNewPw]      = useState('');
+  const [confirmPw,  setConfirmPw]  = useState('');
+  const [pwLoading,  setPwLoading]  = useState(false);
+  const [pwError,    setPwError]    = useState('');
+  const [pwSuccess,  setPwSuccess]  = useState(false);
+
   const handleLogout = () => {
     localStorage.removeItem('user');
     navigate('/');
+  };
+
+  const handleChangePw = async () => {
+    if (!currentPw || !newPw || !confirmPw) { setPwError('請填寫所有欄位'); return; }
+    if (newPw.length < 6) { setPwError('新密碼至少需要 6 個字元'); return; }
+    if (newPw !== confirmPw) { setPwError('兩次密碼輸入不一致'); return; }
+    const user = (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
+    if (!user?.user_id) { setPwError('請先登入'); return; }
+    setPwLoading(true); setPwError(''); setPwSuccess(false);
+    try {
+      const res  = await fetch(`${API_BASE}/api/auth/password`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.user_id, current_password: currentPw, new_password: newPw }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPwSuccess(true);
+        setCurrentPw(''); setNewPw(''); setConfirmPw('');
+        setTimeout(() => { setPwSuccess(false); setShowPwForm(false); }, 2000);
+      } else {
+        setPwError(data.error || '更新失敗');
+      }
+    } catch { setPwError('無法連接伺服器'); }
+    finally { setPwLoading(false); }
   };
 
   return (
@@ -93,6 +137,51 @@ function Settings() {
               </button>
             ))}
           </div>
+        </Section>
+
+        {/* ── 帳號安全 ── */}
+        <Section label={t.security}>
+          <button
+            style={{ ...s.rowToggle, ...(showPwForm ? s.rowToggleActive : {}) }}
+            onClick={() => { setShowPwForm(v => !v); setPwError(''); setPwSuccess(false); }}
+          >
+            <span>{t.changePw}</span>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ transform: showPwForm ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }}>
+              <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
+          {showPwForm && (
+            <div style={s.pwForm}>
+              {[
+                { label: t.currentPw, val: currentPw, set: setCurrentPw, key: 'cur' },
+                { label: t.newPw,     val: newPw,      set: setNewPw,     key: 'new' },
+                { label: t.confirmPw, val: confirmPw,  set: setConfirmPw, key: 'con' },
+              ].map(({ label, val, set, key }) => (
+                <div key={key} style={s.pwField}>
+                  <label style={s.pwLabel}>{label}</label>
+                  <input
+                    type="password"
+                    value={val}
+                    onChange={e => { set(e.target.value); setPwError(''); setPwSuccess(false); }}
+                    style={s.pwInput}
+                    autoComplete={key === 'cur' ? 'current-password' : 'new-password'}
+                  />
+                </div>
+              ))}
+
+              {pwError   && <p style={s.pwMsg}>{pwError}</p>}
+              {pwSuccess  && <p style={{ ...s.pwMsg, color: '#5A9E6A' }}>密碼已更新</p>}
+
+              <button
+                style={{ ...s.pwSaveBtn, ...(pwLoading ? { opacity: 0.5, cursor: 'not-allowed' } : {}) }}
+                onClick={handleChangePw}
+                disabled={pwLoading}
+              >
+                {pwLoading ? '更新中…' : t('儲存') || '儲存新密碼'}
+              </button>
+            </div>
+          )}
         </Section>
 
         {/* ── 帳號 ── */}
@@ -247,6 +336,75 @@ const s = {
     borderColor: 'var(--accent)',
     color: '#FFFFFF',
     fontWeight: 500,
+  },
+
+  /* 改密碼 toggle */
+  rowToggle: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    height: '40px',
+    backgroundColor: 'transparent',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '0 14px',
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '13px',
+    color: 'var(--text-secondary)',
+    cursor: 'pointer',
+    transition: 'border-color 150ms',
+  },
+  rowToggleActive: {
+    borderColor: 'var(--accent)',
+    color: 'var(--accent)',
+  },
+  pwForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+    paddingTop: '4px',
+    borderTop: '1px solid var(--border)',
+    marginTop: '4px',
+  },
+  pwField: { display: 'flex', flexDirection: 'column', gap: '6px' },
+  pwLabel: {
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '12px',
+    fontWeight: 500,
+    color: 'var(--text-secondary)',
+  },
+  pwInput: {
+    height: '40px',
+    padding: '0 12px',
+    borderRadius: '8px',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-subtle)',
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '14px',
+    color: 'var(--text-primary)',
+    outline: 'none',
+    transition: 'border-color 150ms',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  pwMsg: {
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '12px',
+    color: '#C4614A',
+    margin: 0,
+  },
+  pwSaveBtn: {
+    height: '38px',
+    backgroundColor: 'var(--bg-inverse)',
+    color: 'var(--text-inverse)',
+    border: 'none',
+    borderRadius: '8px',
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '13px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'opacity 150ms',
   },
 
   /* Danger */

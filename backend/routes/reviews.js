@@ -30,6 +30,27 @@ router.get('/:product_id', async (req, res) => {
   res.json(data);
 });
 
+// DELETE /api/reviews/:review_id  刪除評論
+router.delete('/:review_id', async (req, res) => {
+  const { review_id } = req.params;
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ error: '缺少 user_id' });
+
+  // 確認是本人的評論才能刪
+  const { data: existing } = await supabase
+    .from('reviews')
+    .select('user_id')
+    .eq('review_id', review_id)
+    .single();
+
+  if (!existing) return res.status(404).json({ error: '評論不存在' });
+  if (existing.user_id !== parseInt(user_id)) return res.status(403).json({ error: '無權限刪除' });
+
+  const { error } = await supabase.from('reviews').delete().eq('review_id', review_id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: '已刪除' });
+});
+
 // POST /api/reviews  新增評論
 router.post('/', async (req, res) => {
   const { product_id, user_id, rating, content } = req.body;

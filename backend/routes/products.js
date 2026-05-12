@@ -23,7 +23,7 @@ const effectMap = {
 };
 
 router.get('/', async (req, res) => {
-  const { category, sub_category, skin_type, effect, finish, coverage, search, page = 1, limit = 24 } = req.query;
+  const { category, sub_category, skin_type, effect, finish, coverage, search, sort = 'score', page = 1, limit = 24 } = req.query;
   const pageNum = Math.max(1, parseInt(page));
   const pageSize = Math.min(48, Math.max(1, parseInt(limit)));
   const from = (pageNum - 1) * pageSize;
@@ -74,7 +74,13 @@ router.get('/', async (req, res) => {
       ? scored.filter(p => p.score >= 3)
       : scored;
 
-    filtered.sort((a, b) => b.score - a.score);
+    if (sort === 'name_asc') {
+      filtered.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'));
+    } else if (sort === 'newest') {
+      filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } else {
+      filtered.sort((a, b) => b.score - a.score);
+    }
 
     const paged = filtered.slice(from, to + 1);
 
