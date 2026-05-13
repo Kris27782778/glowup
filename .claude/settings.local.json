@@ -54,7 +54,9 @@
       "Bash(kill -9 24459 24766)",
       "Bash(curl -s \"http://localhost:5001/api/products?category=化妝品&sub_category=粉底液&coverage=輕薄\")",
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); console.log\\('總筆數:', j.data?.length, '第一筆:', j.data?.[0]?.name, j.data?.[0]?.coverage\\)\")",
-      "Bash(curl -s \"http://localhost:5001/api/products?category=%E5%8C%96%E5%A6%9D%E5%93%81&sub_category=%E7%B2%89%E5%BA%95%E6%B6%B2&coverage=%E8%BC%95%E8%96%84\")"
+      "Bash(curl -s \"http://localhost:5001/api/products?category=%E5%8C%96%E5%A6%9D%E5%93%81&sub_category=%E7%B2%89%E5%BA%95%E6%B6%B2&coverage=%E8%BC%95%E8%96%84\")",
+      "Bash(GIT_EDITOR=true git rebase --continue)",
+      "Bash(GIT_EDITOR=cat git rebase --continue)"
     ]
   }
 }

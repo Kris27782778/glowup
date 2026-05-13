@@ -4,6 +4,7 @@ import { useLang } from './hooks/useLang';
 import API_BASE from './config';
 import ProductPopover from './components/ProductPopover';
 import ReportModal from './components/ReportModal';
+import CompareModal from './components/CompareModal';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -50,6 +51,14 @@ function ProductDB() {
   const [showScoreInfo,   setShowScoreInfo]   = useState(false);
   const [tourStep,        setTourStep]        = useState(null); // null | 0 | 1 | 2
   const [isCompact,       setIsCompact]       = useState(false);
+  const [compareList,     setCompareList]     = useState([]);
+  const [showCompare,     setShowCompare]     = useState(false);
+  const [compareToast,    setCompareToast]    = useState(null);
+  const [showCardHint,    setShowCardHint]    = useState(false);
+  const [cardHintFading,  setCardHintFading]  = useState(false);
+  const hintTimerRef = useRef(null);
+  const [compareFabOpen,  setCompareFabOpen]  = useState(false);
+  const compareFabRef = useRef(null);
   const tourRefs = useRef([]);
   const skipNextPageEffect = useRef(false);
   const PAGE_SIZE = 10;
@@ -158,8 +167,18 @@ const fetchProducts = async (pageNum = page) => {
 
     const res  = await fetch(`${API_BASE}/api/products?${params}`);
     const data = await res.json();
-    setProducts(Array.isArray(data?.data) ? data.data : []);
+    const newProducts = Array.isArray(data?.data) ? data.data : [];
+    setProducts(newProducts);
     setTotalCount(typeof data?.total === 'number' ? data.total : 0);
+    if (newProducts.length > 0) {
+      clearTimeout(hintTimerRef.current);
+      setCardHintFading(false);
+      setShowCardHint(true);
+      hintTimerRef.current = setTimeout(() => {
+        setCardHintFading(true);
+        setTimeout(() => setShowCardHint(false), 450);
+      }, 3000);
+    }
   } catch (err) {
     console.error('撈取產品失敗', err);
     setProducts([]);
@@ -168,6 +187,40 @@ const fetchProducts = async (pageNum = page) => {
     setLoading(false);
   }
 };
+
+  const showToast = (msg) => {
+    setCompareToast(msg);
+    setTimeout(() => setCompareToast(null), 2500);
+  };
+
+  const toggleCompare = (e, product) => {
+    e.stopPropagation();
+    if (compareList.some(cp => cp.product_id === product.product_id)) {
+      setCompareList(prev => prev.filter(cp => cp.product_id !== product.product_id));
+      return;
+    }
+    if (compareList.length > 0 && compareList[0].category !== product.category) {
+      showToast('只能比較同類別產品');
+      return;
+    }
+    if (compareList.length >= 3) {
+      showToast('最多比較 3 件產品');
+      return;
+    }
+    setCompareList(prev => [...prev, product]);
+  };
+
+  // 點擊 FAB 外部時關閉 popover
+  useEffect(() => {
+    if (!compareFabOpen) return;
+    const handler = e => {
+      if (compareFabRef.current && !compareFabRef.current.contains(e.target)) {
+        setCompareFabOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [compareFabOpen]);
 
   const clearAll = () => {
     setCategory(null); setSkinType(null); setEffect(null); setItem(null);
@@ -416,7 +469,7 @@ const fetchProducts = async (pageNum = page) => {
                     </div>
                   </div>
                   <div style={styles.productGrid}>
-                    {pagedProducts.map(p => {
+                    {pagedProducts.map((p, idx) => {
                       const scoreNum = parseFloat(p.score);
                       const scorePct = isNaN(scoreNum) ? 0 : Math.min(100, Math.max(0, scoreNum * 10));
                       const scoreColor = scorePct >= 80 ? '#7BAF7B' : scorePct >= 50 ? T.accent : T.textTertiary;
@@ -474,6 +527,109 @@ const fetchProducts = async (pageNum = page) => {
                               ))}
                             </div>
                           )}
+
+                          {/* 第一張卡片操作導覽 overlay */}
+                          {idx === 0 && showCardHint && (
+                            <div
+                              onClick={e => {
+                                e.stopPropagation();
+                                clearTimeout(hintTimerRef.current);
+                                setShowCardHint(false);
+                                setCardHintFading(false);
+                              }}
+                              style={{
+                                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                                backgroundColor: 'rgba(28,25,23,0.72)',
+                                borderRadius: '16px',
+                                zIndex: 20,
+                                cursor: 'pointer',
+                                opacity: cardHintFading ? 0 : 1,
+                                transition: 'opacity 450ms ease',
+                              }}
+                            >
+                              {/* 中央：點擊看詳情 */}
+                              <div style={{
+                                position: 'absolute',
+                                top: '50%', left: '50%',
+                                transform: 'translate(-50%, -65%)',
+                                textAlign: 'center',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                              }}>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(247,244,242,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                                </svg>
+                                <p style={{ margin: 0, fontSize: '12px', fontWeight: 500, color: 'rgba(247,244,242,0.9)', fontFamily: '"DM Sans","Noto Sans TC",sans-serif', lineHeight: 1.6 }}>
+                                  點擊卡片<br/>查看成分與評論
+                                </p>
+                              </div>
+
+                              {/* 點任意處關閉 */}
+                              <p style={{
+                                position: 'absolute', top: '50%', left: '50%',
+                                transform: 'translate(-50%, 60%)',
+                                margin: 0, whiteSpace: 'nowrap',
+                                fontSize: '10px', color: 'rgba(247,244,242,0.28)',
+                                fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+                                letterSpacing: '0.06em',
+                              }}>點任意處關閉</p>
+
+                              {/* 左下：檢舉 */}
+                              <div style={{
+                                position: 'absolute', bottom: '50px', left: '14px',
+                                display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '3px',
+                              }}>
+                                <span style={{ fontSize: '10px', color: 'rgba(196,137,122,1)', fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>hover 可檢舉</span>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(196,137,122,1)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+                                </svg>
+                              </div>
+
+                              {/* 右下：比較 */}
+                              <div style={{
+                                position: 'absolute', bottom: '50px', right: '56px',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
+                              }}>
+                                <span style={{ fontSize: '10px', color: 'rgba(196,137,122,1)', fontFamily: '"DM Sans","Noto Sans TC",sans-serif', whiteSpace: 'nowrap' }}>比較</span>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(196,137,122,1)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="2" y="3" width="8" height="18" rx="1.5"/><rect x="14" y="3" width="8" height="18" rx="1.5"/>
+                                </svg>
+                              </div>
+
+                              {/* 右下：收藏 */}
+                              <div style={{
+                                position: 'absolute', bottom: '50px', right: '14px',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
+                              }}>
+                                <span style={{ fontSize: '10px', color: 'rgba(196,137,122,1)', fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>收藏</span>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(196,137,122,1)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 比較按鈕 */}
+                          {(() => {
+                            const inCompare = compareList.some(cp => cp.product_id === p.product_id);
+                            return (
+                              <button
+                                style={{
+                                  ...styles.compareBtn,
+                                  backgroundColor: inCompare ? T.accent : T.bgSurface,
+                                  borderColor: inCompare ? T.accent : T.border,
+                                }}
+                                onClick={e => toggleCompare(e, p)}
+                                title={inCompare ? '移出比較' : '加入比較'}
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                                  stroke={inCompare ? '#fff' : T.accent}
+                                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="2" y="3" width="8" height="18" rx="1.5"/>
+                                  <rect x="14" y="3" width="8" height="18" rx="1.5"/>
+                                </svg>
+                              </button>
+                            );
+                          })()}
 
                           {/* 收藏愛心 */}
                           <button
@@ -623,6 +779,149 @@ const fetchProducts = async (pageNum = page) => {
           )}
         </main>
       </div>
+      {/* 比較 FAB */}
+      {compareList.length > 0 && (
+        <div ref={compareFabRef} style={{ position: 'fixed', bottom: '28px', right: '28px', zIndex: 900 }}>
+
+          {/* Popover */}
+          {compareFabOpen && compareList.length > 0 && (
+            <div style={{
+              position: 'absolute', bottom: '64px', right: 0,
+              width: '240px',
+              backgroundColor: T.bgInverse,
+              borderRadius: '16px',
+              padding: '18px 16px 14px',
+              boxShadow: '0 8px 32px rgba(28,25,23,0.28)',
+              border: '1px solid rgba(247,244,242,0.08)',
+            }}>
+              <p style={{
+                margin: '0 0 12px',
+                fontSize: '10px', fontWeight: 500,
+                letterSpacing: '0.14em', color: 'rgba(247,244,242,0.4)',
+                fontFamily: '"DM Sans",sans-serif', textTransform: 'uppercase',
+              }}>比較清單</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+                {compareList.map(cp => (
+                  <div key={cp.product_id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
+                  }}>
+                    <span style={{
+                      fontSize: '13px', color: T.textInverse,
+                      fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      flex: 1,
+                    }}>{cp.name}</span>
+                    <button
+                      onClick={() => setCompareList(prev => prev.filter(x => x.product_id !== cp.product_id))}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'rgba(247,244,242,0.35)', fontSize: '13px',
+                        padding: '2px', lineHeight: 1, flexShrink: 0,
+                      }}
+                    >✕</button>
+                  </div>
+                ))}
+                {compareList.length < 3 && (
+                  <p style={{
+                    margin: 0, fontSize: '12px',
+                    color: 'rgba(247,244,242,0.25)',
+                    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+                  }}>
+                    + 再加 {3 - compareList.length} 件
+                  </p>
+                )}
+              </div>
+
+              <button
+                onClick={() => { setShowCompare(true); setCompareFabOpen(false); }}
+                disabled={compareList.length < 2}
+                style={{
+                  width: '100%', padding: '10px',
+                  backgroundColor: compareList.length >= 2 ? T.accent : 'rgba(247,244,242,0.08)',
+                  border: 'none', borderRadius: '10px',
+                  fontSize: '13px', fontWeight: 500,
+                  color: compareList.length >= 2 ? '#fff' : 'rgba(247,244,242,0.25)',
+                  cursor: compareList.length >= 2 ? 'pointer' : 'not-allowed',
+                  fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+                  transition: 'background-color 150ms',
+                  marginBottom: '8px',
+                }}
+              >開始比較 →</button>
+
+              <button
+                onClick={() => { setCompareList([]); setCompareFabOpen(false); }}
+                style={{
+                  width: '100%', background: 'none', border: 'none',
+                  cursor: 'pointer', fontSize: '12px',
+                  color: 'rgba(247,244,242,0.3)',
+                  fontFamily: '"DM Sans",sans-serif',
+                  textDecoration: 'underline', textUnderlineOffset: '3px',
+                }}
+              >清除全部</button>
+            </div>
+          )}
+
+          {/* FAB 圓形按鈕 */}
+          <button
+            onClick={() => setCompareFabOpen(prev => !prev)}
+            style={{
+              width: '52px', height: '52px', borderRadius: '50%',
+              backgroundColor: T.bgInverse,
+              border: '1px solid rgba(247,244,242,0.15)',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 20px rgba(28,25,23,0.3)',
+              position: 'relative',
+              transition: 'transform 150ms',
+            }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
+              stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="3" width="8" height="18" rx="1.5"/>
+              <rect x="14" y="3" width="8" height="18" rx="1.5"/>
+            </svg>
+            {/* 數量 badge：有選產品才顯示 */}
+            {compareList.length > 0 && (
+              <div style={{
+                position: 'absolute', top: '-4px', right: '-4px',
+                width: '20px', height: '20px', borderRadius: '50%',
+                backgroundColor: T.accent,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '11px', fontWeight: 700, color: '#fff',
+                fontFamily: '"DM Sans",sans-serif',
+                boxShadow: '0 2px 6px rgba(196,137,122,0.4)',
+              }}>
+                {compareList.length}
+              </div>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Toast 提示 */}
+      {compareToast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '92px',
+          left: '50%', transform: 'translateX(-50%)',
+          zIndex: 950,
+          backgroundColor: T.bgInverse,
+          color: T.textInverse,
+          padding: '10px 22px',
+          borderRadius: '999px',
+          fontSize: '13px',
+          fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+        }}>
+          {compareToast}
+        </div>
+      )}
+
       {/* 產品詳細 Modal */}
       {selectedProduct && (
         <ProductPopover
@@ -636,6 +935,12 @@ const fetchProducts = async (pageNum = page) => {
           targetType={reportTarget.type}
           targetId={reportTarget.id}
           onClose={() => setReportTarget(null)}
+        />
+      )}
+      {showCompare && compareList.length >= 2 && (
+        <CompareModal
+          products={compareList}
+          onClose={() => setShowCompare(false)}
         />
       )}
       {tourStep !== null && (
@@ -842,7 +1147,7 @@ const styles = {
   },
   searchBoxFocus: {
     backgroundColor: 'rgba(247,244,242,0.12)',
-    borderColor: 'rgba(196,137,122,0.6)',
+    borderColor: 'rgba(196,137,122,1)',
   },
   searchInput: {
     flex: 1,
@@ -1206,6 +1511,22 @@ const styles = {
     cursor: 'pointer',
     padding: 0,
     transition: 'border-color 150ms, transform 150ms',
+  },
+  compareBtn: {
+    position: 'absolute',
+    bottom: '16px',
+    right: '58px', // 16(right) + 34(fav) + 8(gap)
+    width: '34px',
+    height: '34px',
+    borderRadius: '50%',
+    border: `1px solid ${T.border}`,
+    backgroundColor: T.bgSurface,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    padding: 0,
+    transition: 'background-color 150ms, border-color 150ms',
   },
   reportBtn: {
     position: 'absolute',

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ReactDOM from 'react-dom';
 import API_BASE from '../config';
 
 const REASONS = ['內容不實', '廣告業配', '不當言論', '垃圾訊息', '其他'];
@@ -34,10 +35,13 @@ export default function ReportModal({ targetType, targetId, onClose }) {
     }
   };
 
-  return (
+  return ReactDOM.createPortal(
     <div onClick={onClose} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+      position: 'fixed',
+      top: 0, right: 0, bottom: 0, left: 0,
+      background: 'rgba(0,0,0,0.55)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 9999,
     }}>
       <div onClick={e => e.stopPropagation()} style={{
         background: '#1e1a1a', border: '1px solid rgba(255,255,255,0.1)',
@@ -102,7 +106,8 @@ export default function ReportModal({ targetType, targetId, onClose }) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
