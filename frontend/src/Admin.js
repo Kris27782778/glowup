@@ -1028,21 +1028,98 @@ function IngredientsTab() {
 
 // ── 貼文審核頁 ────────────────────────────────────────────────────
 function PostsTab() {
+  const [posts,    setPosts]    = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [search,   setSearch]   = useState('');
+  const [filter,   setFilter]   = useState('');
+  const [acting,   setActing]   = useState(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (search) params.set('q', search);
+    if (filter) params.set('status', filter);
+    adminFetch(`/posts?${params}`)
+      .then(d => { if (Array.isArray(d)) setPosts(d); })
+      .finally(() => setLoading(false));
+  }, [search, filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleRemove = async (postId) => {
+    if (!window.confirm('確定要下架這篇貼文嗎？')) return;
+    setActing(postId);
+    await adminFetch(`/posts/${postId}/remove`, { method: 'PATCH' });
+    setActing(null);
+    load();
+  };
+
+  const handleRestore = async (postId) => {
+    setActing(postId);
+    await adminFetch(`/posts/${postId}/restore`, { method: 'PATCH' });
+    setActing(null);
+    load();
+  };
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
-      <div style={{
-        ...sectionStyle, padding:'60px 40px', textAlign:'center',
-        display:'flex', flexDirection:'column', alignItems:'center', gap:'16px',
-      }}>
-        <div style={{ fontSize:'40px', opacity:0.3 }}>◫</div>
-        <p style={{ margin:0, fontSize:'15px', color:C.text, fontWeight:500 }}>社群貼文審核</p>
-        <p style={{ margin:0, fontSize:'13px', color:C.textSub, maxWidth:'360px', lineHeight:1.6 }}>
-          Community 社群功能目前使用模擬資料。<br />
-          待社群貼文正式儲存至資料庫後，此頁面將顯示貼文列表、下架與恢復操作。
-        </p>
-        <span style={{ ...tagStyle, color:C.yellow, background:'rgba(196,176,122,0.12)',
-          fontSize:'11px', letterSpacing:'0.08em' }}>COMING SOON — v2</span>
+      <div style={{ display:'flex', gap:'8px', alignItems:'center', flexWrap:'wrap' }}>
+        <SearchBar value={search} onChange={setSearch} placeholder="搜尋標題或作者…" />
+        {['','active','removed'].map(s => (
+          <FilterChip key={s} label={s===''?'全部':s==='active'?'正常':'已下架'}
+            active={filter===s} onClick={() => setFilter(s)} />
+        ))}
       </div>
+
+      {loading ? (
+        <Loading />
+      ) : posts.length === 0 ? (
+        <div style={{ ...sectionStyle, padding:'60px 40px', textAlign:'center' }}>
+          <p style={{ margin:0, color:C.textDim, fontSize:'13px' }}>
+            {search || filter ? '沒有符合條件的貼文' : '尚無社群貼文'}
+          </p>
+        </div>
+      ) : (
+        <div style={sectionStyle}>
+          <table style={tableStyle}>
+            <thead><tr>
+              {['標題','作者','膚質','領域','狀態','發文時間','操作'].map(h => (
+                <th key={h} style={thStyle}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {posts.map(p => (
+                <tr key={p.post_id} style={{ borderBottom:`1px solid ${C.border}`, opacity: p.status==='removed' ? 0.55 : 1 }}>
+                  <td style={{ ...tdStyle, maxWidth:'220px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    <strong style={{ color:C.text }}>{p.title}</strong>
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{ fontSize:'13px', color:C.textSub }}>{p.nickname || '—'}</span>
+                    {p.department_grade && <span style={{ display:'block', fontSize:'11px', color:C.textDim }}>{p.department_grade}</span>}
+                  </td>
+                  <td style={tdStyle}><span style={tagStyle}>{p.skin_type}</span></td>
+                  <td style={tdStyle}><span style={tagStyle}>{p.domain}</span></td>
+                  <td style={tdStyle}>
+                    <span style={{ ...tagStyle, color: p.status==='active'?C.green:C.yellow, background: p.status==='active'?'rgba(123,174,138,0.12)':'rgba(196,176,122,0.12)' }}>
+                      {p.status==='active' ? '正常' : '已下架'}
+                    </span>
+                  </td>
+                  <td style={tdStyle}>{fmtDate(p.created_at)}</td>
+                  <td style={tdStyle}>
+                    {p.status === 'active' ? (
+                      <button style={{ ...btnStyle('ghost'), color:C.yellow, borderColor:C.yellow, opacity: acting===p.post_id?0.5:1 }}
+                        disabled={acting===p.post_id} onClick={() => handleRemove(p.post_id)}>下架</button>
+                    ) : (
+                      <button style={{ ...btnStyle('ghost'), color:C.green, borderColor:C.green, opacity: acting===p.post_id?0.5:1 }}
+                        disabled={acting===p.post_id} onClick={() => handleRestore(p.post_id)}>恢復</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

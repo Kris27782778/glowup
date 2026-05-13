@@ -51,6 +51,8 @@ function Dashboard() {
   const [deletingQuestionId, setDeletingQuestionId] = useState(null);
   const [editingReview,      setEditingReview]      = useState(null);
   const [wishlistFilter,     setWishlistFilter]     = useState(null);
+  const [myPosts,     setMyPosts]     = useState([]);
+  const [myBookmarks, setMyBookmarks] = useState([]);
   const navigate = useNavigate();
   const { t } = useLang();
 
@@ -70,6 +72,15 @@ function Dashboard() {
     fetch(`${API_BASE}/api/reviews/user/${parsed.user_id}`)   // ← 加這段
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setMyReviews(data); })
+      .catch(() => {});
+
+    fetch(`${API_BASE}/api/posts?user_id=${parsed.user_id}&limit=50`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data?.data)) setMyPosts(data.data); })
+      .catch(() => {});
+    fetch(`${API_BASE}/api/posts/bookmarks/${parsed.user_id}`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setMyBookmarks(data); })
       .catch(() => {});
   }, [navigate]);
 
@@ -345,7 +356,44 @@ function Dashboard() {
           {/* 內容區：key 讓 tab 切換時重新掛載觸發動畫 */}
           <div style={styles.tabContent}>
             <div key={tab} className="g-tab-content">
-              {tab === 1 ? (
+
+              {tab === 0 ? (
+              myPosts.length === 0 ? (
+                <EmptyState title={t(EMPTY_KEYS[0].title)} sub={t(EMPTY_KEYS[0].sub)} />
+              ) : (
+                <div style={wishlistStyle.grid}>
+                  {myPosts.map(p => (
+                    <div key={p.post_id} style={wishlistStyle.card}>
+                      <div style={wishlistStyle.cardHeader}>
+                        <span style={wishlistStyle.brand}>{new Date(p.created_at).toLocaleDateString('zh-TW')}</span>
+                        <button style={wishlistStyle.deleteBtn} title="刪除貼文" onClick={async () => {
+                          if (!window.confirm('確定要刪除這篇貼文嗎？')) return;
+                          const res = await fetch(`${API_BASE}/api/posts/${p.post_id}`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ user_id: user.user_id }),
+                          });
+                          if (res.ok) setMyPosts(prev => prev.filter(x => x.post_id !== p.post_id));
+                        }}>✕</button>
+                      </div>
+                      <p style={{ ...wishlistStyle.name, cursor: 'pointer' }}
+                        onClick={() => navigate(`/community/${p.post_id}`)}>
+                        {p.title}
+                      </p>
+                      <div style={wishlistStyle.tags}>
+                        <span style={wishlistStyle.tag}>{p.skin_type}</span>
+                        <span style={wishlistStyle.tag}>{p.domain}</span>
+                        {p.sub_category && <span style={wishlistStyle.tag}>{p.sub_category}</span>}
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px', paddingTop: '4px' }}>
+                        <span style={{ fontSize: '11px', color: T.textTertiary }}>❤ {p.helpful_count || 0} 有幫助</span>
+                        <span style={{ fontSize: '11px', color: T.textTertiary }}>💬 {p.comment_count || 0} 留言</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : tab === 1 ? (
                 myQuestions.length === 0 ? (
                   <EmptyState
                     title={t(EMPTY_KEYS[1].title)}
@@ -490,6 +538,50 @@ function Dashboard() {
                   </div>
                   </div>
                 )
+
+                ) : tab === 3 ? (
+                  myBookmarks.length === 0 ? (
+                    <EmptyState title="還沒有收藏任何筆記" sub="去論壇逛逛吧，收藏有幫助的貼文" />
+                  ) : (
+                    <div style={wishlistStyle.grid}>
+                      {myBookmarks.map(bkm => {
+                        const p = bkm.forum_posts;
+                        if (!p) return null;
+                        return (
+                          <div key={bkm.id} style={wishlistStyle.card}>
+                            <div style={wishlistStyle.cardHeader}>
+                              <span style={wishlistStyle.brand}>{new Date(bkm.created_at).toLocaleDateString('zh-TW')}</span>
+                              <button style={wishlistStyle.heartBtn} title="取消收藏" onClick={async () => {
+                                await fetch(`${API_BASE}/api/posts/${p.post_id}/bookmark`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ user_id: user.user_id }),
+                                });
+                                setMyBookmarks(prev => prev.filter(x => x.id !== bkm.id));
+                              }}>
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill={T.accent} stroke={T.accent} strokeWidth="1.3" strokeLinejoin="round">
+                                  <path d="M3 2h10v12l-5-3.5L3 14V2z"/>
+                                </svg>
+                              </button>
+                            </div>
+                            <p style={{ ...wishlistStyle.name, cursor: 'pointer' }}
+                              onClick={() => navigate(`/community/${p.post_id}`)}>
+                              {p.title}
+                            </p>
+                            <div style={wishlistStyle.tags}>
+                              <span style={wishlistStyle.tag}>{p.skin_type}</span>
+                              <span style={wishlistStyle.tag}>{p.domain}</span>
+                              {p.sub_category && <span style={wishlistStyle.tag}>{p.sub_category}</span>}
+                            </div>
+                            {p.users?.nickname && (
+                              <span style={{ fontSize: '11px', color: T.textTertiary }}>by {p.users.nickname}</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+
               ) : tab === 4 ? (
                 myReviews.length === 0 ? (
                   <EmptyState

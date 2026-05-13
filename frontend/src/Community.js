@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReveal } from './hooks/useReveal';
+import API_BASE from './config';
 
 /* ─── 設計 tokens ────────────────────────────────────────── */
 const T = {
@@ -339,6 +340,20 @@ const ms = {
 };
 
 /* ─── 主元件 ─────────────────────────────────────────────── */
+
+function timeAgo(dateStr) {
+  const diff = (Date.now() - new Date(dateStr)) / 1000;
+  if (diff < 60)    return '剛剛';
+  if (diff < 3600)  return `${Math.floor(diff / 60)} 分鐘前`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} 小時前`;
+  const d = Math.floor(diff / 86400); return d === 1 ? '昨天' : `${d} 天前`;
+}
+function avatarColor(str) {
+  const colors = ['#C4897A','#9E8A7A','#7A8A9E','#8A9E7A','#A08060','#9A7AA0'];
+  let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) % colors.length;
+  return colors[h];
+}
+
 export default function Community() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('latest');
@@ -346,6 +361,41 @@ export default function Community() {
   const [search, setSearch] = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
   const [showNewPost, setShowNewPost] = useState(false);
+
+  const [apiPosts, setApiPosts]   = useState([]);
+  const [apiLoaded, setApiLoaded] = useState(false);
+  useEffect(() => {
+    fetch(`${API_BASE}/api/posts?limit=50`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data.data)) {
+          // 把 API 資料轉成這個元件用的格式
+          const mapped = data.data.map(p => ({
+            id:          p.post_id,
+            initial:     (p.users?.nickname || '?')[0],
+            authorColor: avatarColor(p.users?.nickname || ''),
+            author:      p.users?.nickname || '匿名',
+            dept:        p.users?.department_grade || '',
+            time:        timeAgo(p.created_at),
+            tags:        [p.skin_type, p.domain, p.sub_category, ...(p.effect_tags || [])].filter(Boolean),
+            title:       p.title,
+            excerpt:     p.content,
+            ingredients: p.ingredients || [],
+            likes:       p.helpful_count || 0,
+            comments:    p.comment_count || 0,
+            views:       p.views || 0,
+            hot:         (p.helpful_count || 0) >= 20,
+            pinned:      false,
+            reactions:   { heart: p.helpful_count || 0 },
+            skinTypes:   [p.skin_type],
+          }));
+          setApiPosts(mapped);
+        }
+        setApiLoaded(true);
+      })
+      .catch(() => setApiLoaded(true));
+  }, []);
+
   useReveal();
 
   // 取得當前使用者膚質（用於個人化推薦）
@@ -359,7 +409,8 @@ export default function Community() {
     { key: 'featured', label: '精選' },
   ];
 
-  const filtered = MOCK_POSTS
+  const POSTS = apiLoaded && apiPosts.length > 0 ? apiPosts : MOCK_POSTS;
+  const filtered = POSTS
     .filter(p => activeTag === '全部' || p.tags.includes(activeTag))
     .filter(p => !search || p.title.includes(search) || p.excerpt.includes(search))
     .sort((a, b) => tab === 'hot' ? b.likes - a.likes : b.id - a.id);
@@ -369,7 +420,9 @@ export default function Community() {
     ? MOCK_POSTS.filter(p => p.skinTypes?.includes(userSkinType) && p.id !== 3).slice(0, 2)
     : [];
 
-  const pinnedPost = MOCK_POSTS.find(p => p.pinned);
+
+ 
+  
 
   return (
     <div style={s.page}>
@@ -385,9 +438,9 @@ export default function Community() {
           </div>
           <div style={s.heroStats}>
             {[
-              { num: '1,240', label: '篇貼文' },
-              { num: '368',   label: '位成員' },
-              { num: '89',    label: '個標籤' },
+              { num: apiLoaded ? String(apiPosts.length) : '—', label: '篇貼文' },
+              { num: '1',   label: '位成員' },
+              { num: '15',  label: '個標籤' },
             ].map(item => (
               <div key={item.label} style={s.statItem}>
                 <span style={s.statNum}>{item.num}</span>
@@ -415,7 +468,7 @@ export default function Community() {
               <button style={s.searchClear} onClick={() => setSearch('')}>✕</button>
             )}
           </div>
-          <button style={s.newPostBtn} onClick={() => setShowNewPost(true)}>
+          <button style={s.newPostBtn} onClick={() => navigate('/community/new')}>
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
               <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
             </svg>
@@ -441,7 +494,7 @@ export default function Community() {
                   <div
                     key={post.id}
                     style={s.recommendCard}
-                    onClick={() => navigate(`/community/post/${post.id}`)}
+                    onClick={() => navigate(`/community/${post.id}`)}
                   >
                     <div style={s.recommendCardTop}>
                       <div style={{ ...s.recAvatar, backgroundColor: post.authorColor }}>{post.initial}</div>
@@ -459,33 +512,7 @@ export default function Community() {
           )}
 
           {/* 精選置頂貼文 */}
-          {pinnedPost && tab !== 'hot' && !search && activeTag === '全部' && (
-            <div
-              style={s.pinnedCard}
-              onClick={() => navigate(`/community/post/${pinnedPost.id}`)}
-              className="g-reveal"
-            >
-              <div style={s.pinnedBadge}>本週精選</div>
-              <div style={s.pinnedTop}>
-                <div style={{ ...s.avatar, backgroundColor: pinnedPost.authorColor }}>{pinnedPost.initial}</div>
-                <div style={s.authorInfo}>
-                  <span style={s.authorName}>{pinnedPost.author}</span>
-                  <span style={s.authorMeta}>{pinnedPost.dept} · {pinnedPost.time}</span>
-                </div>
-              </div>
-              <h3 style={s.pinnedTitle}>{pinnedPost.title}</h3>
-              <p style={s.pinnedExcerpt}>{pinnedPost.excerpt}</p>
-              <div style={s.pinnedIngredients}>
-                {pinnedPost.ingredients?.map(ing => (
-                  <IngredientPill key={ing} name={ing} navigate={navigate} />
-                ))}
-              </div>
-              <div style={s.pinnedFooter}>
-                <ReactionMini reactions={pinnedPost.reactions} />
-                <span style={s.pinnedReadMore}>閱讀全文 →</span>
-              </div>
-            </div>
-          )}
+          
 
           {/* Tab 列 */}
           <div style={s.tabRow}>
@@ -652,7 +679,7 @@ function PostCard({ post, idx, navigate }) {
         ...(hovered ? s.cardHovered : {}),
       }}
       className="g-fade-up"
-      onClick={() => navigate(`/community/post/${post.id}`)}
+      onClick={() => navigate(`/community/${post.id}`)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >

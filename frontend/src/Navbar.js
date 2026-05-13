@@ -16,7 +16,8 @@ function Navbar() {
   const [menuOpen,    setMenuOpen]    = useState(false);
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [scrolled,    setScrolled]    = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount,     setUnreadCount]     = useState(0);
+  const [postUnreadCount, setPostUnreadCount] = useState(0);
   const menuRef                 = useRef(null);
   const navigate                = useNavigate();
   const location                = useLocation();
@@ -36,11 +37,17 @@ function Navbar() {
     setUser(u);
 
     const fetchUnread = (currentUser) => {
-      if (!currentUser?.user_id) { setUnreadCount(0); return; }
+      if (!currentUser?.user_id) { setUnreadCount(0); setPostUnreadCount(0); return; }
       const since = localStorage.getItem('lastSeenQA') || '';
       fetch(`${API_BASE}/api/notifications/unread?user_id=${currentUser.user_id}&since=${encodeURIComponent(since)}`)
         .then(r => r.json())
         .then(d => setUnreadCount(d.count || 0))
+        .catch(() => {});
+
+      const sinceCommunity = localStorage.getItem('lastSeenCommunity') || '';
+      fetch(`${API_BASE}/api/notifications/post-unread?user_id=${currentUser.user_id}&since=${encodeURIComponent(sinceCommunity)}`)
+        .then(r => r.json())
+        .then(d => setPostUnreadCount(d.count || 0))
         .catch(() => {});
     };
 
@@ -94,6 +101,11 @@ function Navbar() {
                 }}
               >
                 {t(key)}
+                {key === '社群討論' && postUnreadCount > 0 && (
+                  <span style={styles.badge}>
+                    {postUnreadCount > 9 ? '9+' : postUnreadCount}
+                  </span>
+                )}
                 {key === '問答' && unreadCount > 0 && (
                   <span style={styles.badge}>
                     {unreadCount > 9 ? '9+' : unreadCount}
@@ -223,6 +235,11 @@ function Navbar() {
               onClick={() => setMobileOpen(false)}
             >
               {t(key)}
+              {key === '社群討論' && postUnreadCount > 0 && (
+                <span style={{ ...styles.badge, position: 'static', display: 'inline-flex', marginLeft: '8px', verticalAlign: 'middle' }}>
+                  {postUnreadCount > 9 ? '9+' : postUnreadCount}
+                </span>
+              )}
               {key === '問答' && unreadCount > 0 && (
                 <span style={{ ...styles.badge, position: 'static', display: 'inline-flex', marginLeft: '8px', verticalAlign: 'middle' }}>
                   {unreadCount > 9 ? '9+' : unreadCount}
