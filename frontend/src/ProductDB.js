@@ -49,6 +49,7 @@ function ProductDB() {
   const [sort,            setSort]            = useState('score'); // 'score' | 'newest' | 'name_asc'
   const [showScoreInfo,   setShowScoreInfo]   = useState(false);
   const [tourStep,        setTourStep]        = useState(null); // null | 0 | 1 | 2
+  const [isCompact,       setIsCompact]       = useState(false);
   const tourRefs = useRef([]);
   const skipNextPageEffect = useRef(false);
   const PAGE_SIZE = 10;
@@ -57,6 +58,14 @@ function ProductDB() {
     try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
   })();
   const userId = currentUser?.user_id;
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsCompact(media.matches);
+    update();
+    media.addEventListener?.('change', update);
+    return () => media.removeEventListener?.('change', update);
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -527,7 +536,10 @@ const fetchProducts = async (pageNum = page) => {
                 開始引導 →
               </button>
 
-              <div style={styles.onboardSteps}>
+              <div style={{
+                ...styles.onboardSteps,
+                ...(isCompact ? styles.onboardStepsCompact : {}),
+              }}>
                 {[
                   {
                     num: '01',
@@ -567,13 +579,21 @@ const fetchProducts = async (pageNum = page) => {
                     title: t('查看推薦'),
                   },
                 ].map((step, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: isCompact ? '10px' : '20px',
+                      ...(isCompact ? styles.onboardStepItemCompact : {}),
+                    }}
+                  >
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                       <div style={styles.onboardCircle}>{step.icon}</div>
                       <p style={styles.onboardNum}>{step.num}</p>
                       <p style={styles.onboardCardTitle}>{step.title}</p>
                     </div>
-                    {i < 2 && (
+                    {i < 2 && !isCompact && (
                       <svg width="36" height="12" viewBox="0 0 24 10" fill="none" style={{ marginBottom: '52px', flexShrink: 0 }}>
                         <path d="M0 5h20M16 1l4 4-4 4" stroke={T.accentLight} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -620,34 +640,84 @@ const TOUR_STEPS = [
 ];
 
 function TourOverlay({ step, targetRefs, onNext, onSkip }) {
-  const [rect, setRect] = useState(null);
+  const [layout, setLayout] = useState(null);
 
   useEffect(() => {
     const el = targetRefs.current?.[step];
     if (!el) return;
-    const update = () => setRect(el.getBoundingClientRect());
+
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+    const update = () => {
+      const nextRect = el.getBoundingClientRect();
+      const viewportW = window.innerWidth;
+      const viewportH = window.innerHeight;
+      const gutter = viewportW <= 480 ? 12 : 16;
+      const pad = viewportW <= 480 ? 6 : 10;
+      const tooltipW = Math.min(280, viewportW - gutter * 2);
+      const tooltipH = 176;
+
+      const spotLeft = clamp(nextRect.left - pad, gutter, Math.max(gutter, viewportW - gutter));
+      const spotTop = clamp(nextRect.top - pad, gutter, Math.max(gutter, viewportH - gutter));
+      const spotRight = clamp(nextRect.right + pad, gutter, viewportW - gutter);
+      const spotBottom = clamp(nextRect.bottom + pad, gutter, viewportH - gutter);
+
+      const spaceRight = viewportW - nextRect.right - gutter;
+      const spaceLeft = nextRect.left - gutter;
+      const spaceBottom = viewportH - nextRect.bottom - gutter;
+      const spaceTop = nextRect.top - gutter;
+
+      let tooltipLeft;
+      let tooltipTop;
+
+      if (viewportW <= 640) {
+        tooltipLeft = clamp((viewportW - tooltipW) / 2, gutter, viewportW - tooltipW - gutter);
+        tooltipTop = spaceBottom >= tooltipH + 14
+          ? nextRect.bottom + 14
+          : nextRect.top - tooltipH - 14;
+      } else if (spaceRight >= tooltipW + 14) {
+        tooltipLeft = nextRect.right + 14;
+        tooltipTop = nextRect.top;
+      } else if (spaceLeft >= tooltipW + 14) {
+        tooltipLeft = nextRect.left - tooltipW - 14;
+        tooltipTop = nextRect.top;
+      } else if (spaceBottom >= tooltipH + 14) {
+        tooltipLeft = nextRect.left + (nextRect.width - tooltipW) / 2;
+        tooltipTop = nextRect.bottom + 14;
+      } else if (spaceTop >= tooltipH + 14) {
+        tooltipLeft = nextRect.left + (nextRect.width - tooltipW) / 2;
+        tooltipTop = nextRect.top - tooltipH - 14;
+      } else {
+        tooltipLeft = (viewportW - tooltipW) / 2;
+        tooltipTop = viewportH - tooltipH - gutter;
+      }
+
+      setLayout({
+        spot: {
+          left: spotLeft,
+          top: spotTop,
+          width: Math.max(0, spotRight - spotLeft),
+          height: Math.max(0, spotBottom - spotTop),
+        },
+        tooltip: {
+          left: clamp(tooltipLeft, gutter, viewportW - tooltipW - gutter),
+          top: clamp(tooltipTop, gutter, viewportH - tooltipH - gutter),
+          width: tooltipW,
+        },
+      });
+    };
+
     update();
     window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
   }, [step, targetRefs]);
 
-  if (!rect) return null;
+  if (!layout) return null;
 
-  const PAD = 10;
-  const TW  = 230;
   const info = TOUR_STEPS[step];
-
-  const spotLeft = rect.left - PAD;
-  const spotTop  = rect.top  - PAD;
-  const spotW    = rect.width  + PAD * 2;
-  const spotH    = rect.height + PAD * 2;
-
-  // tooltip: 右邊放得下就右邊，否則左邊
-  const spaceRight = window.innerWidth - rect.right - PAD - 20;
-  const tooltipLeft = spaceRight >= TW
-    ? rect.right + PAD + 12
-    : rect.left  - PAD - 12 - TW;
-  const tooltipTop  = Math.min(rect.top, window.innerHeight - 200);
 
   return (
     <div
@@ -659,10 +729,10 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
         onClick={e => e.stopPropagation()}
         style={{
           position: 'fixed',
-          left:   spotLeft,
-          top:    spotTop,
-          width:  spotW,
-          height: spotH,
+          left:   layout.spot.left,
+          top:    layout.spot.top,
+          width:  layout.spot.width,
+          height: layout.spot.height,
           borderRadius: '12px',
           boxShadow: '0 0 0 9999px rgba(28,25,23,0.6)',
           zIndex: 1001,
@@ -676,9 +746,10 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
         onClick={e => e.stopPropagation()}
         style={{
           position: 'fixed',
-          left:    tooltipLeft,
-          top:     tooltipTop,
-          width:   TW,
+          left:    layout.tooltip.left,
+          top:     layout.tooltip.top,
+          width:   layout.tooltip.width,
+          maxWidth: 'calc(100vw - 24px)',
           zIndex:  1002,
           background: '#FFFFFF',
           borderRadius: '14px',
@@ -975,6 +1046,21 @@ const styles = {
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
+  onboardStepsCompact: {
+    width: '100%',
+    maxWidth: '360px',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: '12px',
+  },
+  onboardStepItemCompact: {
+    width: '100%',
+    justifyContent: 'flex-start',
+    padding: '12px 14px',
+    border: `1px solid ${T.border}`,
+    borderRadius: '12px',
+    backgroundColor: T.bgSurface,
+  },
   onboardCircle: {
     width: '96px',
     height: '96px',
@@ -1168,4 +1254,3 @@ const styles = {
 };
 
 export default ProductDB;
-
