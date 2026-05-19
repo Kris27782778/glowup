@@ -33,34 +33,53 @@ export default function AskQuestion() {
   const [submitted,   setSubmitted]   = useState(false);
   const debounceRef = useRef(null);
 
-  /* 標題變動 → debounce → 查詢真實問題資料庫找相似問題 */
+  /* 輸入變動 → debounce → 後端相似度模型搜尋真實問題資料庫 */
   useEffect(() => {
     clearTimeout(debounceRef.current);
-    if (title.trim().length < 4) { setSimilar([]); setAiLoading(false); return; }
+    const cleanTitle = title.trim();
+    const cleanDetail = detail.trim();
+    if (cleanTitle.length < 4 && cleanDetail.length < 12) { setSimilar([]); setAiLoading(false); return; }
+
+    const controller = new AbortController();
     setAiLoading(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const keyword = title.trim().slice(0, 30);
-        const res = await fetch(`${API_BASE}/api/questions?search=${encodeURIComponent(keyword)}&limit=5`);
+        const res = await fetch(`${API_BASE}/api/questions/similar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            title: cleanTitle,
+            detail: cleanDetail,
+            tags: selTags,
+            limit: 5,
+          }),
+        });
         const data = await res.json();
-        const list = (data?.data ?? []).slice(0, 3).map(q => ({
+        const list = (data?.data ?? []).map(q => ({
           id:      q.question_id,
           title:   q.title,
-          excerpt: q.detail || '',
+          excerpt: q.excerpt || q.detail || '',
           tags:    q.tags || [],
           solved:  q.solved,
           views:   q.views || 0,
           answers: q.answer_count ?? 0,
+          score:   q.score || 0,
+          matchedTerms: q.matched_terms || [],
         }));
         setSimilar(list);
-      } catch {
+      } catch (err) {
+        if (err.name === 'AbortError') return;
         setSimilar([]);
       } finally {
-        setAiLoading(false);
+        if (!controller.signal.aborted) setAiLoading(false);
       }
-    }, 600);
-    return () => clearTimeout(debounceRef.current);
-  }, [title]);
+    }, 700);
+    return () => {
+      controller.abort();
+      clearTimeout(debounceRef.current);
+    };
+  }, [title, detail, selTags]);
 
   const toggleTag = (tag) => {
     setSelTags(prev =>
@@ -360,7 +379,7 @@ export default function AskQuestion() {
                         <span style={{ ...s.similarStatus, ...(q.solved ? s.similarSolved : s.similarUnsolved) }}>
                           {q.solved ? '已解決' : '待解決'}
                         </span>
-                        <span style={s.similarViews}>{q.views} 次瀏覽</span>
+                        <span style={s.similarScore}>{Math.round(q.score * 100)}% 相似</span>
                       </div>
                       <p style={s.similarTitle}>{q.title}</p>
                       <div style={s.similarMeta}>
@@ -369,6 +388,9 @@ export default function AskQuestion() {
                         ))}
                         <span style={s.similarAnswers}>{q.answers} 則回答</span>
                       </div>
+                      {q.matchedTerms.length > 0 && (
+                        <p style={s.similarMatch}>命中：{q.matchedTerms.join('、')}</p>
+                      )}
                     </div>
                     </Link>
                   ))}
@@ -781,6 +803,12 @@ const s = {
     fontFamily: '"DM Sans", sans-serif',
     fontSize: '10px', color: 'var(--text-tertiary)',
   },
+  similarScore: {
+    fontFamily: '"DM Sans", sans-serif',
+    fontSize: '10px',
+    fontWeight: 600,
+    color: '#6B8CBA',
+  },
   similarTitle: {
     fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
     fontSize: '14px', fontWeight: 400,
@@ -803,6 +831,13 @@ const s = {
     fontFamily: '"DM Sans", sans-serif',
     fontSize: '10px', color: 'var(--accent)',
     marginLeft: 'auto',
+  },
+  similarMatch: {
+    margin: '2px 0 0',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '10px',
+    color: 'var(--text-tertiary)',
+    lineHeight: 1.45,
   },
 
   /* Tips */

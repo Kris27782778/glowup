@@ -3,6 +3,122 @@ const router   = express.Router();
 const supabase = require('../config/supabase');
 const Anthropic = require('@anthropic-ai/sdk');
 
+const STOP_WORDS = new Set([
+  '可以', '能不能', '是否', '請問', '想問', '問題', '使用', '一起', '適合', '需要',
+  '怎麼', '如何', '什麼', '哪個', '哪種', '比較', '推薦', '有人', '知道', '保養',
+]);
+
+const SYNONYMS = {
+  'a醇': ['a醇', '維a醇', '視黃醇', 'retinol'],
+  '玻尿酸': ['玻尿酸', '透明質酸', 'hyaluronic'],
+  '菸鹼醯胺': ['菸鹼醯胺', '煙酰胺', 'niacinamide'],
+  '水楊酸': ['水楊酸', 'bha', 'salicylic'],
+  '杏仁酸': ['杏仁酸', 'mandelic'],
+  '乳酸': ['乳酸', 'lactic'],
+  '維他命c': ['維他命c', '維生素c', 'vitamin c', '抗壞血酸'],
+  '敏感肌': ['敏感肌', '敏感性肌', '泛紅', '刺痛'],
+  '油性肌': ['油性肌', '油肌', '出油'],
+  '乾性肌': ['乾性肌', '乾肌', '乾燥'],
+};
+
+const normalizeText = (value = '') =>
+  String(value)
+    .toLowerCase()
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    .replace(/[^\p{Script=Han}a-z0-9%+\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const addToken = (map, token, weight = 1) => {
+  if (!token || token.length < 2 || STOP_WORDS.has(token)) return;
+  map.set(token, (map.get(token) || 0) + weight);
+};
+
+const tokenize = (text = '', baseWeight = 1) => {
+  const normalized = normalizeText(text);
+  const tokens = new Map();
+
+  Object.entries(SYNONYMS).forEach(([canonical, variants]) => {
+    if (variants.some(v => normalized.includes(v))) addToken(tokens, canonical, baseWeight * 2.4);
+  });
+
+  normalized.split(/\s+/).forEach(part => {
+    if (!part) return;
+    addToken(tokens, part, baseWeight * 1.4);
+    if (/^[\p{Script=Han}]+$/u.test(part)) {
+      for (let size = 2; size <= Math.min(4, part.length); size += 1) {
+        for (let i = 0; i <= part.length - size; i += 1) {
+          addToken(tokens, part.slice(i, i + size), baseWeight / size);
+        }
+      }
+    }
+  });
+
+  return tokens;
+};
+
+const mergeTokenMaps = (...maps) => {
+  const merged = new Map();
+  maps.forEach(map => {
+    map.forEach((value, key) => addToken(merged, key, value));
+  });
+  return merged;
+};
+
+const cosine = (a, b) => {
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  a.forEach((value, key) => {
+    normA += value * value;
+    dot += value * (b.get(key) || 0);
+  });
+  b.forEach(value => { normB += value * value; });
+  if (!normA || !normB) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+};
+
+const tagSimilarity = (inputTags = [], candidateTags = []) => {
+  const a = new Set(inputTags);
+  const b = new Set(candidateTags || []);
+  if (!a.size || !b.size) return 0;
+  let overlap = 0;
+  a.forEach(tag => { if (b.has(tag)) overlap += 1; });
+  return overlap / Math.max(a.size, b.size);
+};
+
+const topMatchedTokens = (a, b) =>
+  [...a.entries()]
+    .filter(([key]) => b.has(key))
+    .sort((x, y) => (y[1] + b.get(y[0])) - (x[1] + b.get(x[0])))
+    .slice(0, 4)
+    .map(([key]) => key);
+
+const scoreQuestionSimilarity = (input, question) => {
+  const inputTitle = tokenize(input.title, 2.2);
+  const inputDetail = tokenize(input.detail, 1);
+  const candidateTitle = tokenize(question.title, 2.2);
+  const candidateDetail = tokenize(question.detail, 1);
+  const inputAll = mergeTokenMaps(inputTitle, inputDetail);
+  const candidateAll = mergeTokenMaps(candidateTitle, candidateDetail);
+
+  const titleScore = cosine(inputTitle, candidateTitle);
+  const detailScore = cosine(inputAll, candidateAll);
+  const tagsScore = tagSimilarity(input.tags, question.tags);
+  const exactTitleBoost = normalizeText(input.title).includes(normalizeText(question.title))
+    || normalizeText(question.title).includes(normalizeText(input.title))
+    ? 0.12
+    : 0;
+  const solvedBoost = question.solved ? 0.03 : 0;
+  const answerBoost = Number(question.answer_count || 0) > 0 ? 0.02 : 0;
+  const score = Math.min(1, titleScore * 0.5 + detailScore * 0.25 + tagsScore * 0.18 + exactTitleBoost + solvedBoost + answerBoost);
+
+  return {
+    score,
+    matched_terms: topMatchedTokens(inputAll, candidateAll),
+  };
+};
+
 // GET /api/questions — 取問題列表（支援 tag / search / solved 篩選，分頁）
 router.get('/', async (req, res) => {
   const { tag, search, solved, user_id, include_anonymous, page = 1, limit = 20 } = req.query;
@@ -14,7 +130,7 @@ router.get('/', async (req, res) => {
   try {
     let query = supabase
       .from('questions')
-      .select('question_id, user_id, is_anonymous, title, tags, solved, views, created_at, ai_answer, users(nickname, department_grade), answers(count)', { count: 'exact' })
+      .select('question_id, user_id, is_anonymous, title, detail, tags, solved, views, created_at, ai_answer, users(nickname, department_grade), answers(count)', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to);
 
@@ -43,6 +159,60 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: '查詢失敗' });
+  }
+});
+
+// POST /api/questions/similar — AI-like 相似問題偵測（標題、說明、標籤加權）
+router.post('/similar', async (req, res) => {
+  const { title = '', detail = '', tags = [], limit = 5, exclude_id } = req.body || {};
+  const cleanTitle = String(title).trim();
+  const cleanDetail = String(detail).trim();
+  if (cleanTitle.length < 4 && cleanDetail.length < 12) {
+    return res.json({ data: [], total: 0 });
+  }
+
+  try {
+    const candidateLimit = 160;
+    let query = supabase
+      .from('questions')
+      .select('question_id, title, detail, tags, solved, views, created_at, answers(count)')
+      .order('created_at', { ascending: false })
+      .limit(candidateLimit);
+
+    if (exclude_id) query = query.neq('question_id', exclude_id);
+
+    const { data, error } = await query;
+    if (error) return res.status(400).json({ error: error.message });
+
+    const scored = (data || [])
+      .map(q => {
+        const answerCount = q.answers?.[0]?.count ?? 0;
+        const result = scoreQuestionSimilarity(
+          { title: cleanTitle, detail: cleanDetail, tags: Array.isArray(tags) ? tags : [] },
+          { ...q, answer_count: answerCount },
+        );
+        return {
+          id: q.question_id,
+          question_id: q.question_id,
+          title: q.title,
+          excerpt: q.detail || '',
+          tags: q.tags || [],
+          solved: q.solved,
+          views: q.views || 0,
+          answers: answerCount,
+          answer_count: answerCount,
+          score: Number(result.score.toFixed(3)),
+          matched_terms: result.matched_terms,
+        };
+      })
+      .filter(q => q.score >= 0.18)
+      .sort((a, b) => b.score - a.score || b.answers - a.answers || b.views - a.views)
+      .slice(0, Math.min(10, Math.max(1, Number(limit) || 5)));
+
+    res.json({ data: scored, total: scored.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: '相似問題偵測失敗' });
   }
 });
 
