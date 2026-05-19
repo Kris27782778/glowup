@@ -977,15 +977,18 @@ const s = {
   /* Post card */
   card: {
     backgroundColor: T.bgSurface,
-    border: `1px solid ${T.border}`,
+    border: '1px solid rgba(196,137,122,0.12)',
     borderRadius: '12px', padding: '20px 24px',
     display: 'flex', flexDirection: 'column', gap: '10px',
     cursor: 'pointer',
-    transition: 'box-shadow 200ms, border-color 200ms, transform 200ms',
+    boxShadow: '0 10px 28px rgba(28,25,23,0.035)',
+    outline: 'none',
+    transition: 'box-shadow 200ms, border-color 200ms, transform 200ms, background-color 200ms',
   },
   cardHovered: {
-    boxShadow: '0 4px 16px rgba(28,25,23,0.08)',
-    borderColor: T.accentLight,
+    boxShadow: '0 16px 36px rgba(28,25,23,0.07)',
+    borderColor: 'rgba(196,137,122,0.26)',
+    backgroundColor: '#FFFDFB',
     transform: 'translateY(-2px)',
   },
   cardTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
