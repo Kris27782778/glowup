@@ -204,11 +204,23 @@ const fetchProducts = async (pageNum = page) => {
       {/* 主體：篩選 + 結果 */}
       <div style={styles.body}>
         {/* 側欄篩選 */}
-        <aside style={styles.sidebar} ref={el => (tourRefs.current[1] = el)}>
+        <aside
+          style={{
+            ...styles.sidebar,
+            ...(tourStep === 1 ? styles.tourTarget : {}),
+          }}
+          ref={el => (tourRefs.current[1] = el)}
+        >
 
           <div style={styles.filterSection}>
             <p style={styles.filterTitle}>{t('探索領域')}</p>
-            <div style={styles.filterGroup} ref={el => (tourRefs.current[0] = el)}>
+            <div
+              style={{
+                ...styles.filterGroup,
+                ...(tourStep === 0 ? styles.tourTargetTags : {}),
+              }}
+              ref={el => (tourRefs.current[0] = el)}
+            >
               {CATEGORIES.map(cat => (
                 <button
                   key={cat}
@@ -320,7 +332,13 @@ const fetchProducts = async (pageNum = page) => {
         </aside>
 
         {/* 結果區 */}
-        <main style={styles.results} ref={el => (tourRefs.current[2] = el)}>
+        <main
+          style={{
+            ...styles.results,
+            ...(tourStep === 2 ? styles.tourTarget : {}),
+          }}
+          ref={el => (tourRefs.current[2] = el)}
+        >
           {hasFilter ? (
             <>
               {/* 已選標籤 */}
@@ -654,14 +672,8 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
       const gutter = viewportW <= 480 ? 12 : 16;
       const topGutter = Math.max(gutter, 88);
       const bottomGutter = gutter;
-      const pad = viewportW <= 480 ? 6 : 10;
       const tooltipW = Math.min(280, viewportW - gutter * 2);
       const tooltipH = 176;
-
-      const spotLeft = nextRect.left - pad;
-      const spotTop = nextRect.top - pad;
-      const spotRight = nextRect.right + pad;
-      const spotBottom = nextRect.bottom + pad;
 
       const spaceRight = viewportW - nextRect.right - gutter;
       const spaceLeft = nextRect.left - gutter;
@@ -694,12 +706,6 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
       }
 
       setLayout({
-        spot: {
-          left: spotLeft,
-          top: spotTop,
-          width: Math.max(0, spotRight - spotLeft),
-          height: Math.max(0, spotBottom - spotTop),
-        },
         tooltip: {
           left: clamp(tooltipLeft, gutter, viewportW - tooltipW - gutter),
           top: clamp(tooltipTop, topGutter, viewportH - tooltipH - bottomGutter),
@@ -725,26 +731,14 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 1000 }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        backgroundColor: 'rgba(28,25,23,0.6)',
+      }}
       onClick={onSkip}
     >
-      {/* spotlight */}
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          position: 'fixed',
-          left:   layout.spot.left,
-          top:    layout.spot.top,
-          width:  layout.spot.width,
-          height: layout.spot.height,
-          borderRadius: '12px',
-          boxShadow: '0 0 0 9999px rgba(28,25,23,0.6)',
-          zIndex: 1001,
-          pointerEvents: 'none',
-          transition: 'left 350ms ease, top 350ms ease, width 350ms ease, height 350ms ease',
-        }}
-      />
-
       {/* tooltip */}
       <div
         onClick={e => e.stopPropagation()}
@@ -754,7 +748,7 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
           top:     layout.tooltip.top,
           width:   layout.tooltip.width,
           maxWidth: 'calc(100vw - 24px)',
-          zIndex:  1002,
+          zIndex:  1004,
           background: '#FFFFFF',
           borderRadius: '14px',
           padding: '18px 20px',
@@ -902,6 +896,23 @@ const styles = {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '6px',
+  },
+  tourTarget: {
+    position: 'relative',
+    zIndex: 1003,
+    backgroundColor: T.bgSurface,
+    boxShadow: '0 16px 48px rgba(28,25,23,0.18)',
+  },
+  tourTargetTags: {
+    position: 'relative',
+    zIndex: 1003,
+    display: 'inline-flex',
+    width: 'fit-content',
+    padding: '10px 12px',
+    margin: '-10px -12px',
+    borderRadius: '14px',
+    backgroundColor: T.bgSurface,
+    boxShadow: '0 16px 48px rgba(28,25,23,0.18)',
   },
   filterChip: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
