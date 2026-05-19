@@ -647,16 +647,6 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
     if (!el) return;
 
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-    const scrollTargetIntoView = () => {
-      const nextRect = el.getBoundingClientRect();
-      const safeTop = 96;
-      const safeBottom = window.innerHeight - 96;
-
-      if (nextRect.top < safeTop || nextRect.bottom > safeBottom) {
-        el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
-      }
-    };
-
     const update = () => {
       const nextRect = el.getBoundingClientRect();
       const viewportW = window.innerWidth;
@@ -718,12 +708,8 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
       });
     };
 
-    scrollTargetIntoView();
     update();
-    const frame = window.requestAnimationFrame(() => {
-      update();
-      window.requestAnimationFrame(update);
-    });
+    const frame = window.requestAnimationFrame(update);
     window.addEventListener('resize', update);
     window.addEventListener('scroll', update, true);
     return () => {
