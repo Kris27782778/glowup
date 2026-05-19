@@ -647,24 +647,36 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
     if (!el) return;
 
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+    const scrollTargetIntoView = () => {
+      const nextRect = el.getBoundingClientRect();
+      const safeTop = 96;
+      const safeBottom = window.innerHeight - 96;
+
+      if (nextRect.top < safeTop || nextRect.bottom > safeBottom) {
+        el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+      }
+    };
+
     const update = () => {
       const nextRect = el.getBoundingClientRect();
       const viewportW = window.innerWidth;
       const viewportH = window.innerHeight;
       const gutter = viewportW <= 480 ? 12 : 16;
+      const topGutter = Math.max(gutter, 88);
+      const bottomGutter = gutter;
       const pad = viewportW <= 480 ? 6 : 10;
       const tooltipW = Math.min(280, viewportW - gutter * 2);
       const tooltipH = 176;
 
       const spotLeft = clamp(nextRect.left - pad, gutter, Math.max(gutter, viewportW - gutter));
-      const spotTop = clamp(nextRect.top - pad, gutter, Math.max(gutter, viewportH - gutter));
+      const spotTop = clamp(nextRect.top - pad, topGutter, Math.max(topGutter, viewportH - bottomGutter));
       const spotRight = clamp(nextRect.right + pad, gutter, viewportW - gutter);
-      const spotBottom = clamp(nextRect.bottom + pad, gutter, viewportH - gutter);
+      const spotBottom = clamp(nextRect.bottom + pad, topGutter, viewportH - bottomGutter);
 
       const spaceRight = viewportW - nextRect.right - gutter;
       const spaceLeft = nextRect.left - gutter;
-      const spaceBottom = viewportH - nextRect.bottom - gutter;
-      const spaceTop = nextRect.top - gutter;
+      const spaceBottom = viewportH - nextRect.bottom - bottomGutter;
+      const spaceTop = nextRect.top - topGutter;
 
       let tooltipLeft;
       let tooltipTop;
@@ -700,16 +712,19 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
         },
         tooltip: {
           left: clamp(tooltipLeft, gutter, viewportW - tooltipW - gutter),
-          top: clamp(tooltipTop, gutter, viewportH - tooltipH - gutter),
+          top: clamp(tooltipTop, topGutter, viewportH - tooltipH - bottomGutter),
           width: tooltipW,
         },
       });
     };
 
+    scrollTargetIntoView();
     update();
+    const frame = window.requestAnimationFrame(update);
     window.addEventListener('resize', update);
     window.addEventListener('scroll', update, true);
     return () => {
+      window.cancelAnimationFrame(frame);
       window.removeEventListener('resize', update);
       window.removeEventListener('scroll', update, true);
     };
