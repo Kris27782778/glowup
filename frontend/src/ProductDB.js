@@ -206,9 +206,9 @@ const fetchProducts = async (pageNum = page) => {
         {/* 側欄篩選 */}
         <aside style={styles.sidebar} ref={el => (tourRefs.current[1] = el)}>
 
-          <div style={styles.filterSection} ref={el => (tourRefs.current[0] = el)}>
+          <div style={styles.filterSection}>
             <p style={styles.filterTitle}>{t('探索領域')}</p>
-            <div style={styles.filterGroup}>
+            <div style={styles.filterGroup} ref={el => (tourRefs.current[0] = el)}>
               {CATEGORIES.map(cat => (
                 <button
                   key={cat}
@@ -653,7 +653,7 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
       const safeBottom = window.innerHeight - 96;
 
       if (nextRect.top < safeTop || nextRect.bottom > safeBottom) {
-        el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+        el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
       }
     };
 
@@ -668,10 +668,10 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
       const tooltipW = Math.min(280, viewportW - gutter * 2);
       const tooltipH = 176;
 
-      const spotLeft = clamp(nextRect.left - pad, gutter, Math.max(gutter, viewportW - gutter));
-      const spotTop = clamp(nextRect.top - pad, topGutter, Math.max(topGutter, viewportH - bottomGutter));
-      const spotRight = clamp(nextRect.right + pad, gutter, viewportW - gutter);
-      const spotBottom = clamp(nextRect.bottom + pad, topGutter, viewportH - bottomGutter);
+      const spotLeft = nextRect.left - pad;
+      const spotTop = nextRect.top - pad;
+      const spotRight = nextRect.right + pad;
+      const spotBottom = nextRect.bottom + pad;
 
       const spaceRight = viewportW - nextRect.right - gutter;
       const spaceLeft = nextRect.left - gutter;
@@ -720,7 +720,10 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
 
     scrollTargetIntoView();
     update();
-    const frame = window.requestAnimationFrame(update);
+    const frame = window.requestAnimationFrame(() => {
+      update();
+      window.requestAnimationFrame(update);
+    });
     window.addEventListener('resize', update);
     window.addEventListener('scroll', update, true);
     return () => {
