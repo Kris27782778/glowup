@@ -9,7 +9,6 @@ import ReportModal from './components/ReportModal';
 
 const SKIN_TAGS  = ['油性肌', '乾肌', '敏感肌', '混合性肌', '中性'];
 const TOPIC_TAGS = ['成分討論', '保濕', '防曬推薦', '抗老', '屏障修護', '去角質', '抗痘'];
-const ALL_TAGS   = [...SKIN_TAGS, ...TOPIC_TAGS];
 
 const COLORS = ['#C4897A', '#9E8A7A', '#7BAF7B', '#7AAFC4', '#C4B07A', '#9B7AC4'];
 const ANON_COLOR = '#A89990';
@@ -26,13 +25,18 @@ export default function QA() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLang();
-  const [questions,   setQuestions]   = useState([]);
-  const [tab,         setTab]         = useState('all');
-  const [activeTags,  setActiveTags]  = useState(new Set());
-  const [search,      setSearch]      = useState('');
-  const [searchFocus, setSearchFocus] = useState(false);
-  const [expandedId,  setExpandedId]  = useState(null);
-  const [reportTarget, setReportTarget] = useState(null);
+  const [questions,     setQuestions]     = useState([]);
+  const [tab,           setTab]           = useState('all');
+  const [activeTags,    setActiveTags]    = useState(new Set());
+  const [search,        setSearch]        = useState('');
+  const [searchFocus,   setSearchFocus]   = useState(false);
+  const [expandedId,    setExpandedId]    = useState(null);
+  const [reportTarget,  setReportTarget]  = useState(null);
+  const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
+  const [savedQuestions, setSavedQuestions] = useState([]);
+
+  const currentUser = (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
+  const userId = currentUser?.user_id;
   useReveal();
 
   /* 頁面載入時從後端拿問題，並處理從 AskQuestion 帶回的新問題 */
@@ -62,6 +66,39 @@ export default function QA() {
     const mineFetch = currentUser?.user_id
       ? fetch(`${API_BASE}/api/questions?user_id=${currentUser.user_id}&include_anonymous=true`).then(r => r.json())
       : Promise.resolve([]);
+
+    // 載入收藏的問答
+    if (currentUser?.user_id) {
+      fetch(`${API_BASE}/api/questions/bookmarks/${currentUser.user_id}`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setSavedQuestions(data.map(q => ({
+              id: q.question_id,
+              is_anonymous: q.is_anonymous,
+              title: q.title,
+              excerpt: q.detail,
+              tags: q.tags || [],
+              solved: q.solved,
+              views: q.views,
+              hot: false,
+              initial: q.is_anonymous ? '匿' : (q.users?.nickname?.[0]?.toUpperCase() || '?'),
+              authorColor: userColor(q.is_anonymous ? null : q.user_id),
+              author: q.is_anonymous ? '匿名用戶' : (q.users?.nickname || '匿名用戶'),
+              dept: q.is_anonymous ? '' : (q.users?.department_grade || ''),
+              time: new Date(q.created_at).toLocaleDateString('zh-TW'),
+              aiAnswer: q.ai_answer || '',
+              answerCount: q.answer_count ?? 0,
+              expert: null,
+              community: [],
+              _mine: false,
+              user_id: q.user_id,
+            })));
+            setBookmarkedIds(new Set(data.map(q => q.question_id)));
+          }
+        })
+        .catch(() => {});
+    }
 
     Promise.all([publicFetch, mineFetch])
       .then(([publicData, mineData]) => {
@@ -112,22 +149,59 @@ export default function QA() {
       .map(([tag, count]) => ({ tag: `#${tag}`, count }));
   }, [questions]);
 
-  // 社群尚未回答的問題（按最舊排序，等最久的先顯示）
+  // 社群尚未回答且未解決的問題（按最舊排序，等最久的先顯示）
   const allUnanswered = useMemo(() =>
-    [...questions.filter(q => q.answerCount === 0)].reverse(),
+    [...questions.filter(q => q.answerCount === 0 && !q.solved)].reverse(),
   [questions]);
   const unlitQuestions = allUnanswered.slice(0, 3);
   const unlitExtra     = allUnanswered.length > 3 ? allUnanswered.length - 3 : 0;
 
   const TABS = [
-    { key: 'all',  label: t('全部問題') || '全部問題' },
-    { key: 'mine', label: t('我的提問') || '我的提問' },
+    { key: 'all',        label: t('全部問題') || '全部問題' },
+    { key: 'unanswered', label: '未解決' },
+    { key: 'mine',       label: t('我的提問') || '我的提問' },
+    { key: 'saved',      label: '我的關注' },
   ];
 
-  const filtered = questions
+  const baseList = tab === 'saved' ? savedQuestions : tab === 'unanswered' ? allUnanswered : questions;
+
+  const markSolved = async (questionId) => {
+    if (!userId) return;
+    const res = await fetch(`${API_BASE}/api/questions/${questionId}/solved`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId }),
+    });
+    if (res.ok) {
+      setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, solved: true } : q));
+      setSavedQuestions(prev => prev.map(q => q.id === questionId ? { ...q, solved: true } : q));
+    }
+  };
+  const filtered = baseList
     .filter(q => tab === 'mine' ? q._mine === true : true)
     .filter(q => activeTags.size === 0 || [...activeTags].every(tag => q.tags.includes(tag)))
     .filter(q => !search || q.title.includes(search) || q.excerpt.includes(search));
+
+  const toggleBookmark = async (questionId) => {
+    if (!userId) return;
+    const res = await fetch(`${API_BASE}/api/questions/${questionId}/bookmark`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId }),
+    });
+    const { bookmarked } = await res.json();
+    setBookmarkedIds(prev => {
+      const next = new Set(prev);
+      bookmarked ? next.add(questionId) : next.delete(questionId);
+      return next;
+    });
+    if (bookmarked) {
+      const q = questions.find(q => q.id === questionId);
+      if (q) setSavedQuestions(prev => [q, ...prev.filter(sq => sq.id !== questionId)]);
+    } else {
+      setSavedQuestions(prev => prev.filter(q => q.id !== questionId));
+    }
+  };
 
   const handleToggle = (id) => setExpandedId(prev => prev === id ? null : id);
 
@@ -270,6 +344,10 @@ export default function QA() {
                 expanded={expandedId === q.id}
                 onToggle={() => handleToggle(q.id)}
                 onReport={(id, type) => setReportTarget({ id, type })}
+                currentUserId={userId}
+                bookmarked={bookmarkedIds.has(q.id)}
+                onBookmark={toggleBookmark}
+                onMarkSolved={markSolved}
               />
             ))
           )}
@@ -387,7 +465,7 @@ export default function QA() {
 }
 
 /* ─── 問題卡片（含三層回答展開） ───────────────────────── */
-function QuestionCard({ question: q, idx, t, expanded, onToggle, onReport }) {
+function QuestionCard({ question: q, idx, t, expanded, onToggle, onReport, currentUserId, bookmarked, onBookmark, onMarkSolved }) {
   const [answers,        setAnswers]        = useState([]);
   const [showReplyForm,  setShowReplyForm]  = useState(false);
   const [replyText,      setReplyText]      = useState('');
@@ -492,27 +570,50 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle, onReport }) {
               <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
-          <button
-            onClick={e => { e.stopPropagation(); onReport(q.id, 'question'); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '4px',
-              padding: '5px 11px',
-              border: '1px solid rgba(196,137,122,0.35)',
-              borderRadius: '999px',
-              background: 'rgba(196,137,122,0.07)',
-              color: 'var(--text-secondary)',
-              fontSize: '11px',
-              fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
-              cursor: 'pointer',
-              letterSpacing: '0.02em',
-            }}
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
-              <line x1="4" y1="22" x2="4" y2="15"/>
-            </svg>
-            檢舉
-          </button>
+          {currentUserId && !q._mine && (
+            <button
+              onClick={e => { e.stopPropagation(); onBookmark(q.id); }}
+              title={bookmarked ? '取消關注' : '加入關注'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '5px 11px',
+                border: `1px solid ${bookmarked ? 'rgba(196,137,122,0.6)' : 'rgba(196,137,122,0.35)'}`,
+                borderRadius: '999px',
+                background: bookmarked ? 'rgba(196,137,122,0.15)' : 'rgba(196,137,122,0.07)',
+                color: bookmarked ? '#C4897A' : 'var(--text-secondary)',
+                fontSize: '11px',
+                fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+                cursor: 'pointer',
+                letterSpacing: '0.02em',
+                transition: 'all 150ms',
+              }}
+            >
+              {bookmarked ? '★' : '☆'} {bookmarked ? '已關注' : '關注'}
+            </button>
+          )}
+          {!q._mine && (
+            <button
+              onClick={e => { e.stopPropagation(); onReport(q.id, 'question'); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '5px 11px',
+                border: '1px solid rgba(196,137,122,0.35)',
+                borderRadius: '999px',
+                background: 'rgba(196,137,122,0.07)',
+                color: 'var(--text-secondary)',
+                fontSize: '11px',
+                fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+                cursor: 'pointer',
+                letterSpacing: '0.02em',
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                <line x1="4" y1="22" x2="4" y2="15"/>
+              </svg>
+              檢舉
+            </button>
+          )}
         </div>
       </div>
 

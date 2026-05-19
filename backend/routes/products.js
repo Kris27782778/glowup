@@ -48,6 +48,7 @@ router.get('/', async (req, res) => {
         )
       `);
 
+    query = query.eq('is_deleted', false);
     if (category)     query = query.eq('category', category);
     if (sub_category) query = query.eq('sub_category', sub_category);
     if (finish)       query = query.eq('finish', finish);

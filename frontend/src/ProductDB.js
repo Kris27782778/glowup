@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { useLang } from './hooks/useLang';
 import API_BASE from './config';
@@ -49,6 +50,8 @@ function ProductDB() {
   const [hoveredCard,     setHoveredCard]     = useState(null);
   const [sort,            setSort]            = useState('score'); // 'score' | 'newest' | 'name_asc'
   const [showScoreInfo,   setShowScoreInfo]   = useState(false);
+  const [showScoreModal,  setShowScoreModal]  = useState(false);
+  const scoreHideTimer = useRef(null);
   const [tourStep,        setTourStep]        = useState(null); // null | 0 | 1 | 2
   const [isCompact,       setIsCompact]       = useState(false);
   const [compareList,     setCompareList]     = useState([]);
@@ -440,8 +443,8 @@ const fetchProducts = async (pageNum = page) => {
                       ))}
                       <div style={{ position: 'relative' }}>
                         <button
-                          onMouseEnter={() => setShowScoreInfo(true)}
-                          onMouseLeave={() => setShowScoreInfo(false)}
+                          onMouseEnter={() => { clearTimeout(scoreHideTimer.current); setShowScoreInfo(true); }}
+                          onMouseLeave={() => { scoreHideTimer.current = setTimeout(() => setShowScoreInfo(false), 200); }}
                           style={{
                             width: '18px', height: '18px', borderRadius: '50%', fontSize: '11px',
                             fontFamily: '"DM Sans",sans-serif', fontWeight: 600,
@@ -451,7 +454,10 @@ const fetchProducts = async (pageNum = page) => {
                           }}
                         >?</button>
                         {showScoreInfo && (
-                          <div style={{
+                          <div
+                            onMouseEnter={() => clearTimeout(scoreHideTimer.current)}
+                            onMouseLeave={() => { scoreHideTimer.current = setTimeout(() => setShowScoreInfo(false), 200); }}
+                            style={{
                             position: 'absolute', right: 0, top: '24px', zIndex: 100,
                             width: '220px', padding: '12px 14px',
                             background: T.bgSurface, border: `1px solid ${T.border}`,
@@ -460,9 +466,15 @@ const fetchProducts = async (pageNum = page) => {
                             <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: 600, color: T.textPrimary, fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>
                               推薦分數說明
                             </p>
-                            <p style={{ margin: 0, fontSize: '11px', color: T.textSecondary, lineHeight: 1.65, fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>
+                            <p style={{ margin: '0 0 8px', fontSize: '11px', color: T.textSecondary, lineHeight: 1.65, fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>
                               基礎分 3 分，依你選擇的<strong>膚質</strong>與<strong>功效</strong>篩選條件，累加產品中每個成分的對應評分。分數反映該產品對目前篩選條件的契合程度，未選篩選時所有產品同分。
                             </p>
+                            <button
+                              onMouseDown={e => { e.stopPropagation(); setShowScoreModal(true); setShowScoreInfo(false); }}
+                              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '11px', color: T.accent, fontFamily: '"DM Sans","Noto Sans TC",sans-serif', fontWeight: 500 }}
+                            >
+                              更多詳細 →
+                            </button>
                           </div>
                         )}
                       </div>
@@ -950,6 +962,61 @@ const fetchProducts = async (pageNum = page) => {
           onNext={() => tourStep < TOUR_STEPS.length - 1 ? setTourStep(tourStep + 1) : setTourStep(null)}
           onSkip={() => setTourStep(null)}
         />
+      )}
+      {showScoreModal && ReactDOM.createPortal(
+        <>
+          <div onClick={() => setShowScoreModal(false)} style={{ position:'fixed', inset:0, zIndex:1100, backgroundColor:'rgba(28,25,23,0.4)' }} />
+          <div style={{
+            position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
+            zIndex:1101, width:'520px', maxWidth:'92vw',
+            maxHeight:'calc(100vh - 100px)', overflowY:'auto',
+            background:T.bgSurface, border:`1px solid ${T.border}`,
+            borderRadius:'16px', padding:'28px 28px 24px',
+            boxShadow:'0 20px 60px rgba(0,0,0,0.18)',
+          }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px' }}>
+              <p style={{ margin:0, fontSize:'16px', fontWeight:600, color:T.textPrimary, fontFamily:'"DM Sans","Noto Sans TC",sans-serif' }}>推薦分數計算說明</p>
+              <button onClick={() => setShowScoreModal(false)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:'18px', color:T.textTertiary, lineHeight:1, padding:'4px 8px' }}>✕</button>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'16px', fontFamily:'"DM Sans","Noto Sans TC",sans-serif' }}>
+
+              {/* 保養品 */}
+              <div>
+                <p style={{ margin:'0 0 10px', fontSize:'11px', fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:T.accent }}>保養品</p>
+                <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+                  {[
+                    { num:'①', title:'成分白名單', desc:'每款產品對應一張成分表，記錄該產品實際含有哪些成分，作為後續評分的基礎。' },
+                    { num:'②', title:'成分加權', desc:'白名單中每個成分都預先設定了對各膚質、各功效標籤的加減分值。每款產品初始基礎分為 3 分，以避免分數出現空值或零分。' },
+                    { num:'③', title:'推薦清單生成', desc:'當使用者選擇膚質或功效標籤，系統比對產品成分並累加對應加減分，最後依總分由高到低排列，產出個人化推薦清單。' },
+                  ].map(item => (
+                    <div key={item.num} style={{ display:'flex', gap:'14px', padding:'14px 16px', backgroundColor:T.bgSubtle, borderRadius:'10px', border:`1px solid ${T.border}` }}>
+                      <span style={{ fontSize:'15px', fontWeight:700, color:T.accent, flexShrink:0, marginTop:'1px' }}>{item.num}</span>
+                      <div>
+                        <p style={{ margin:'0 0 4px', fontSize:'14px', fontWeight:600, color:T.textPrimary }}>{item.title}</p>
+                        <p style={{ margin:0, fontSize:'13px', color:T.textSecondary, lineHeight:1.65 }}>{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 分隔 */}
+              <div style={{ height:'1px', backgroundColor:T.border }} />
+
+              {/* 化妝品 */}
+              <div>
+                <p style={{ margin:'0 0 10px', fontSize:'11px', fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:T.accent }}>化妝品（粉底液、遮瑕）</p>
+                <div style={{ padding:'14px 16px', backgroundColor:T.bgSubtle, borderRadius:'10px', border:`1px solid ${T.border}` }}>
+                  <p style={{ margin:'0 0 4px', fontSize:'14px', fontWeight:600, color:T.textPrimary }}>妝感偏好匹配</p>
+                  <p style={{ margin:0, fontSize:'13px', color:T.textSecondary, lineHeight:1.65 }}>化妝品不以成分評分，而是依據使用者選擇的妝感（霧面／光澤／緞光）與遮瑕度（輕透／中等／全覆蓋）進行偏好匹配，符合條件的產品優先顯示。</p>
+                </div>
+              </div>
+
+              <p style={{ margin:0, fontSize:'12px', color:T.textTertiary, lineHeight:1.6 }}>分數僅反映與當前篩選條件的契合程度，非產品品質的絕對評價。</p>
+            </div>
+          </div>
+        </>,
+        document.body
       )}
     </div>
   );

@@ -21,7 +21,7 @@ router.get('/:user_id', async (req, res) => {
     const { data: products, error: pErr } = await supabase
       .from('products')
       .select(`
-        product_id, name, brand, category, sub_category,
+        product_id, name, brand, category, sub_category, is_deleted,
         product_ingredients (
           ingredient_id,
           ingredients ( ingredient_id, name )

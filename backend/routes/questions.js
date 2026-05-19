@@ -119,9 +119,9 @@ const scoreQuestionSimilarity = (input, question) => {
   };
 };
 
-// GET /api/questions — 取問題列表（支援 tag / search / solved 篩選，分頁）
+// GET /api/questions — 取問題列表（支援 tag / search / solved / unanswered 篩選，分頁）
 router.get('/', async (req, res) => {
-  const { tag, search, solved, user_id, include_anonymous, page = 1, limit = 20 } = req.query;
+  const { tag, search, solved, unanswered, user_id, include_anonymous, page = 1, limit = 20 } = req.query;
   const pageNum = Math.max(1, parseInt(page));
   const pageSize = Math.min(50, Math.max(1, parseInt(limit)));
   const from = (pageNum - 1) * pageSize;
@@ -130,9 +130,7 @@ router.get('/', async (req, res) => {
   try {
     let query = supabase
       .from('questions')
-      .select('question_id, user_id, is_anonymous, title, detail, tags, solved, views, created_at, ai_answer, users(nickname, department_grade), answers(count)', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, to);
+      .select('question_id, user_id, is_anonymous, title, tags, solved, views, created_at, ai_answer, users(nickname, department_grade), answers(count)', { count: 'exact' });
 
     if (user_id) {
       query = query.eq('user_id', user_id);
@@ -142,6 +140,18 @@ router.get('/', async (req, res) => {
     if (solved === 'false') query = query.eq('solved', false);
     if (tag)    query = query.contains('tags', [tag]);
     if (search) query = query.or(`title.ilike.%${search}%`);
+
+    if (unanswered === 'true') {
+      const { data: answeredRows } = await supabase.from('answers').select('question_id');
+      const answeredIds = [...new Set((answeredRows || []).map(r => r.question_id))];
+      if (answeredIds.length > 0) {
+        query = query.not('question_id', 'in', `(${answeredIds.join(',')})`);
+      }
+      query = query.eq('solved', false).order('created_at', { ascending: true });
+    } else {
+      query = query.order('created_at', { ascending: false });
+    }
+    query = query.range(from, to);
 
     const { data, error, count } = await query;
     if (error) return res.status(400).json({ error: error.message });
@@ -260,6 +270,93 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: '新增失敗' });
+  }
+});
+
+// GET /api/questions/bookmarks/:user_id — 取得使用者收藏的問答清單
+router.get('/bookmarks/:user_id', async (req, res) => {
+  const { user_id } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('question_bookmarks')
+      .select('question_id, questions(question_id, user_id, is_anonymous, title, tags, solved, views, created_at, ai_answer, users(nickname, department_grade), answers(count))')
+      .eq('user_id', user_id)
+      .order('created_at', { ascending: false });
+    if (error) return res.status(400).json({ error: error.message });
+    const result = (data || []).map(d => ({
+      ...d.questions,
+      answer_count: d.questions?.answers?.[0]?.count ?? 0,
+    }));
+    res.json(result);
+  } catch (err) {
+    console.error('[GET question bookmarks]', err.message);
+    res.status(500).json({ error: '查詢失敗' });
+  }
+});
+
+// POST /api/questions/:id/bookmark — 收藏 / 取消收藏問答（toggle）
+router.post('/:id/bookmark', async (req, res) => {
+  const { id } = req.params;
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ error: '需要登入' });
+  try {
+    const { data: existing } = await supabase
+      .from('question_bookmarks')
+      .select('id')
+      .eq('question_id', id)
+      .eq('user_id', user_id)
+      .maybeSingle();
+    if (existing) {
+      await supabase.from('question_bookmarks').delete().eq('id', existing.id);
+      return res.json({ bookmarked: false });
+    }
+    await supabase.from('question_bookmarks')
+      .insert({ question_id: parseInt(id), user_id: parseInt(user_id) });
+    res.json({ bookmarked: true });
+  } catch (err) {
+    console.error('[POST question bookmark]', err.message);
+    res.status(500).json({ error: '操作失敗' });
+  }
+});
+
+// GET /api/questions/:id/bookmark-status?user_id= — 查詢是否已收藏
+router.get('/:id/bookmark-status', async (req, res) => {
+  const { id } = req.params;
+  const { user_id } = req.query;
+  if (!user_id) return res.json({ bookmarked: false });
+  const { data } = await supabase
+    .from('question_bookmarks')
+    .select('id')
+    .eq('question_id', id)
+    .eq('user_id', user_id)
+    .maybeSingle();
+  res.json({ bookmarked: !!data });
+});
+
+// PATCH /api/questions/:id/solved — 發問者標記問題為已解決
+router.patch('/:id/solved', async (req, res) => {
+  const { id } = req.params;
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ error: '需要 user_id' });
+  try {
+    const { data: existing, error: fetchErr } = await supabase
+      .from('questions')
+      .select('user_id')
+      .eq('question_id', id)
+      .single();
+    if (fetchErr || !existing) return res.status(404).json({ error: '找不到問題' });
+    if (String(existing.user_id) !== String(user_id)) {
+      return res.status(403).json({ error: '只有發問者可以標記已解決' });
+    }
+    const { error } = await supabase
+      .from('questions')
+      .update({ solved: true })
+      .eq('question_id', id);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ message: '已標記為已解決' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: '操作失敗' });
   }
 });
 

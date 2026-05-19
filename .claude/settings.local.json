@@ -56,7 +56,13 @@
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); console.log\\('總筆數:', j.data?.length, '第一筆:', j.data?.[0]?.name, j.data?.[0]?.coverage\\)\")",
       "Bash(curl -s \"http://localhost:5001/api/products?category=%E5%8C%96%E5%A6%9D%E5%93%81&sub_category=%E7%B2%89%E5%BA%95%E6%B6%B2&coverage=%E8%BC%95%E8%96%84\")",
       "Bash(GIT_EDITOR=true git rebase --continue)",
-      "Bash(GIT_EDITOR=cat git rebase --continue)"
+      "Bash(GIT_EDITOR=cat git rebase --continue)",
+      "Bash(pkill -f \"node.*backend\")",
+      "Bash(pkill -f \"react-scripts\")",
+      "Bash(node server.js)",
+      "Bash(curl -s -X PATCH http://localhost:5001/api/admin/products/1/restore -H \"Content-Type: application/json\" -H \"x-admin-key: glowadmin2026\")",
+      "Bash(node -e \"require\\('/Users/wyk/Desktop/美妝樣本/backend/routes/admin.js'\\)\")",
+      "Bash(kill -9 4476)"
     ]
   }
 }

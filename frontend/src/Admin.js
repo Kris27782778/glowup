@@ -555,8 +555,13 @@ function ProductsTab() {
 
   const handleDelete = async () => {
     await adminFetch(`/products/${del.product_id}`, { method:'DELETE' });
-    setAll(prev => prev.filter(p => p.product_id !== del.product_id));
+    setAll(prev => prev.map(p => p.product_id === del.product_id ? { ...p, is_deleted: true } : p));
     setDel(null);
+  };
+
+  const handleRestore = async (productId) => {
+    await adminFetch(`/products/${productId}/restore`, { method:'PATCH' });
+    setAll(prev => prev.map(p => p.product_id === productId ? { ...p, is_deleted: false } : p));
   };
 
   const handleSave = (updated) => {
@@ -653,13 +658,14 @@ function ProductsTab() {
               const sc = P_SUB_COLORS[si % P_SUB_COLORS.length];
               return (
                 <tr key={p.product_id}
-                  style={{ borderBottom:`1px solid ${C.border}`, transition:'background 150ms' }}
+                  style={{ borderBottom:`1px solid ${C.border}`, transition:'background 150ms', opacity: p.is_deleted ? 0.5 : 1 }}
                   onMouseEnter={e => e.currentTarget.style.background = C.bgRowHover}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   <td style={{ ...tdStyle, maxWidth:'200px', overflow:'hidden',
                     textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                     <strong style={{ color:C.text }}>{p.name}</strong>
+                    {p.is_deleted && <span style={{ marginLeft:'6px', fontSize:'10px', color:'#A89990', border:'1px solid rgba(168,153,144,0.4)', borderRadius:'999px', padding:'1px 7px' }}>已下架</span>}
                   </td>
                   <td style={tdStyle}>{p.brand}</td>
                   <td style={tdStyle}>
@@ -671,8 +677,11 @@ function ProductsTab() {
                   <td style={tdStyle}>{fmtDate(p.created_at)}</td>
                   <td style={tdStyle}>
                     <div style={{ display:'flex', gap:'6px' }}>
-                      <button onClick={() => setEditing(p)} style={btnStyle('accent')}>編輯</button>
-                      <button onClick={() => setDel(p)} style={btnStyle('danger')}>刪除</button>
+                      {!p.is_deleted && <button onClick={() => setEditing(p)} style={btnStyle('accent')}>編輯</button>}
+                      {p.is_deleted
+                        ? <button onClick={() => handleRestore(p.product_id)} style={btnStyle('accent')}>重新上架</button>
+                        : <button onClick={() => setDel(p)} style={btnStyle('danger')}>下架</button>
+                      }
                     </div>
                   </td>
                 </tr>
@@ -685,7 +694,7 @@ function ProductsTab() {
 
       {del && (
         <ConfirmModal
-          message={`確定要刪除產品「${del.name}」？\n此操作無法復原。`}
+          message={`確定要下架產品「${del.name}」？\n下架後可從管理後台重新上架。`}
           onConfirm={handleDelete}
           onCancel={() => setDel(null)}
         />

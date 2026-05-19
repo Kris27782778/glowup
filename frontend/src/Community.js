@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReveal } from './hooks/useReveal';
 import API_BASE from './config';
@@ -646,16 +646,6 @@ export default function Community() {
   );
 }
 
-/* ─── 反應 mini-count ─────────────────────────────────────── */
-function ReactionMini({ reactions }) {
-  const total = Object.values(reactions || {}).reduce((s, n) => s + n, 0);
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <span style={s.reactionMiniIcons}>❤️ 📚 🙋</span>
-      <span style={s.reactionMiniCount}>{total}</span>
-    </div>
-  );
-}
 
 /* ─── 貼文卡片 ─────────────────────────────────────────────── */
 function PostCard({ post, idx, navigate }) {

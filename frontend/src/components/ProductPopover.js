@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import API_BASE from '../config';
+import ReportModal from './ReportModal';
 
 const T = {
   bgSurface:     '#FFFFFF',
@@ -34,12 +35,13 @@ function Stars({ value, onChange, readonly = false }) {
 }
 
 export default function ProductPopover({ product, onClose, currentUser }) {
-  const [reviews,    setReviews]    = useState([]);
-  const [myRating,   setMyRating]   = useState(0);
-  const [myContent,  setMyContent]  = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted,  setSubmitted]  = useState(false);
-  const [visible,    setVisible]    = useState(false); // 控制滑入動畫
+  const [reviews,      setReviews]      = useState([]);
+  const [myRating,     setMyRating]     = useState(0);
+  const [myContent,    setMyContent]    = useState('');
+  const [submitting,   setSubmitting]   = useState(false);
+  const [submitted,    setSubmitted]    = useState(false);
+  const [visible,      setVisible]      = useState(false);
+  const [reportTarget, setReportTarget] = useState(null);
 
   // 掛載後觸發滑入
   useEffect(() => {
@@ -306,9 +308,21 @@ export default function ProductPopover({ product, onClose, currentUser }) {
                         {r.content}
                       </p>
                     )}
-                    <p style={{ margin:'6px 0 0', fontSize:'11px', color:T.textTertiary }}>
-                      {new Date(r.created_at).toLocaleDateString('zh-TW')}
-                    </p>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:'6px' }}>
+                      <p style={{ margin:0, fontSize:'11px', color:T.textTertiary }}>
+                        {new Date(r.created_at).toLocaleDateString('zh-TW')}
+                      </p>
+                      {currentUser && String(currentUser.user_id) !== String(r.user_id) && (
+                        <button
+                          onClick={() => setReportTarget({ id: r.review_id, type: 'review' })}
+                          style={{ background:'none', border:'1px solid rgba(196,137,122,0.35)',
+                            borderRadius:'999px', cursor:'pointer',
+                            fontSize:'11px', color:T.textSecondary, padding:'3px 10px' }}
+                        >
+                          檢舉
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -357,7 +371,14 @@ export default function ProductPopover({ product, onClose, currentUser }) {
           </div>
         </div>
       </div>
+      {reportTarget && (
+        <ReportModal
+          targetType={reportTarget.type}
+          targetId={reportTarget.id}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
     </>,
-    document.body   // ← 掛到 body，完全脫離任何父層
+    document.body
   );
 }

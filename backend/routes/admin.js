@@ -109,7 +109,7 @@ router.get('/products', async (req, res) => {
   const { q = '' } = req.query;
   try {
     const result = await pool.query(
-      `SELECT product_id, name, brand, category, sub_category, created_at
+      `SELECT product_id, name, brand, category, sub_category, is_deleted, created_at
        FROM products
        WHERE name ILIKE $1 OR brand ILIKE $1 OR category ILIKE $1
        ORDER BY created_at DESC`,
@@ -180,16 +180,25 @@ router.post('/products', async (req, res) => {
   }
 });
 
-// ── 刪除產品 DELETE /api/admin/products/:id ───────────────────────
+// ── 下架產品 DELETE /api/admin/products/:id ───────────────────────
 router.delete('/products/:id', async (req, res) => {
   try {
-    await pool.query('DELETE FROM product_ingredients WHERE product_id = $1', [req.params.id]);
-    await pool.query('DELETE FROM wishlists          WHERE product_id = $1', [req.params.id]);
-    await pool.query('DELETE FROM products           WHERE product_id = $1', [req.params.id]);
-    res.json({ message: '已刪除' });
+    await pool.query('UPDATE products SET is_deleted = true WHERE product_id = $1', [req.params.id]);
+    res.json({ message: '已下架' });
   } catch (err) {
     console.error('[admin/products delete]', err.message);
-    res.status(500).json({ error: '刪除失敗' });
+    res.status(500).json({ error: '下架失敗' });
+  }
+});
+
+// ── 重新上架 PATCH /api/admin/products/:id/restore ────────────────
+router.patch('/products/:id/restore', async (req, res) => {
+  try {
+    await pool.query('UPDATE products SET is_deleted = false WHERE product_id = $1', [req.params.id]);
+    res.json({ message: '已重新上架' });
+  } catch (err) {
+    console.error('[admin/products restore]', err.message);
+    res.status(500).json({ error: '上架失敗' });
   }
 });
 
@@ -285,12 +294,13 @@ router.get('/reports', async (req, res) => {
   const { status = '' } = req.query;
   const baseSql = `
     SELECT r.*, u.nickname AS reporter_name,
-      COALESCE(q.title, pr.name, LEFT(a.content, 120)) AS preview_text
+      COALESCE(q.title, pr.name, LEFT(a.content, 120), LEFT(rv.content, 120)) AS preview_text
     FROM reports r
     LEFT JOIN users u    ON u.user_id    = r.reporter_id
     LEFT JOIN questions q ON r.target_type = 'question' AND q.question_id = r.target_id
     LEFT JOIN products pr ON r.target_type = 'product'  AND pr.product_id  = r.target_id
     LEFT JOIN answers  a  ON r.target_type = 'answer'   AND a.answer_id    = r.target_id
+    LEFT JOIN reviews  rv ON r.target_type = 'review'   AND rv.review_id   = r.target_id
   `;
   try {
     const params = [];
@@ -323,6 +333,8 @@ router.patch('/reports/:id/resolve', async (req, res) => {
       await pool.query(`DELETE FROM questions WHERE question_id = $1`, [target_id]);
     } else if (target_type === 'answer') {
       await pool.query(`DELETE FROM answers WHERE answer_id = $1`, [target_id]);
+    } else if (target_type === 'review') {
+      await pool.query(`DELETE FROM reviews WHERE review_id = $1`, [target_id]);
     }
 
     await pool.query(

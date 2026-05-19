@@ -506,11 +506,14 @@ function Dashboard() {
                       const p = w.products;
                       if (!p) return null;
                       return (
-                        <div key={w.wishlist_id} style={wishlistStyle.card}>
+                        <div key={w.wishlist_id} style={{ ...wishlistStyle.card, ...(p.is_deleted ? { opacity: 0.45, filter: 'grayscale(0.6)' } : {}) }}>
                           <div style={wishlistStyle.cardHeader}>
                             <span style={wishlistStyle.brand}>{p.brand}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={wishlistStyle.badge}>{p.sub_category}</span>
+                              {p.is_deleted
+                                ? <span style={{ fontSize: '10px', color: '#A89990', backgroundColor: 'rgba(168,153,144,0.12)', border: '1px solid rgba(168,153,144,0.3)', borderRadius: '999px', padding: '2px 8px' }}>已下架</span>
+                                : <span style={wishlistStyle.badge}>{p.sub_category}</span>
+                              }
                               <button
                                 onClick={() => handleRemoveFavorite(w.wishlist_id, p.product_id)}
                                 title="取消收藏"

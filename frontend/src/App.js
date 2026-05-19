@@ -13,7 +13,6 @@ const ProductDB = lazy(() => import('./ProductDB'));
 const Dashboard = lazy(() => import('./Dashboard'));
 const Settings = lazy(() => import('./Settings'));
 const Community = lazy(() => import('./Community'));
-const CommunityPost = lazy(() => import('./CommunityPost'));
 const QA = lazy(() => import('./QA'));
 const AskQuestion = lazy(() => import('./AskQuestion'));
 const Admin = lazy(() => import('./Admin'));
