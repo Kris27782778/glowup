@@ -501,6 +501,9 @@ const fetchProducts = async (pageNum = page) => {
                           setHoveredCard(null);
                         }}
                       >
+                          {/* 產品圖片 */}
+                          <ProductImage url={p.image_url} />
+
                           {/* 品牌 + 品項 */}
                           <div style={styles.cardHeader}>
                             <span style={styles.productBrand}>{p.brand}</span>
@@ -1022,6 +1025,39 @@ const fetchProducts = async (pageNum = page) => {
   );
 }
 
+// ── 產品圖片元件 ───────────────────────────────────────────────────
+function ProductImage({ url }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div style={{
+      backgroundColor: '#F0EBE7',
+      borderRadius: '8px',
+      marginBottom: '12px',
+      aspectRatio: '1 / 1',
+      overflow: 'hidden',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>
+      {url && !failed ? (
+        <img
+          src={url}
+          alt=""
+          loading="lazy"
+          onError={() => setFailed(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      ) : (
+        <span style={{
+          fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+          fontSize: '12px',
+          color: '#A89990',
+        }}>暫無圖片</span>
+      )}
+    </div>
+  );
+}
+
 // ── 引導遊覽 Overlay ───────────────────────────────────────────────
 const TOUR_STEPS = [
   { title: '選擇探索領域', desc: '先決定要找保養品還是化妝品，後續篩選條件會自動切換。' },
@@ -1482,7 +1518,7 @@ const styles = {
   },
   productGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
     gap: '20px',
   },
   productCard: {
