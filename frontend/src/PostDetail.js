@@ -1,7 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import API_BASE from './config';
 import { useLang } from './hooks/useLang';
+
+const SKIN_TYPES = ['油性肌', '乾性肌', '敏感肌', '混合性肌', '中性肌'];
+const DOMAINS    = ['保養品', '化妝品'];
+const POST_TYPES = ['心得分享', '請益討論', '成分研究', '開箱評測'];
+const SUB_CARE   = ['化妝水', '乳液', '面霜', '精華液', '眼霜'];
+const SUB_MAKEUP = ['粉底液', '遮瑕', '氣墊', '防曬'];
+const EFFECTS    = ['保濕', '控油', '抗痘', '舒緩修復', '去角質', '抗老', '美白'];
 
 function timeAgo(dateStr) {
   const diff = (Date.now() - new Date(dateStr)) / 1000;
@@ -18,9 +25,10 @@ function avatarColor(str = '') {
 }
 
 export default function PostDetail() {
-  const { id }     = useParams();
-  const navigate   = useNavigate();
-  const { t }      = useLang();
+  const { id }         = useParams();
+  const navigate       = useNavigate();
+  const { t }          = useLang();
+  const [searchParams] = useSearchParams();
 
   const [post,       setPost]       = useState(null);
   const [comments,   setComments]   = useState([]);
@@ -31,6 +39,15 @@ export default function PostDetail() {
   const [loading,    setLoading]    = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleting,   setDeleting]   = useState(false);
+  const [isEditing,  setIsEditing]  = useState(false);
+  const [saving,     setSaving]     = useState(false);
+  const [editTitle,   setEditTitle]   = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editSkin,    setEditSkin]    = useState('');
+  const [editDomain,  setEditDomain]  = useState('');
+  const [editType,    setEditType]    = useState('');
+  const [editSubCat,  setEditSubCat]  = useState('');
+  const [editEffects, setEditEffects] = useState([]);
 
   const user = (() => {
     try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
@@ -48,6 +65,14 @@ export default function PostDetail() {
     if (!postRes.ok) { navigate('/community'); return; }
     setPost(postData);
     setHelpCount(postData.helpful_count || 0);
+    setEditTitle(postData.title || '');
+    setEditContent(postData.content || '');
+    setEditSkin(postData.skin_type || '');
+    setEditDomain(postData.domain || '');
+    setEditType(postData.post_type || '');
+    setEditSubCat(postData.sub_category || '');
+    setEditEffects(postData.effect_tags || []);
+    if (searchParams.get('edit') === 'true') setIsEditing(true);
     const comData = await commentsRes.json();
     setComments(Array.isArray(comData) ? comData : []);
     if (helpRes) {
@@ -59,7 +84,7 @@ export default function PostDetail() {
     setLoading(false);
     // 進入貼文頁時，更新 lastSeenCommunity，清除 Navbar 紅點
     localStorage.setItem('lastSeenCommunity', new Date().toISOString());
-  }, [id, navigate, user?.user_id]);
+  }, [id, navigate, user?.user_id, searchParams]);
 
   useEffect(() => { fetchPost(); }, [fetchPost]);
 
@@ -115,6 +140,43 @@ export default function PostDetail() {
     else setDeleting(false);
   };
 
+  const handleSave = async () => {
+    if (!editTitle.trim() || editTitle.length < 6) return;
+    if (!editContent.trim() || editContent.length < 30) return;
+    setSaving(true);
+    const res = await fetch(`${API_BASE}/api/posts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: user.user_id,
+        title:        editTitle,
+        content:      editContent,
+        skin_type:    editSkin,
+        domain:       editDomain,
+        post_type:    editType    || null,
+        sub_category: editSubCat  || null,
+        effect_tags:  editEffects,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setPost(data.post);
+      setIsEditing(false);
+    }
+    setSaving(false);
+  };
+
+  const cancelEdit = () => {
+    setEditTitle(post.title || '');
+    setEditContent(post.content || '');
+    setEditSkin(post.skin_type || '');
+    setEditDomain(post.domain || '');
+    setEditType(post.post_type || '');
+    setEditSubCat(post.sub_category || '');
+    setEditEffects(post.effect_tags || []);
+    setIsEditing(false);
+  };
+
   if (loading) return <div style={s.page}><div style={s.loading}>載入中…</div></div>;
   if (!post)   return null;
 
@@ -134,18 +196,53 @@ export default function PostDetail() {
           {/* ── 主內容 ── */}
           <article style={s.article}>
 
-            {/* 標籤列 */}
-            <div style={s.tagRow}>
-              <span style={s.tag}>{post.skin_type}</span>
-              <span style={s.tag}>{post.domain}</span>
-              {post.sub_category && <span style={s.tag}>{post.sub_category}</span>}
-              {(post.effect_tags || []).map(e => (
-                <span key={e} style={s.tag}>{e}</span>
-              ))}
-            </div>
+            {/* 標籤列 / 編輯時的 chip 選擇器 */}
+            {isEditing ? (
+              <div style={s.editTagArea}>
+                {[
+                  { label: '膚質 *', options: SKIN_TYPES, value: editSkin,   single: true,  onChange: v => setEditSkin(v) },
+                  { label: '領域 *', options: DOMAINS,    value: editDomain, single: true,  onChange: v => { setEditDomain(v); setEditSubCat(''); } },
+                  { label: '貼文類型', options: POST_TYPES, value: editType,  single: true,  onChange: v => setEditType(prev => prev === v ? '' : v) },
+                  ...(editDomain ? [{ label: '品項', options: editDomain === '保養品' ? SUB_CARE : SUB_MAKEUP, value: editSubCat, single: true, onChange: v => setEditSubCat(prev => prev === v ? '' : v) }] : []),
+                  ...(editDomain === '保養品' ? [{ label: '功效', options: EFFECTS, value: editEffects, single: false, onChange: v => setEditEffects(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]) }] : []),
+                ].map(group => (
+                  <div key={group.label} style={s.editChipRow}>
+                    <span style={s.editChipLabel}>{group.label}</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                      {group.options.map(opt => {
+                        const active = group.single ? group.value === opt : group.value.includes(opt);
+                        return (
+                          <button key={opt}
+                            style={{ ...s.editChip, ...(active ? s.editChipActive : {}) }}
+                            onClick={() => group.onChange(opt)}
+                          >{opt}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={s.tagRow}>
+                <span style={s.tag}>{post.skin_type}</span>
+                <span style={s.tag}>{post.domain}</span>
+                {post.post_type   && <span style={{ ...s.tag, ...s.tagType }}>{post.post_type}</span>}
+                {post.sub_category && <span style={s.tag}>{post.sub_category}</span>}
+                {(post.effect_tags || []).map(e => <span key={e} style={s.tag}>{e}</span>)}
+              </div>
+            )}
 
             {/* 標題 */}
-            <h1 style={s.title}>{post.title}</h1>
+            {isEditing ? (
+              <input
+                style={s.editTitleInput}
+                value={editTitle}
+                onChange={e => setEditTitle(e.target.value)}
+                placeholder="標題（至少 6 個字）"
+              />
+            ) : (
+              <h1 style={s.title}>{post.title}</h1>
+            )}
 
             {/* 作者資訊 */}
             <div style={s.authorRow}>
@@ -156,14 +253,21 @@ export default function PostDetail() {
                 <span style={s.authorName}>{post.users?.nickname || '匿名'}</span>
                 <span style={s.authorMeta}> · {post.users?.department_grade || ''} · {timeAgo(post.created_at)}</span>
               </div>
-              {isOwner && (
-                <button
-                  style={s.deleteBtn}
-                  onClick={handleDelete}
-                  disabled={deleting}
-                >
-                  {deleting ? '刪除中…' : '刪除貼文'}
-                </button>
+              {isOwner && !isEditing && (
+                <>
+                  <button style={s.editBtn} onClick={() => setIsEditing(true)}>編輯貼文</button>
+                  <button style={s.deleteBtn} onClick={handleDelete} disabled={deleting}>
+                    {deleting ? '刪除中…' : '刪除貼文'}
+                  </button>
+                </>
+              )}
+              {isEditing && (
+                <>
+                  <button style={s.cancelBtn} onClick={cancelEdit}>取消</button>
+                  <button style={s.saveBtn} onClick={handleSave} disabled={saving}>
+                    {saving ? '儲存中…' : '儲存變更'}
+                  </button>
+                </>
               )}
             </div>
 
@@ -171,11 +275,21 @@ export default function PostDetail() {
             <hr style={s.divider} />
 
             {/* 正文 */}
-            <div style={s.content}>
-              {post.content.split('\n').map((line, i) => (
-                <p key={i} style={{ margin: '0 0 12px' }}>{line}</p>
-              ))}
-            </div>
+            {isEditing ? (
+              <textarea
+                style={s.editContentArea}
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                placeholder="內文（至少 30 個字）"
+                rows={14}
+              />
+            ) : (
+              <div style={s.content}>
+                {post.content.split('\n').map((line, i) => (
+                  <p key={i} style={{ margin: '0 0 12px' }}>{line}</p>
+                ))}
+              </div>
+            )}
 
             {/* 互動按鈕列 */}
             <div style={s.actionBar}>
@@ -277,6 +391,7 @@ export default function PostDetail() {
               <InfoRow label="作者" value={post.users?.nickname || '匿名'} />
               <InfoRow label="膚質" value={post.skin_type} />
               <InfoRow label="領域" value={post.domain} />
+              {post.post_type && <InfoRow label="類型" value={post.post_type} />}
               {post.sub_category && <InfoRow label="品項" value={post.sub_category} />}
               <InfoRow label="有幫助" value={`${helpCount} 人`} />
               <InfoRow label="留言" value={`${post.comment_count} 則`} />
@@ -334,9 +449,42 @@ const s = {
     justifyContent: 'center', fontFamily: '"Cormorant Garamond", serif', fontSize: '16px', color: '#fff', flexShrink: 0 },
   authorName: { fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' },
   authorMeta: { fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', fontSize: '12px', color: 'var(--text-tertiary)' },
-  deleteBtn: { marginLeft: 'auto', padding: '4px 12px', border: '1px solid #E07060', borderRadius: '8px',
+  editBtn: { marginLeft: 'auto', padding: '4px 12px', border: '1px solid var(--accent)', borderRadius: '8px',
+    backgroundColor: 'transparent', color: 'var(--accent)', fontSize: '12px', cursor: 'pointer',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif' },
+  deleteBtn: { padding: '4px 12px', border: '1px solid #E07060', borderRadius: '8px',
     backgroundColor: 'transparent', color: '#E07060', fontSize: '12px', cursor: 'pointer',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif' },
+  cancelBtn: { marginLeft: 'auto', padding: '4px 14px', border: '1px solid var(--border)', borderRadius: '8px',
+    backgroundColor: 'transparent', color: 'var(--text-tertiary)', fontSize: '12px', cursor: 'pointer',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif' },
+  saveBtn: { padding: '4px 14px', border: 'none', borderRadius: '8px',
+    backgroundColor: 'var(--accent)', color: '#fff', fontSize: '12px', cursor: 'pointer',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', fontWeight: 500 },
+
+  editTagArea: { display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px',
+    padding: '14px 16px', backgroundColor: 'var(--bg-subtle)', borderRadius: '12px',
+    border: '1px solid var(--border)' },
+  editChipRow: { display: 'flex', alignItems: 'flex-start', gap: '10px' },
+  editChipLabel: { fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase',
+    color: 'var(--text-tertiary)', minWidth: '52px', paddingTop: '5px',
+    fontFamily: '"DM Sans", sans-serif' },
+  editChip: { height: '26px', padding: '0 11px', borderRadius: '999px',
+    border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)',
+    fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', transition: 'all 120ms' },
+  editChipActive: { backgroundColor: 'var(--accent)', borderColor: 'var(--accent)', color: '#fff' },
+
+  editTitleInput: { width: '100%', boxSizing: 'border-box', fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
+    fontSize: '28px', fontWeight: 400, color: 'var(--text-primary)', border: 'none',
+    borderBottom: '2px solid var(--accent)', outline: 'none', background: 'transparent',
+    padding: '4px 0', margin: '0 0 20px', lineHeight: 1.3 },
+  editContentArea: { width: '100%', boxSizing: 'border-box', padding: '14px 16px',
+    border: '1px solid var(--border)', borderRadius: '12px', backgroundColor: 'var(--bg-surface)',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif', fontSize: '15px',
+    color: 'var(--text-secondary)', lineHeight: 1.8, outline: 'none', resize: 'vertical',
+    marginBottom: '32px' },
+  tagType: { backgroundColor: 'rgba(196,137,122,0.1)', borderColor: 'rgba(196,137,122,0.3)', color: 'var(--accent)' },
 
   divider: { border: 'none', borderTop: '1px solid var(--border)', margin: '0 0 24px' },
 

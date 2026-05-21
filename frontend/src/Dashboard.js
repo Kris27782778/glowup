@@ -366,6 +366,8 @@ function Dashboard() {
                     <div key={p.post_id} style={wishlistStyle.card}>
                       <div style={wishlistStyle.cardHeader}>
                         <span style={wishlistStyle.brand}>{new Date(p.created_at).toLocaleDateString('zh-TW')}</span>
+                        <button style={{ ...wishlistStyle.deleteBtn, marginRight: '6px', borderColor: 'var(--accent)', color: 'var(--accent)' }}
+                          onClick={() => navigate(`/community/${p.post_id}?edit=true`)}>編輯</button>
                         <button style={wishlistStyle.deleteBtn} title="刪除貼文" onClick={async () => {
                           if (!window.confirm('確定要刪除這篇貼文嗎？')) return;
                           const res = await fetch(`${API_BASE}/api/posts/${p.post_id}`, {

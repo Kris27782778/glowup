@@ -157,6 +157,45 @@ router.post('/', async (req, res) => {
   }
 });
 
+/* PUT /api/posts/:id */
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { user_id, title, content, skin_type, domain, post_type, sub_category, effect_tags } = req.body;
+
+  if (!user_id)                        return res.status(400).json({ error: '需要登入' });
+  if (!title || title.length < 6)      return res.status(400).json({ error: '標題至少需要 6 個字' });
+  if (!content || content.length < 30) return res.status(400).json({ error: '內文至少需要 30 個字' });
+  if (!skin_type)                      return res.status(400).json({ error: '膚質為必選' });
+  if (!domain)                         return res.status(400).json({ error: '領域為必選' });
+
+  try {
+    const { data: existing } = await supabase
+      .from('forum_posts').select('user_id').eq('post_id', id).single();
+    if (!existing || String(existing.user_id) !== String(user_id))
+      return res.status(403).json({ error: '無權限編輯此貼文' });
+
+    const { data, error } = await supabase
+      .from('forum_posts')
+      .update({
+        title, content, skin_type, domain,
+        post_type:    post_type    || null,
+        sub_category: sub_category || null,
+        effect_tags:  Array.isArray(effect_tags) ? effect_tags : [],
+      })
+      .eq('post_id', id)
+      .select(`post_id, user_id, title, content, skin_type, domain, post_type,
+               sub_category, effect_tags, ingredients, helpful_count, comment_count,
+               views, status, created_at, users(nickname, department_grade)`)
+      .single();
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ message: '更新成功', post: data });
+  } catch (err) {
+    console.error('[PUT /posts/:id]', err.message);
+    res.status(500).json({ error: '更新失敗' });
+  }
+});
+
 /* DELETE /api/posts/:id */
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
