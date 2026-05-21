@@ -61,6 +61,41 @@ router.get('/bookmarks/:user_id', async (req, res) => {
   }
 });
 
+/* ⚠️ GET /api/posts/popular  必須在 /:id 之前 */
+router.get('/popular', async (req, res) => {
+  try {
+    const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const fields  = 'post_id, title, helpful_count, comment_count, skin_type, domain, post_type, created_at, users(nickname)';
+
+    // 先抓近 30 天
+    const { data: recent } = await supabase
+      .from('forum_posts')
+      .select(fields)
+      .eq('status', 'active')
+      .gte('created_at', since30)
+      .order('helpful_count', { ascending: false })
+      .order('comment_count', { ascending: false })
+      .limit(3);
+
+    if (recent && recent.length >= 3) return res.json(recent);
+
+    // fallback：全期間
+    const { data: allTime, error } = await supabase
+      .from('forum_posts')
+      .select(fields)
+      .eq('status', 'active')
+      .order('helpful_count', { ascending: false })
+      .order('comment_count', { ascending: false })
+      .limit(3);
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(allTime || []);
+  } catch (err) {
+    console.error('[GET popular]', err.message);
+    res.status(500).json({ error: '查詢失敗' });
+  }
+});
+
 /* ⚠️ GET /api/posts/trending-tags  必須在 /:id 之前 */
 router.get('/trending-tags', async (req, res) => {
   try {

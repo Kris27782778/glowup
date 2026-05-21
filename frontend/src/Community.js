@@ -103,24 +103,6 @@ const TRENDING_FALLBACK = [
   { tag: '#控油', count: null },
 ];
 
-const ACTIVE_MEMBERS = [
-  { initial: '林', color: '#C4897A', name: '林小羽', posts: 12, skinType: '混合性肌' },
-  { initial: '王', color: '#7A8A9E', name: '王思涵', posts: 9, skinType: '油性肌' },
-  { initial: '黃', color: '#A08060', name: '黃品蓁', posts: 7, skinType: '敏感肌' },
-];
-
-const RELATED_QA = [
-  { id: 1, q: '角鯊烷和荷荷芭油哪個更適合油性肌？', answers: 3 },
-  { id: 2, q: '菸鹼醯胺和維C可以同時用嗎？', answers: 5 },
-  { id: 3, q: '第一次用A醇要注意什麼？', answers: 7 },
-];
-
-const INGREDIENT_SPOTLIGHT = {
-  name: '角鯊烷',
-  safety: 'safe',
-  summary: '植物性油脂，高度仿真皮脂，油肌乾肌都適合',
-  postCount: 24,
-};
 
 /* ─── 輔助元件：成分 Pill ─────────────────────────────────── */
 function IngredientPill({ name, navigate }) {
@@ -367,11 +349,16 @@ export default function Community() {
 
   const [apiPosts, setApiPosts]   = useState([]);
   const [apiLoaded, setApiLoaded] = useState(false);
-  const [trending,  setTrending]  = useState([]);
+  const [trending, setTrending] = useState([]);
+  const [popular,  setPopular]  = useState([]);
   useEffect(() => {
     fetch(`${API_BASE}/api/posts/trending-tags`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data) && data.length > 0) setTrending(data); })
+      .catch(() => {});
+    fetch(`${API_BASE}/api/posts/popular`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setPopular(data); })
       .catch(() => {});
   }, []);
   useEffect(() => {
@@ -607,64 +594,28 @@ export default function Community() {
             </div>
           </div>
 
-          {/* 成分知識連結 */}
+          {/* 熱門文章 */}
           <div style={s.sideCard} className="g-reveal delay-1">
-            <p style={s.sideTitle}>本週成分焦點</p>
-            <div style={s.ingredientSpotlight}>
-              <div style={s.spotlightTop}>
-                <span style={s.spotlightName}>{INGREDIENT_SPOTLIGHT.name}</span>
-                <span style={s.spotlightBadge}>安全</span>
+            <p style={s.sideTitle}>熱門文章</p>
+            {popular.length === 0 ? (
+              <p style={{ fontFamily: '"DM Sans","Noto Sans TC",sans-serif', fontSize: '12px', color: T.textTertiary, margin: 0 }}>
+                還沒有熱門文章
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {popular.map((p, i) => (
+                  <button key={p.post_id} style={s.popularRow} onClick={() => navigate(`/community/${p.post_id}`)}>
+                    <span style={s.popularRank}>{i + 1}</span>
+                    <div style={s.popularInfo}>
+                      <span style={s.popularTitle}>{p.title}</span>
+                      <span style={s.popularMeta}>
+                        {p.users?.nickname} · ♡ {p.helpful_count} · 💬 {p.comment_count}
+                      </span>
+                    </div>
+                  </button>
+                ))}
               </div>
-              <p style={s.spotlightDesc}>{INGREDIENT_SPOTLIGHT.summary}</p>
-              <div style={s.spotlightFooter}>
-                <span style={s.spotlightCount}>{INGREDIENT_SPOTLIGHT.postCount} 篇討論</span>
-                <button
-                  style={s.spotlightBtn}
-                  onClick={() => navigate(`/products?q=${INGREDIENT_SPOTLIGHT.name}`)}
-                >
-                  查看成分 →
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* 相關問答 */}
-          <div style={s.sideCard} className="g-reveal delay-1">
-            <p style={s.sideTitle}>最新問答</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {RELATED_QA.map(qa => (
-                <button
-                  key={qa.id}
-                  style={s.qaRow}
-                  onClick={() => navigate('/qa')}
-                >
-                  <span style={s.qaQ}>{qa.q}</span>
-                  <span style={s.qaCount}>{qa.answers} 則回答</span>
-                </button>
-              ))}
-              <button style={s.qaAskBtn} onClick={() => navigate('/qa/ask')}>
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                  <path d="M5.5 1v9M1 5.5h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-                提出你的問題
-              </button>
-            </div>
-          </div>
-
-          {/* 活躍成員 */}
-          <div style={s.sideCard} className="g-reveal delay-2">
-            <p style={s.sideTitle}>活躍成員</p>
-            <div style={s.memberList}>
-              {ACTIVE_MEMBERS.map(m => (
-                <div key={m.name} style={s.memberRow}>
-                  <div style={{ ...s.memberAvatar, backgroundColor: m.color }}>{m.initial}</div>
-                  <div style={s.memberInfo}>
-                    <span style={s.memberName}>{m.name}</span>
-                    <span style={s.memberPosts}>{m.posts} 篇貼文 · {m.skinType}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            )}
           </div>
 
         </aside>
@@ -1143,75 +1094,24 @@ const s = {
     fontFamily: '"DM Sans",sans-serif', fontSize: '11px', color: T.textTertiary,
   },
 
-  /* Ingredient spotlight */
-  ingredientSpotlight: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  spotlightTop: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  spotlightName: {
-    fontFamily: '"Cormorant Garamond","Noto Serif TC",serif',
-    fontSize: '22px', fontWeight: 400, color: T.textPrimary,
-  },
-  spotlightBadge: {
-    fontFamily: '"DM Sans",sans-serif', fontSize: '10px', fontWeight: 600,
-    color: T.safe, backgroundColor: 'rgba(123,174,138,0.12)',
-    border: '1px solid rgba(123,174,138,0.28)',
-    borderRadius: '999px', padding: '2px 8px',
-  },
-  spotlightDesc: {
-    fontFamily: '"DM Sans","Noto Sans TC",sans-serif', fontSize: '12px',
-    color: T.textSecondary, margin: 0, lineHeight: 1.6,
-  },
-  spotlightFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  spotlightCount: {
-    fontFamily: '"DM Sans",sans-serif', fontSize: '11px', color: T.textTertiary,
-  },
-  spotlightBtn: {
-    background: 'none', border: 'none', cursor: 'pointer',
-    fontFamily: '"DM Sans",sans-serif', fontSize: '12px',
-    fontWeight: 500, color: T.accent,
-  },
-
-  /* QA sidebar */
-  qaRow: {
-    display: 'flex', flexDirection: 'column', gap: '4px',
+  /* Popular posts sidebar */
+  popularRow: {
+    display: 'flex', alignItems: 'flex-start', gap: '8px',
     background: 'none', border: 'none', width: '100%',
-    padding: '8px 10px', borderRadius: '8px', cursor: 'pointer',
+    padding: '7px 8px', borderRadius: '8px', cursor: 'pointer',
     textAlign: 'left', transition: 'background-color 120ms',
-    backgroundColor: T.bgSubtle,
   },
-  qaQ: {
+  popularRank: {
+    fontFamily: '"Cormorant Garamond",serif', fontSize: '16px', fontWeight: 400,
+    color: T.accentLight, width: '16px', flexShrink: 0, lineHeight: 1.2,
+  },
+  popularInfo: { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 },
+  popularTitle: {
     fontFamily: '"DM Sans","Noto Sans TC",sans-serif', fontSize: '12px',
-    color: T.textSecondary, lineHeight: 1.5,
+    fontWeight: 500, color: T.textPrimary, lineHeight: 1.45,
     display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
   },
-  qaCount: {
-    fontFamily: '"DM Sans",sans-serif', fontSize: '11px', color: T.textTertiary,
-  },
-  qaAskBtn: {
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-    height: '34px', borderRadius: '8px',
-    border: `1px dashed ${T.border}`,
-    backgroundColor: 'transparent', cursor: 'pointer',
-    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
-    fontSize: '12px', color: T.textTertiary,
-    transition: 'border-color 120ms, color 120ms',
-    marginTop: '2px',
-  },
-
-  /* Members */
-  memberList: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  memberRow: { display: 'flex', alignItems: 'center', gap: '10px' },
-  memberAvatar: {
-    width: '30px', height: '30px', borderRadius: '50%',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontFamily: '"Cormorant Garamond",serif', fontSize: '13px',
-    color: '#fff', flexShrink: 0,
-  },
-  memberInfo: { display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0 },
-  memberName: {
-    fontFamily: '"DM Sans","Noto Sans TC",sans-serif', fontSize: '13px',
-    color: T.textPrimary, fontWeight: 500,
-  },
-  memberPosts: {
+  popularMeta: {
     fontFamily: '"DM Sans",sans-serif', fontSize: '11px', color: T.textTertiary,
   },
 };
