@@ -620,8 +620,36 @@ export default function Community() {
         {/* ── Sidebar ── */}
         <aside style={s.sidebar}>
 
-          {/* 本週熱門話題 */}
+          {/* 回答系統 */}
           <div style={s.sideCard} className="g-reveal">
+            <p style={s.sideTitle}>回答系統</p>
+            <div style={s.tierList}>
+              <div style={s.tierRow}>
+                <div style={{ ...s.tierDot, backgroundColor: '#6B8CBA' }}><AIIcon size={10} /></div>
+                <div style={s.tierInfo}>
+                  <span style={s.tierName}>GLŌW AI</span>
+                  <span style={s.tierDesc}>成分科學分析</span>
+                </div>
+              </div>
+              <div style={s.tierRow}>
+                <div style={{ ...s.tierDot, backgroundColor: '#C4A35A' }}><ExpertIcon size={10} /></div>
+                <div style={s.tierInfo}>
+                  <span style={s.tierName}>專家解答</span>
+                  <span style={s.tierDesc}>專業背景認證</span>
+                </div>
+              </div>
+              <div style={s.tierRow}>
+                <div style={{ ...s.tierDot, backgroundColor: '#7AAE8A' }}><CommunityIcon size={10} /></div>
+                <div style={s.tierInfo}>
+                  <span style={s.tierName}>社群回答</span>
+                  <span style={s.tierDesc}>真實使用經驗</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 本週熱門話題 */}
+          <div style={s.sideCard} className="g-reveal delay-1">
             <p style={s.sideTitle}>本週熱門話題</p>
             <div style={s.trendingList}>
               {(trending.length > 0 ? trending : TRENDING_FALLBACK).map((item, i) => (
@@ -663,34 +691,6 @@ export default function Community() {
                 ))}
               </div>
             )}
-          </div>
-
-          {/* 回答系統 */}
-          <div style={s.sideCard} className="g-reveal delay-3">
-            <p style={s.sideTitle}>回答系統</p>
-            <div style={s.tierList}>
-              <div style={s.tierRow}>
-                <div style={{ ...s.tierDot, backgroundColor: '#6B8CBA' }}><AIIcon size={10} /></div>
-                <div style={s.tierInfo}>
-                  <span style={s.tierName}>GLŌW AI</span>
-                  <span style={s.tierDesc}>成分科學分析</span>
-                </div>
-              </div>
-              <div style={s.tierRow}>
-                <div style={{ ...s.tierDot, backgroundColor: '#C4A35A' }}><ExpertIcon size={10} /></div>
-                <div style={s.tierInfo}>
-                  <span style={s.tierName}>專家解答</span>
-                  <span style={s.tierDesc}>專業背景認證</span>
-                </div>
-              </div>
-              <div style={s.tierRow}>
-                <div style={{ ...s.tierDot, backgroundColor: '#7AAE8A' }}><CommunityIcon size={10} /></div>
-                <div style={s.tierInfo}>
-                  <span style={s.tierName}>社群回答</span>
-                  <span style={s.tierDesc}>真實使用經驗</span>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* 快速入口 */}
