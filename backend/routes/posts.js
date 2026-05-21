@@ -4,7 +4,7 @@ const supabase = require('../config/supabase');
 
 /* GET /api/posts */
 router.get('/', async (req, res) => {
-  const { skin_type, domain, effect, search, page = 1, limit = 20, user_id } = req.query;
+  const { skin_type, domain, post_type, effect, search, page = 1, limit = 20, user_id } = req.query;
   const pageNum  = Math.max(1, parseInt(page));
   const pageSize = Math.min(50, Math.max(1, parseInt(limit)));
   const from     = (pageNum - 1) * pageSize;
@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
     let q = supabase
       .from('forum_posts')
       .select(
-  `post_id, user_id, title, content, skin_type, domain,
+  `post_id, user_id, title, content, skin_type, domain, post_type,
    sub_category, effect_tags, ingredients, helpful_count, comment_count,
    views, status, created_at,
    users(nickname, department_grade)`,
@@ -26,6 +26,7 @@ router.get('/', async (req, res) => {
 
     if (skin_type) q = q.eq('skin_type', skin_type);
     if (domain)    q = q.eq('domain', domain);
+    if (post_type) q = q.eq('post_type', post_type);
     if (effect)    q = q.contains('effect_tags', [effect]);
     if (search)    q = q.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
     if (user_id)   q = q.eq('user_id', user_id);
@@ -106,7 +107,7 @@ router.get('/:id', async (req, res) => {
     const { data, error } = await supabase
       .from('forum_posts')
       .select(
-  `post_id, user_id, title, content, skin_type, domain,
+  `post_id, user_id, title, content, skin_type, domain, post_type,
    sub_category, effect_tags, ingredients, helpful_count, comment_count,
    views, status, created_at,
    users(nickname, department_grade)`,)
@@ -123,7 +124,7 @@ router.get('/:id', async (req, res) => {
 
 /* POST /api/posts */
 router.post('/', async (req, res) => {
-  const { user_id, title, content, skin_type, domain, sub_category, effect_tags , ingredients} = req.body;
+  const { user_id, title, content, skin_type, domain, post_type, sub_category, effect_tags, ingredients } = req.body;
 
   if (!user_id)                        return res.status(400).json({ error: '需要登入' });
   if (!title || title.length < 6)      return res.status(400).json({ error: '標題至少需要 6 個字' });
@@ -140,9 +141,10 @@ router.post('/', async (req, res) => {
         content,
         skin_type,
         domain,
+        post_type:    post_type    || null,
         sub_category: sub_category || null,
         effect_tags:  Array.isArray(effect_tags) ? effect_tags : [],
-        ingredients: Array.isArray(ingredients) ? ingredients : [],
+        ingredients:  Array.isArray(ingredients) ? ingredients : [],
       })
       .select()
       .single();

@@ -93,6 +93,7 @@ export const MOCK_POSTS = [
 const TAG_GROUPS = [
   { label: '膚質', tags: ['油性肌', '乾性肌', '混合性肌', '敏感肌', '中性肌'] },
   { label: '領域', tags: ['保養品', '化妝品'] },
+  { label: '類型', tags: ['心得分享', '請益討論', '成分研究', '開箱評測'] },
   { label: '功效', tags: ['保濕', '控油', '去角質', '抗老', '防曬推薦', '成分討論', '屏障修護'] },
 ];
 
@@ -386,7 +387,7 @@ export default function Community() {
             author:      p.users?.nickname || '匿名',
             dept:        p.users?.department_grade || '',
             time:        timeAgo(p.created_at),
-            tags:        [p.skin_type, p.domain, p.sub_category, ...(p.effect_tags || [])].filter(Boolean),
+            tags:        [p.skin_type, p.domain, p.post_type, p.sub_category, ...(p.effect_tags || [])].filter(Boolean),
             title:       p.title,
             excerpt:     p.content,
             ingredients: p.ingredients || [],

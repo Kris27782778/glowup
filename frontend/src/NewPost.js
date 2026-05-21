@@ -5,6 +5,7 @@ import { useLang } from './hooks/useLang';
 
 const SKIN_TYPES  = ['油性肌', '乾性肌', '敏感肌', '混合性肌', '中性肌'];
 const DOMAINS     = ['保養品', '化妝品'];
+const POST_TYPES  = ['心得分享', '請益討論', '成分研究', '開箱評測'];
 const SUB_CARE    = ['化妝水', '乳液', '面霜', '精華液', '眼霜'];
 const SUB_MAKEUP  = ['粉底液', '遮瑕', '氣墊', '防曬'];
 const EFFECTS     = ['保濕', '控油', '抗痘', '舒緩修復', '去角質', '抗老', '美白'];
@@ -17,6 +18,7 @@ export default function NewPost() {
   const [content,     setContent]     = useState('');
   const [skinType,    setSkinType]    = useState('');
   const [domain,      setDomain]      = useState('');
+  const [postType,    setPostType]    = useState('');
   const [subCat,      setSubCat]      = useState('');
   const [effects,     setEffects]     = useState([]);
   const [ingredients, setIngredients] = useState([]);
@@ -63,7 +65,8 @@ export default function NewPost() {
           content,
           skin_type:    skinType,
           domain,
-          sub_category: subCat || null,
+          post_type:    postType || null,
+          sub_category: subCat   || null,
           effect_tags:  effects,
           ingredients,
         }),
@@ -168,6 +171,25 @@ export default function NewPost() {
                 ))}
               </div>
               {errors.domain && <p style={s.errorMsg}>{errors.domain}</p>}
+            </div>
+
+            {/* 選填：貼文類型 */}
+            <div style={s.field}>
+              <label style={s.label}>
+                貼文類型
+                <span style={s.optional}>選填</span>
+              </label>
+              <div style={s.chipGroup}>
+                {POST_TYPES.map(pt => (
+                  <button
+                    key={pt}
+                    style={{ ...s.chip, ...(postType === pt ? s.chipActive : {}) }}
+                    onClick={() => setPostType(prev => prev === pt ? '' : pt)}
+                  >
+                    {pt}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* 選填：品項 */}
