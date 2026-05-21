@@ -264,6 +264,7 @@ const fetchProducts = async (pageNum = page) => {
           style={{
             ...styles.sidebar,
             ...(tourStep === 1 ? styles.tourTarget : {}),
+            ...(tourStep !== null && tourStep !== 1 ? styles.tourDimmed : {}),
           }}
           ref={el => (tourRefs.current[1] = el)}
         >
@@ -274,6 +275,7 @@ const fetchProducts = async (pageNum = page) => {
               style={{
                 ...styles.filterGroup,
                 ...(tourStep === 0 ? styles.tourTargetTags : {}),
+                ...(tourStep === 0 ? { visibility: 'visible' } : {}),
               }}
               ref={el => (tourRefs.current[0] = el)}
             >
@@ -748,9 +750,9 @@ const fetchProducts = async (pageNum = page) => {
                         <line x1="4" y1="9"  x2="24" y2="9"  stroke={T.accent} strokeWidth="1.3" strokeLinecap="round"/>
                         <line x1="4" y1="14" x2="24" y2="14" stroke={T.accent} strokeWidth="1.3" strokeLinecap="round"/>
                         <line x1="4" y1="19" x2="24" y2="19" stroke={T.accent} strokeWidth="1.3" strokeLinecap="round"/>
-                        <circle cx="10" cy="9"  r="2.5" fill={T.bgBase} stroke={T.accent} strokeWidth="1.3"/>
-                        <circle cx="18" cy="14" r="2.5" fill={T.bgBase} stroke={T.accent} strokeWidth="1.3"/>
-                        <circle cx="10" cy="19" r="2.5" fill={T.bgBase} stroke={T.accent} strokeWidth="1.3"/>
+                        <circle cx="10" cy="9"  r="2.5" fill={T.bgSurface} stroke={T.accent} strokeWidth="1.3"/>
+                        <circle cx="18" cy="14" r="2.5" fill={T.bgSurface} stroke={T.accent} strokeWidth="1.3"/>
+                        <circle cx="10" cy="19" r="2.5" fill={T.bgSurface} stroke={T.accent} strokeWidth="1.3"/>
                       </svg>
                     ),
                     title: t('設定條件'),
@@ -1143,7 +1145,7 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
         position: 'fixed',
         inset: 0,
         zIndex: 1000,
-        backgroundColor: 'rgba(28,25,23,0.6)',
+        backgroundColor: 'rgba(28,25,23,0.78)',
       }}
       onClick={onSkip}
     >
@@ -1308,7 +1310,7 @@ const styles = {
   tourTarget: {
     position: 'relative',
     zIndex: 1003,
-    backgroundColor: T.bgSurface,
+    backgroundColor: 'var(--bg-surface)',
     boxShadow: '0 16px 48px rgba(28,25,23,0.18)',
   },
   tourTargetTags: {
@@ -1319,8 +1321,14 @@ const styles = {
     padding: '10px 12px',
     margin: '-10px -12px',
     borderRadius: '14px',
-    backgroundColor: T.bgSurface,
+    backgroundColor: 'var(--bg-surface)',
     boxShadow: '0 16px 48px rgba(28,25,23,0.18)',
+  },
+  tourDimmed: {
+    backgroundColor: 'transparent',
+    border: '1px solid transparent',
+    boxShadow: 'none',
+    visibility: 'hidden',
   },
   filterChip: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
