@@ -96,12 +96,10 @@ const TAG_GROUPS = [
   { label: '功效', tags: ['保濕', '控油', '去角質', '抗老', '防曬推薦', '成分討論', '屏障修護'] },
 ];
 
-const TRENDING = [
-  { tag: '#角鯊烷', count: 24 },
-  { tag: '#菸鹼醯胺', count: 31 },
-  { tag: '#敏感肌', count: 18 },
-  { tag: '#防曬', count: 27 },
-  { tag: '#A醇入門', count: 14 },
+const TRENDING_FALLBACK = [
+  { tag: '#保濕', count: null },
+  { tag: '#敏感肌', count: null },
+  { tag: '#控油', count: null },
 ];
 
 const ACTIVE_MEMBERS = [
@@ -368,6 +366,13 @@ export default function Community() {
 
   const [apiPosts, setApiPosts]   = useState([]);
   const [apiLoaded, setApiLoaded] = useState(false);
+  const [trending,  setTrending]  = useState([]);
+  useEffect(() => {
+    fetch(`${API_BASE}/api/posts/trending-tags`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data) && data.length > 0) setTrending(data); })
+      .catch(() => {});
+  }, []);
   useEffect(() => {
     fetch(`${API_BASE}/api/posts?limit=50`)
       .then(r => r.json())
@@ -587,7 +592,7 @@ export default function Community() {
           <div style={s.sideCard} className="g-reveal">
             <p style={s.sideTitle}>本週熱門話題</p>
             <div style={s.trendingList}>
-              {TRENDING.map((item, i) => (
+              {(trending.length > 0 ? trending : TRENDING_FALLBACK).map((item, i) => (
                 <button
                   key={item.tag}
                   style={s.trendingRow}
@@ -595,7 +600,7 @@ export default function Community() {
                 >
                   <span style={s.trendingRank}>{i + 1}</span>
                   <span style={s.trendingTag}>{item.tag}</span>
-                  <span style={s.trendingCount}>{item.count} 篇</span>
+                  <span style={s.trendingCount}>{item.count !== null ? `${item.count} 篇` : '—'}</span>
                 </button>
               ))}
             </div>

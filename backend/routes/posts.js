@@ -60,6 +60,37 @@ router.get('/bookmarks/:user_id', async (req, res) => {
   }
 });
 
+/* ⚠️ GET /api/posts/trending-tags  必須在 /:id 之前 */
+router.get('/trending-tags', async (req, res) => {
+  try {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from('forum_posts')
+      .select('skin_type, domain, sub_category, effect_tags')
+      .eq('status', 'active')
+      .gte('created_at', since);
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    const counts = {};
+    for (const post of data || []) {
+      const tags = [post.skin_type, post.domain, post.sub_category, ...(post.effect_tags || [])].filter(Boolean);
+      for (const tag of tags) counts[tag] = (counts[tag] || 0) + 1;
+    }
+
+    const result = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([tag, count]) => ({ tag: `#${tag}`, count }));
+
+    res.json(result);
+  } catch (err) {
+    console.error('[GET trending-tags]', err.message);
+    res.status(500).json({ error: '查詢失敗' });
+  }
+});
+
 /* GET /api/posts/:id */
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
