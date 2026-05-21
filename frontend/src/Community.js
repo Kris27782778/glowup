@@ -351,6 +351,7 @@ export default function Community() {
   const [apiLoaded, setApiLoaded] = useState(false);
   const [trending, setTrending] = useState([]);
   const [popular,  setPopular]  = useState([]);
+  const [unsung,   setUnsung]   = useState([]);
   useEffect(() => {
     fetch(`${API_BASE}/api/posts/trending-tags`)
       .then(r => r.json())
@@ -359,6 +360,10 @@ export default function Community() {
     fetch(`${API_BASE}/api/posts/popular`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setPopular(data); })
+      .catch(() => {});
+    fetch(`${API_BASE}/api/posts/unsung`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setUnsung(data); })
       .catch(() => {});
   }, []);
   useEffect(() => {
@@ -533,9 +538,9 @@ export default function Community() {
 
           {/* 標籤 filter */}
           <div style={s.filterArea}>
-            {TAG_GROUPS.map((group, gi) => (
+            {TAG_GROUPS.map((group) => (
               <div key={group.label} style={s.filterGroup}>
-                {gi > 0 && <span style={s.filterDivider} />}
+                <span style={s.filterDivider} />
                 <span style={s.filterLabel}>{group.label}</span>
                 {group.tags.map(tag => (
                   <button
@@ -606,6 +611,33 @@ export default function Community() {
                 {popular.map((p, i) => (
                   <button key={p.post_id} style={s.popularRow} onClick={() => navigate(`/community/${p.post_id}`)}>
                     <span style={s.popularRank}>{i + 1}</span>
+                    <div style={s.popularInfo}>
+                      <span style={s.popularTitle}>{p.title}</span>
+                      <span style={s.popularMeta}>
+                        {p.users?.nickname} · ♡ {p.helpful_count} · 💬 {p.comment_count}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 尚未發光的文章 */}
+          <div style={s.sideCard} className="g-reveal delay-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <p style={s.sideTitle}>尚未發光的文章</p>
+              <span style={s.unsungDot} />
+            </div>
+            {unsung.length === 0 ? (
+              <p style={{ fontFamily: '"DM Sans","Noto Sans TC",sans-serif', fontSize: '12px', color: T.textTertiary, margin: 0 }}>
+                暫時沒有資料
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {unsung.map((p, i) => (
+                  <button key={p.post_id} style={s.popularRow} onClick={() => navigate(`/community/${p.post_id}`)}>
+                    <span style={{ ...s.popularRank, color: T.textTertiary }}>{i + 1}</span>
                     <div style={s.popularInfo}>
                       <span style={s.popularTitle}>{p.title}</span>
                       <span style={s.popularMeta}>
@@ -1113,5 +1145,11 @@ const s = {
   },
   popularMeta: {
     fontFamily: '"DM Sans",sans-serif', fontSize: '11px', color: T.textTertiary,
+  },
+
+  unsungDot: {
+    width: '6px', height: '6px', borderRadius: '50%',
+    backgroundColor: T.textTertiary, flexShrink: 0, marginBottom: '1px',
+    opacity: 0.45,
   },
 };

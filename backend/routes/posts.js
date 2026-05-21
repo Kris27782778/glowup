@@ -61,6 +61,26 @@ router.get('/bookmarks/:user_id', async (req, res) => {
   }
 });
 
+/* ⚠️ GET /api/posts/unsung  必須在 /:id 之前 */
+router.get('/unsung', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('forum_posts')
+      .select('post_id, title, helpful_count, comment_count, created_at, users(nickname)')
+      .eq('status', 'active')
+      .order('helpful_count',  { ascending: true })
+      .order('comment_count',  { ascending: true })
+      .order('created_at',     { ascending: true })
+      .limit(3);
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data || []);
+  } catch (err) {
+    console.error('[GET unsung]', err.message);
+    res.status(500).json({ error: '查詢失敗' });
+  }
+});
+
 /* ⚠️ GET /api/posts/popular  必須在 /:id 之前 */
 router.get('/popular', async (req, res) => {
   try {
