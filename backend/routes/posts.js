@@ -61,6 +61,42 @@ router.get('/bookmarks/:user_id', async (req, res) => {
   }
 });
 
+/* ⚠️ GET /api/posts/hot  必須在 /:id 之前 */
+router.get('/hot', async (req, res) => {
+  const { limit = 20 } = req.query;
+  const pageSize = Math.min(50, Math.max(1, parseInt(limit)));
+  try {
+    const { data, error } = await supabase
+      .from('forum_posts')
+      .select(
+        `post_id, user_id, title, content, skin_type, domain, post_type,
+         sub_category, effect_tags, ingredients, helpful_count, comment_count,
+         bookmark_count, views, status, created_at,
+         users(nickname, department_grade)`
+      )
+      .eq('status', 'active')
+      // score = helpful_count*2 + bookmark_count + comment_count
+      // Supabase 不支援 computed ORDER，用三欄依序近似
+      .order('helpful_count',  { ascending: false })
+      .order('bookmark_count', { ascending: false })
+      .order('comment_count',  { ascending: false })
+      .limit(pageSize);
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    // client 端做精確排序
+    const sorted = (data || []).sort(
+      (a, b) =>
+        (b.helpful_count * 2 + b.bookmark_count + b.comment_count) -
+        (a.helpful_count * 2 + a.bookmark_count + a.comment_count)
+    );
+    res.json({ data: sorted, total: sorted.length });
+  } catch (err) {
+    console.error('[GET hot]', err.message);
+    res.status(500).json({ error: '查詢失敗' });
+  }
+});
+
 /* ⚠️ GET /api/posts/unsung  必須在 /:id 之前 */
 router.get('/unsung', async (req, res) => {
   try {
@@ -348,11 +384,19 @@ router.post('/:id/bookmark', async (req, res) => {
 
     if (existing) {
       await supabase.from('post_bookmarks').delete().eq('id', existing.id);
-      return res.json({ bookmarked: false });
+      const { data: cur } = await supabase
+        .from('forum_posts').select('bookmark_count').eq('post_id', id).single();
+      const newCount = Math.max((cur?.bookmark_count || 1) - 1, 0);
+      await supabase.from('forum_posts').update({ bookmark_count: newCount }).eq('post_id', id);
+      return res.json({ bookmarked: false, bookmark_count: newCount });
     } else {
       await supabase.from('post_bookmarks')
         .insert({ post_id: parseInt(id), user_id: parseInt(user_id) });
-      return res.json({ bookmarked: true });
+      const { data: cur } = await supabase
+        .from('forum_posts').select('bookmark_count').eq('post_id', id).single();
+      const newCount = (cur?.bookmark_count || 0) + 1;
+      await supabase.from('forum_posts').update({ bookmark_count: newCount }).eq('post_id', id);
+      return res.json({ bookmarked: true, bookmark_count: newCount });
     }
   } catch (err) {
     console.error('[POST bookmark]', err.message);

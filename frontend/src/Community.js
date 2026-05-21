@@ -347,55 +347,62 @@ export default function Community() {
   const [searchFocus, setSearchFocus] = useState(false);
   const [showNewPost, setShowNewPost] = useState(false);
 
-  const [apiPosts, setApiPosts]   = useState([]);
-  const [apiLoaded, setApiLoaded] = useState(false);
-  const [trending, setTrending] = useState([]);
-  const [popular,  setPopular]  = useState([]);
-  const [unsung,   setUnsung]   = useState([]);
+  const [apiPosts,    setApiPosts]    = useState([]);
+  const [hotPosts,    setHotPosts]    = useState([]);
+  const [apiLoaded,   setApiLoaded]   = useState(false);
+  const [hotLoaded,   setHotLoaded]   = useState(false);
+  const [trending,    setTrending]    = useState([]);
+  const [unsung,      setUnsung]      = useState([]);
+
+  const mapPost = p => ({
+    id:          p.post_id,
+    initial:     (p.users?.nickname || '?')[0],
+    authorColor: avatarColor(p.users?.nickname || ''),
+    author:      p.users?.nickname || '匿名',
+    dept:        p.users?.department_grade || '',
+    time:        timeAgo(p.created_at),
+    tags:        [p.skin_type, p.domain, p.post_type, p.sub_category, ...(p.effect_tags || [])].filter(Boolean),
+    title:       p.title,
+    excerpt:     p.content,
+    ingredients: p.ingredients || [],
+    likes:       p.helpful_count || 0,
+    comments:    p.comment_count || 0,
+    views:       p.views || 0,
+    hot:         (p.helpful_count || 0) >= 20,
+    pinned:      false,
+    reactions:   { heart: p.helpful_count || 0 },
+    skinTypes:   [p.skin_type],
+  });
+
   useEffect(() => {
     fetch(`${API_BASE}/api/posts/trending-tags`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data) && data.length > 0) setTrending(data); })
-      .catch(() => {});
-    fetch(`${API_BASE}/api/posts/popular`)
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setPopular(data); })
       .catch(() => {});
     fetch(`${API_BASE}/api/posts/unsung`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setUnsung(data); })
       .catch(() => {});
   }, []);
+
   useEffect(() => {
     fetch(`${API_BASE}/api/posts?limit=50`)
       .then(r => r.json())
       .then(data => {
-        if (Array.isArray(data.data)) {
-          // 把 API 資料轉成這個元件用的格式
-          const mapped = data.data.map(p => ({
-            id:          p.post_id,
-            initial:     (p.users?.nickname || '?')[0],
-            authorColor: avatarColor(p.users?.nickname || ''),
-            author:      p.users?.nickname || '匿名',
-            dept:        p.users?.department_grade || '',
-            time:        timeAgo(p.created_at),
-            tags:        [p.skin_type, p.domain, p.post_type, p.sub_category, ...(p.effect_tags || [])].filter(Boolean),
-            title:       p.title,
-            excerpt:     p.content,
-            ingredients: p.ingredients || [],
-            likes:       p.helpful_count || 0,
-            comments:    p.comment_count || 0,
-            views:       p.views || 0,
-            hot:         (p.helpful_count || 0) >= 20,
-            pinned:      false,
-            reactions:   { heart: p.helpful_count || 0 },
-            skinTypes:   [p.skin_type],
-          }));
-          setApiPosts(mapped);
-        }
+        if (Array.isArray(data.data)) setApiPosts(data.data.map(mapPost));
         setApiLoaded(true);
       })
       .catch(() => setApiLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/posts/hot?limit=50`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data.data)) setHotPosts(data.data.map(mapPost));
+        setHotLoaded(true);
+      })
+      .catch(() => setHotLoaded(true));
   }, []);
 
   useReveal();
@@ -411,14 +418,18 @@ export default function Community() {
     { key: 'featured', label: '精選' },
   ];
 
-  const POSTS = apiLoaded && apiPosts.length > 0 ? apiPosts : MOCK_POSTS;
+  const isHot = tab === 'hot';
+  const sourcePosts = isHot
+    ? (hotLoaded && hotPosts.length > 0 ? hotPosts : (apiLoaded && apiPosts.length > 0 ? apiPosts : MOCK_POSTS))
+    : (apiLoaded && apiPosts.length > 0 ? apiPosts : MOCK_POSTS);
+
   const toggleTag = tag =>
     setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
 
-  const filtered = POSTS
+  const filtered = sourcePosts
     .filter(p => activeTags.length === 0 || activeTags.every(tag => p.tags.includes(tag)))
     .filter(p => !search || p.title.includes(search) || p.excerpt.includes(search))
-    .sort((a, b) => tab === 'hot' ? b.likes - a.likes : b.id - a.id);
+    .sort((a, b) => isHot ? 0 : b.id - a.id);
 
   // 根據用戶膚質推薦貼文
   const recommended = userSkinType
@@ -597,30 +608,6 @@ export default function Community() {
                 </button>
               ))}
             </div>
-          </div>
-
-          {/* 熱門文章 */}
-          <div style={s.sideCard} className="g-reveal delay-1">
-            <p style={s.sideTitle}>熱門文章</p>
-            {popular.length === 0 ? (
-              <p style={{ fontFamily: '"DM Sans","Noto Sans TC",sans-serif', fontSize: '12px', color: T.textTertiary, margin: 0 }}>
-                還沒有熱門文章
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {popular.map((p, i) => (
-                  <button key={p.post_id} style={s.popularRow} onClick={() => navigate(`/community/${p.post_id}`)}>
-                    <span style={s.popularRank}>{i + 1}</span>
-                    <div style={s.popularInfo}>
-                      <span style={s.popularTitle}>{p.title}</span>
-                      <span style={s.popularMeta}>
-                        {p.users?.nickname} · ♡ {p.helpful_count} · 💬 {p.comment_count}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* 尚未發光的文章 */}
