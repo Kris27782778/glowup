@@ -731,13 +731,13 @@ function PostCard({ post, idx, navigate }) {
             </svg>
             {post.likes}
           </span>
-          <button style={s.statBtn} onClick={e => { e.stopPropagation(); navigate(`/community/post/${post.id}#comments`); }}>
+          <span style={s.statBtn}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M2 2h10a1 1 0 011 1v6a1 1 0 01-1 1H5l-3 2V3a1 1 0 011-1z"
                 stroke={T.textTertiary} strokeWidth="1.3" strokeLinejoin="round"/>
             </svg>
             {post.comments}
-          </button>
+          </span>
           <span style={s.viewCount}>
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
               <ellipse cx="6.5" cy="6.5" rx="5.5" ry="3.5" stroke={T.textTertiary} strokeWidth="1.2"/>
@@ -1069,12 +1069,10 @@ const s = {
   },
   cardStats: { display: 'flex', alignItems: 'center', gap: '12px' },
   statBtn: {
-    display: 'flex', alignItems: 'center', gap: '5px',
-    background: 'none', border: 'none',
+    display: 'inline-flex', alignItems: 'center', gap: '5px',
     fontFamily: '"DM Sans",sans-serif', fontSize: '13px',
-    color: T.textTertiary, cursor: 'pointer', padding: '4px 2px',
+    color: T.textTertiary, padding: '4px 2px',
   },
-  statBtnLiked: { color: T.accent },
   viewCount: {
     display: 'flex', alignItems: 'center', gap: '4px',
     fontFamily: '"DM Sans",sans-serif', fontSize: '12px', color: T.textTertiary,
