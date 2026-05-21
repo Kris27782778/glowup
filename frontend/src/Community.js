@@ -670,15 +670,7 @@ export default function Community() {
 
 /* ─── 貼文卡片 ─────────────────────────────────────────────── */
 function PostCard({ post, idx, navigate }) {
-  const [liked, setLiked] = useState(false);
-  const [likes, setLikes] = useState(post.likes);
   const [hovered, setHovered] = useState(false);
-
-  const handleLike = (e) => {
-    e.stopPropagation();
-    setLiked(l => !l);
-    setLikes(n => liked ? n - 1 : n + 1);
-  };
 
   const totalReactions = Object.values(post.reactions || {}).reduce((s, n) => s + n, 0);
 
@@ -732,16 +724,13 @@ function PostCard({ post, idx, navigate }) {
       {/* 底部：互動 */}
       <div style={s.cardFooter}>
         <div style={s.cardStats}>
-          <button
-            style={{ ...s.statBtn, ...(liked ? s.statBtnLiked : {}) }}
-            onClick={handleLike}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill={liked ? T.accent : 'none'}>
+          <span style={s.statBtn}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 12S1.5 8.5 1.5 4.5a2.5 2.5 0 015-0 2.5 2.5 0 015 0C11.5 8.5 7 12 7 12z"
                 stroke={T.accent} strokeWidth="1.3" strokeLinejoin="round"/>
             </svg>
-            {likes}
-          </button>
+            {post.likes}
+          </span>
           <button style={s.statBtn} onClick={e => { e.stopPropagation(); navigate(`/community/post/${post.id}#comments`); }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M2 2h10a1 1 0 011 1v6a1 1 0 01-1 1H5l-3 2V3a1 1 0 011-1z"
