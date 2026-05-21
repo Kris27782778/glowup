@@ -90,7 +90,11 @@ export const MOCK_POSTS = [
   },
 ];
 
-const ALL_TAGS = ['全部', '成分討論', '油性肌', '敏感肌', '混合性肌', '保濕', '防曬推薦', '抗老', '去角質', '屏障修護'];
+const TAG_GROUPS = [
+  { label: '膚質', tags: ['油性肌', '乾性肌', '混合性肌', '敏感肌', '中性肌'] },
+  { label: '領域', tags: ['保養品', '化妝品'] },
+  { label: '功效', tags: ['保濕', '控油', '去角質', '抗老', '防曬推薦', '成分討論', '屏障修護'] },
+];
 
 const TRENDING = [
   { tag: '#角鯊烷', count: 24 },
@@ -357,7 +361,7 @@ function avatarColor(str) {
 export default function Community() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('latest');
-  const [activeTag, setActiveTag] = useState('全部');
+  const [activeTags, setActiveTags] = useState([]);
   const [search, setSearch] = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
   const [showNewPost, setShowNewPost] = useState(false);
@@ -410,8 +414,11 @@ export default function Community() {
   ];
 
   const POSTS = apiLoaded && apiPosts.length > 0 ? apiPosts : MOCK_POSTS;
+  const toggleTag = tag =>
+    setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+
   const filtered = POSTS
-    .filter(p => activeTag === '全部' || p.tags.includes(activeTag))
+    .filter(p => activeTags.length === 0 || activeTags.every(tag => p.tags.includes(tag)))
     .filter(p => !search || p.title.includes(search) || p.excerpt.includes(search))
     .sort((a, b) => tab === 'hot' ? b.likes - a.likes : b.id - a.id);
 
@@ -483,7 +490,7 @@ export default function Community() {
         <main style={s.main}>
 
           {/* 個人化推薦 strip */}
-          {recommended.length > 0 && !search && activeTag === '全部' && (
+          {recommended.length > 0 && !search && activeTags.length === 0 && (
             <div style={s.recommendSection} className="g-reveal">
               <div style={s.recommendHeader}>
                 <span style={s.recommendEyebrow}>為你推薦</span>
@@ -532,21 +539,35 @@ export default function Community() {
           </div>
 
           {/* 標籤 filter */}
-          <div style={s.tagRow}>
-            {ALL_TAGS.map(tag => (
-              <button
-                key={tag}
-                style={{ ...s.tagChip, ...(activeTag === tag ? s.tagChipActive : {}) }}
-                onClick={() => setActiveTag(tag)}
-              >
-                {tag}
-              </button>
+          <div style={s.filterArea}>
+            {TAG_GROUPS.map((group, gi) => (
+              <div key={group.label} style={s.filterGroup}>
+                {gi > 0 && <span style={s.filterDivider} />}
+                <span style={s.filterLabel}>{group.label}</span>
+                {group.tags.map(tag => (
+                  <button
+                    key={tag}
+                    style={{ ...s.tagChip, ...(activeTags.includes(tag) ? s.tagChipActive : {}) }}
+                    onClick={() => toggleTag(tag)}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
             ))}
+            {activeTags.length > 0 && (
+              <button style={s.clearBtn} onClick={() => setActiveTags([])}>
+                清除篩選 ×
+              </button>
+            )}
           </div>
 
           {/* 貼文列表 */}
           {filtered.length === 0 ? (
-            <EmptyState onNewPost={() => setShowNewPost(true)} />
+            <EmptyState
+              mode={activeTags.length === 0 && !search ? 'no-posts' : 'no-results'}
+              onNewPost={() => navigate('/community/new')}
+            />
           ) : (
             filtered.map((post, i) => (
               <PostCard
@@ -746,12 +767,15 @@ function PostCard({ post, idx, navigate }) {
 }
 
 /* ─── 空狀態 ─────────────────────────────────────────────── */
-function EmptyState({ onNewPost }) {
+function EmptyState({ mode, onNewPost }) {
+  const isBlank = mode === 'no-posts';
   return (
     <div style={s.empty}>
-      <p style={s.emptyTitle}>找不到符合的貼文</p>
-      <p style={s.emptySub}>試試其他關鍵字，或成為第一個討論這個話題的人</p>
-      <button style={s.emptyBtn} onClick={onNewPost}>發布貼文</button>
+      <p style={s.emptyTitle}>{isBlank ? '還沒有人分享' : '目前沒有符合條件的貼文'}</p>
+      <p style={s.emptySub}>
+        {isBlank ? '成為第一個在社群分享保養心得的人' : '試試減少篩選條件，或換個關鍵字搜尋'}
+      </p>
+      {isBlank && <button style={s.emptyBtn} onClick={onNewPost}>發布貼文</button>}
     </div>
   );
 }
@@ -955,9 +979,30 @@ const s = {
   },
 
   /* Tag filter */
-  tagRow: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
+  filterArea: {
+    display: 'flex', flexWrap: 'wrap', gap: '8px 14px',
+    alignItems: 'center', padding: '12px 0',
+    borderBottom: `1px solid ${T.border}`,
+  },
+  filterGroup: { display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' },
+  filterLabel: {
+    fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
+    color: T.textTertiary, textTransform: 'uppercase', marginRight: '2px', userSelect: 'none',
+  },
+  filterDivider: {
+    width: '1px', height: '14px', backgroundColor: T.border,
+    flexShrink: 0, alignSelf: 'center',
+  },
+  clearBtn: {
+    height: '26px', padding: '0 10px', borderRadius: '999px',
+    border: `1px solid rgba(196,137,122,0.35)`,
+    backgroundColor: 'rgba(196,137,122,0.07)',
+    color: T.accent, fontSize: '11px', fontWeight: 500, cursor: 'pointer',
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    whiteSpace: 'nowrap', transition: 'all 150ms',
+  },
   tagChip: {
-    height: '28px', padding: '0 12px', borderRadius: '999px',
+    height: '26px', padding: '0 11px', borderRadius: '999px',
     border: `1px solid ${T.border}`, backgroundColor: T.bgSubtle,
     fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
     fontSize: '12px', color: T.textSecondary, cursor: 'pointer', transition: 'all 150ms',
