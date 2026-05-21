@@ -261,22 +261,14 @@ const fetchProducts = async (pageNum = page) => {
       <div style={styles.body}>
         {/* 側欄篩選 */}
         <aside
-          style={{
-            ...styles.sidebar,
-            ...(tourStep === 1 ? styles.tourTarget : {}),
-            ...(tourStep !== null && tourStep !== 1 ? styles.tourDimmed : {}),
-          }}
+          style={styles.sidebar}
           ref={el => (tourRefs.current[1] = el)}
         >
 
           <div style={styles.filterSection}>
             <p style={styles.filterTitle}>{t('探索領域')}</p>
             <div
-              style={{
-                ...styles.filterGroup,
-                ...(tourStep === 0 ? styles.tourTargetTags : {}),
-                ...(tourStep === 0 ? { visibility: 'visible' } : {}),
-              }}
+              style={styles.filterGroup}
               ref={el => (tourRefs.current[0] = el)}
             >
               {CATEGORIES.map(cat => (
@@ -391,10 +383,7 @@ const fetchProducts = async (pageNum = page) => {
 
         {/* 結果區 */}
         <main
-          style={{
-            ...styles.results,
-            ...(tourStep === 2 ? styles.tourTarget : {}),
-          }}
+          style={styles.results}
           ref={el => (tourRefs.current[2] = el)}
         >
           {hasFilter ? (
@@ -1074,52 +1063,53 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
     const el = targetRefs.current?.[step];
     if (!el) return;
 
-    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+    const pad = step === 0 ? 10 : 14;
+    const spotRadius = step === 0 ? '999px' : '16px';
+
     const update = () => {
-      const nextRect = el.getBoundingClientRect();
-      const viewportW = window.innerWidth;
-      const viewportH = window.innerHeight;
-      const gutter = viewportW <= 480 ? 12 : 16;
-      const topGutter = Math.max(gutter, 88);
-      const bottomGutter = gutter;
-      const tooltipW = Math.min(280, viewportW - gutter * 2);
-      const tooltipH = 176;
+      const rect = el.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const g  = vw <= 480 ? 12 : 16;
+      const tW = Math.min(268, vw - g * 2);
+      const tH = 178;
 
-      const spaceRight = viewportW - nextRect.right - gutter;
-      const spaceLeft = nextRect.left - gutter;
-      const spaceBottom = viewportH - nextRect.bottom - bottomGutter;
-      const spaceTop = nextRect.top - topGutter;
+      const spot = {
+        left: rect.left - pad,
+        top:  rect.top  - pad,
+        width:  rect.width  + pad * 2,
+        height: rect.height + pad * 2,
+        borderRadius: spotRadius,
+      };
 
-      let tooltipLeft;
-      let tooltipTop;
+      const sR = vw - rect.right - g;
+      const sL = rect.left - g;
+      const sB = vh - rect.bottom - g;
+      let tL, tT;
 
-      if (viewportW <= 640) {
-        tooltipLeft = clamp((viewportW - tooltipW) / 2, gutter, viewportW - tooltipW - gutter);
-        tooltipTop = spaceBottom >= tooltipH + 14
-          ? nextRect.bottom + 14
-          : nextRect.top - tooltipH - 14;
-      } else if (spaceRight >= tooltipW + 14) {
-        tooltipLeft = nextRect.right + 14;
-        tooltipTop = nextRect.top;
-      } else if (spaceLeft >= tooltipW + 14) {
-        tooltipLeft = nextRect.left - tooltipW - 14;
-        tooltipTop = nextRect.top;
-      } else if (spaceBottom >= tooltipH + 14) {
-        tooltipLeft = nextRect.left + (nextRect.width - tooltipW) / 2;
-        tooltipTop = nextRect.bottom + 14;
-      } else if (spaceTop >= tooltipH + 14) {
-        tooltipLeft = nextRect.left + (nextRect.width - tooltipW) / 2;
-        tooltipTop = nextRect.top - tooltipH - 14;
+      if (vw <= 640) {
+        tL = Math.max(g, Math.min((vw - tW) / 2, vw - tW - g));
+        tT = sB >= tH + 14 ? rect.bottom + pad + 14 : rect.top - pad - tH - 14;
+      } else if (sR >= tW + 16) {
+        tL = rect.right + pad + 16;
+        tT = Math.max(88, rect.top - pad);
+      } else if (sL >= tW + 16) {
+        tL = rect.left - pad - tW - 16;
+        tT = Math.max(88, rect.top - pad);
+      } else if (sB >= tH + 14) {
+        tL = rect.left + (rect.width - tW) / 2;
+        tT = rect.bottom + pad + 14;
       } else {
-        tooltipLeft = (viewportW - tooltipW) / 2;
-        tooltipTop = viewportH - tooltipH - gutter;
+        tL = (vw - tW) / 2;
+        tT = vh - tH - g;
       }
 
       setLayout({
+        spot,
         tooltip: {
-          left: clamp(tooltipLeft, gutter, viewportW - tooltipW - gutter),
-          top: clamp(tooltipTop, topGutter, viewportH - tooltipH - bottomGutter),
-          width: tooltipW,
+          left: Math.max(g, Math.min(tL, vw - tW - g)),
+          top:  Math.max(88, Math.min(tT, vh - tH - g)),
+          width: tW,
         },
       });
     };
@@ -1136,67 +1126,91 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
   }, [step, targetRefs]);
 
   if (!layout) return null;
-
   const info = TOUR_STEPS[step];
+  const ease = '400ms cubic-bezier(0.4,0,0.2,1)';
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1000,
-        backgroundColor: 'rgba(28,25,23,0.78)',
-      }}
-      onClick={onSkip}
-    >
-      {/* tooltip */}
+    <>
+      {/* 點擊空白處跳過 */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1000 }} onClick={onSkip} />
+
+      {/* Spotlight：透明本體 + 巨大陰影形成暗幕 + accent 光圈 */}
+      <div
+        style={{
+          position: 'fixed',
+          left: layout.spot.left,
+          top:  layout.spot.top,
+          width:  layout.spot.width,
+          height: layout.spot.height,
+          borderRadius: layout.spot.borderRadius,
+          boxShadow: '0 0 0 9999px rgba(28,25,23,0.72), 0 0 0 2.5px rgba(196,137,122,0.6)',
+          zIndex: 1001,
+          pointerEvents: 'none',
+          transition: `left ${ease}, top ${ease}, width ${ease}, height ${ease}, border-radius ${ease}`,
+        }}
+      />
+
+      {/* Tooltip */}
       <div
         onClick={e => e.stopPropagation()}
         style={{
           position: 'fixed',
-          left:    layout.tooltip.left,
-          top:     layout.tooltip.top,
-          width:   layout.tooltip.width,
-          maxWidth: 'calc(100vw - 24px)',
-          zIndex:  1004,
-          background: '#FFFFFF',
-          borderRadius: '14px',
-          padding: '18px 20px',
-          boxShadow: '0 12px 40px rgba(28,25,23,0.14)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
+          left: layout.tooltip.left,
+          top:  layout.tooltip.top,
+          width: layout.tooltip.width,
+          zIndex: 1002,
+          backgroundColor: '#FFFFFF',
+          borderRadius: '18px',
+          padding: '20px 22px 18px',
+          boxShadow: '0 8px 40px rgba(28,25,23,0.18)',
           fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
-          transition: 'left 350ms ease, top 350ms ease',
+          transition: `left ${ease}, top ${ease}`,
         }}
       >
-        <span style={{ fontSize: '10px', letterSpacing: '0.14em', color: T.accent }}>
-          {step + 1} / {TOUR_STEPS.length}
-        </span>
-        <p style={{ margin: 0, fontSize: '14px', fontWeight: 500, color: T.textPrimary }}>
+        {/* 進度條 */}
+        <div style={{ display: 'flex', gap: '5px', marginBottom: '16px' }}>
+          {TOUR_STEPS.map((_, i) => (
+            <div key={i} style={{
+              height: '3px',
+              width: i === step ? '22px' : '6px',
+              borderRadius: '999px',
+              backgroundColor: i <= step ? T.accent : 'rgba(196,137,122,0.2)',
+              transition: 'width 350ms ease, background-color 350ms ease',
+            }} />
+          ))}
+        </div>
+
+        <p style={{ margin: '0 0 5px', fontSize: '14px', fontWeight: 600, color: T.textPrimary, letterSpacing: '0.01em' }}>
           {info.title}
         </p>
-        <p style={{ margin: 0, fontSize: '12px', color: T.textSecondary, lineHeight: 1.65 }}>
+        <p style={{ margin: '0 0 18px', fontSize: '12px', color: T.textSecondary, lineHeight: 1.75 }}>
           {info.desc}
         </p>
-        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+
+        <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={onSkip}
-            style={{ flex: 1, padding: '8px', background: 'none', border: `1px solid ${T.border}`,
-              borderRadius: '8px', fontSize: '12px', cursor: 'pointer', color: T.textSecondary }}
-          >
-            跳過
-          </button>
+            style={{
+              flex: 1, padding: '8px',
+              background: 'none', border: '1px solid rgba(196,137,122,0.22)',
+              borderRadius: '10px', fontSize: '12px', cursor: 'pointer',
+              color: T.textTertiary, fontFamily: 'inherit',
+            }}
+          >跳過</button>
           <button
             onClick={onNext}
-            style={{ flex: 2, padding: '8px', background: T.accent, border: 'none',
-              borderRadius: '8px', fontSize: '12px', cursor: 'pointer', color: '#fff' }}
+            style={{
+              flex: 2, padding: '9px',
+              background: T.accent, border: 'none',
+              borderRadius: '10px', fontSize: '12px', cursor: 'pointer',
+              color: '#fff', fontFamily: 'inherit', fontWeight: 500,
+            }}
           >
             {step < TOUR_STEPS.length - 1 ? '下一步 →' : '完成 ✓'}
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -1306,29 +1320,6 @@ const styles = {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '6px',
-  },
-  tourTarget: {
-    position: 'relative',
-    zIndex: 1003,
-    backgroundColor: 'var(--bg-surface)',
-    boxShadow: '0 16px 48px rgba(28,25,23,0.18)',
-  },
-  tourTargetTags: {
-    position: 'relative',
-    zIndex: 1003,
-    display: 'inline-flex',
-    width: 'fit-content',
-    padding: '10px 12px',
-    margin: '-10px -12px',
-    borderRadius: '14px',
-    backgroundColor: 'var(--bg-surface)',
-    boxShadow: '0 16px 48px rgba(28,25,23,0.18)',
-  },
-  tourDimmed: {
-    backgroundColor: 'transparent',
-    border: '1px solid transparent',
-    boxShadow: 'none',
-    visibility: 'hidden',
   },
   filterChip: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
