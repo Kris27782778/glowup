@@ -377,8 +377,12 @@ export default function Community() {
 
   const [apiPosts,    setApiPosts]    = useState([]);
   const [hotPosts,    setHotPosts]    = useState([]);
+  const [myPosts,     setMyPosts]     = useState([]);
+  const [myNotes,     setMyNotes]     = useState([]);
   const [apiLoaded,   setApiLoaded]   = useState(false);
   const [hotLoaded,   setHotLoaded]   = useState(false);
+  const [myLoaded,    setMyLoaded]    = useState(false);
+  const [notesLoaded, setNotesLoaded] = useState(false);
   const [trending,    setTrending]    = useState([]);
   const [unsung,      setUnsung]      = useState([]);
 
@@ -401,6 +405,40 @@ export default function Community() {
     reactions:   { heart: p.helpful_count || 0 },
     skinTypes:   [p.skin_type],
   });
+
+  const mapBookmark = item => {
+    const p = item.forum_posts;
+    if (!p) return null;
+    return mapPost({ ...p, users: p.users });
+  };
+
+  useEffect(() => {
+    if (tab !== 'mine' || myLoaded) return;
+    const uid = currentUser?.user_id;
+    if (!uid) { setMyLoaded(true); return; }
+    fetch(`${API_BASE}/api/posts?user_id=${uid}&limit=50`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data.data)) setMyPosts(data.data.map(mapPost));
+        setMyLoaded(true);
+      })
+      .catch(() => setMyLoaded(true));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab !== 'bookmarks' || notesLoaded) return;
+    const uid = currentUser?.user_id;
+    if (!uid) { setNotesLoaded(true); return; }
+    fetch(`${API_BASE}/api/posts/bookmarks/${uid}`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setMyNotes(data.map(mapBookmark).filter(Boolean));
+        setNotesLoaded(true);
+      })
+      .catch(() => setNotesLoaded(true));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/posts/trending-tags`)
@@ -441,23 +479,27 @@ export default function Community() {
   const userSkinType = currentUser?.skin_type || '';
 
   const TABS = [
-    { key: 'latest',   label: '最新' },
-    { key: 'hot',      label: '熱門' },
-    { key: 'featured', label: '精選' },
+    { key: 'latest',    label: '最新' },
+    { key: 'hot',       label: '熱門' },
+    { key: 'mine',      label: '我的帖子' },
+    { key: 'bookmarks', label: '我的筆記' },
   ];
 
-  const isHot = tab === 'hot';
-  const sourcePosts = isHot
-    ? (hotLoaded && hotPosts.length > 0 ? hotPosts : (apiLoaded && apiPosts.length > 0 ? apiPosts : MOCK_POSTS))
-    : (apiLoaded && apiPosts.length > 0 ? apiPosts : MOCK_POSTS);
+  const fallback = apiLoaded && apiPosts.length > 0 ? apiPosts : MOCK_POSTS;
+  const sourcePosts =
+    tab === 'hot'       ? (hotLoaded   && hotPosts.length  > 0 ? hotPosts  : fallback)
+    : tab === 'mine'      ? myPosts
+    : tab === 'bookmarks' ? myNotes
+    : fallback;
 
   const toggleTag = tag =>
     setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
 
+  const isPersonalTab = tab === 'mine' || tab === 'bookmarks';
   const filtered = sourcePosts
     .filter(p => activeTags.length === 0 || activeTags.every(tag => p.tags.includes(tag)))
     .filter(p => !search || p.title.includes(search) || p.excerpt.includes(search))
-    .sort((a, b) => isHot ? 0 : b.id - a.id);
+    .sort((a, b) => tab === 'hot' ? 0 : b.id - a.id);
 
   // 根據用戶膚質推薦貼文
   const recommended = userSkinType
@@ -600,9 +642,14 @@ export default function Community() {
           </div>
 
           {/* 貼文列表 */}
-          {filtered.length === 0 ? (
+          {!currentUser && isPersonalTab ? (
+            <EmptyState mode="login" onNewPost={() => navigate('/login')} />
+          ) : filtered.length === 0 ? (
             <EmptyState
-              mode={activeTags.length === 0 && !search ? 'no-posts' : 'no-results'}
+              mode={
+                isPersonalTab ? (tab === 'bookmarks' ? 'no-bookmarks' : 'no-mine')
+                : activeTags.length === 0 && !search ? 'no-posts' : 'no-results'
+              }
               onNewPost={() => navigate('/community/new')}
             />
           ) : (
@@ -802,14 +849,19 @@ function PostCard({ post, idx, navigate }) {
 
 /* ─── 空狀態 ─────────────────────────────────────────────── */
 function EmptyState({ mode, onNewPost }) {
-  const isBlank = mode === 'no-posts';
+  const config = {
+    'no-posts':      { title: '還沒有人分享',           sub: '成為第一個在社群分享保養心得的人',   btn: '發布貼文' },
+    'no-results':    { title: '目前沒有符合條件的貼文', sub: '試試減少篩選條件，或換個關鍵字搜尋', btn: null },
+    'no-mine':       { title: '你還沒有發過帖子',        sub: '把你的保養心得分享給大家吧',          btn: '發布第一篇' },
+    'no-bookmarks':  { title: '還沒有收藏任何帖子',      sub: '在帖子頁面點選書籤圖示即可加入筆記', btn: null },
+    'login':         { title: '請先登入',               sub: '登入後才能查看個人帖子與收藏',        btn: '前往登入' },
+  };
+  const { title, sub, btn } = config[mode] || config['no-results'];
   return (
     <div style={s.empty}>
-      <p style={s.emptyTitle}>{isBlank ? '還沒有人分享' : '目前沒有符合條件的貼文'}</p>
-      <p style={s.emptySub}>
-        {isBlank ? '成為第一個在社群分享保養心得的人' : '試試減少篩選條件，或換個關鍵字搜尋'}
-      </p>
-      {isBlank && <button style={s.emptyBtn} onClick={onNewPost}>發布貼文</button>}
+      <p style={s.emptyTitle}>{title}</p>
+      <p style={s.emptySub}>{sub}</p>
+      {btn && <button style={s.emptyBtn} onClick={onNewPost}>{btn}</button>}
     </div>
   );
 }
