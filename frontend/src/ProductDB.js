@@ -265,12 +265,9 @@ const fetchProducts = async (pageNum = page) => {
           ref={el => (tourRefs.current[1] = el)}
         >
 
-          <div style={styles.filterSection}>
+          <div style={styles.filterSection} ref={el => (tourRefs.current[0] = el)}>
             <p style={styles.filterTitle}>{t('探索領域')}</p>
-            <div
-              style={styles.filterGroup}
-              ref={el => (tourRefs.current[0] = el)}
-            >
+            <div style={styles.filterGroup}>
               {CATEGORIES.map(cat => (
                 <button
                   key={cat}
@@ -1064,7 +1061,7 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
     if (!el) return;
 
     const pad = step === 0 ? 10 : 14;
-    const spotRadius = step === 0 ? '999px' : '16px';
+    const spotRadius = step === 0 ? '12px' : '16px';
 
     const update = () => {
       const rect = el.getBoundingClientRect();
@@ -1134,7 +1131,7 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
       {/* 點擊空白處跳過 */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 1000 }} onClick={onSkip} />
 
-      {/* Spotlight：透明本體 + 巨大陰影形成暗幕 + accent 光圈 */}
+      {/* Spotlight */}
       <div
         style={{
           position: 'fixed',
@@ -1150,8 +1147,27 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
         }}
       />
 
+      {/* Step 0：呼吸光圈 */}
+      {step === 0 && (
+        <div
+          className="tour-ring-pulse"
+          style={{
+            position: 'fixed',
+            left:   layout.spot.left   - 8,
+            top:    layout.spot.top    - 8,
+            width:  layout.spot.width  + 16,
+            height: layout.spot.height + 16,
+            borderRadius: `calc(${layout.spot.borderRadius} + 8px)`,
+            border: '1.5px solid rgba(196,137,122,0.75)',
+            zIndex: 1000,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
       {/* Tooltip */}
       <div
+        key={step}
         onClick={e => e.stopPropagation()}
         style={{
           position: 'fixed',
@@ -1160,54 +1176,66 @@ function TourOverlay({ step, targetRefs, onNext, onSkip }) {
           width: layout.tooltip.width,
           zIndex: 1002,
           backgroundColor: '#FFFFFF',
-          borderRadius: '18px',
-          padding: '20px 22px 18px',
-          boxShadow: '0 8px 40px rgba(28,25,23,0.18)',
+          borderRadius: '20px',
+          overflow: 'hidden',
+          boxShadow: '0 12px 48px rgba(28,25,23,0.16), 0 2px 8px rgba(28,25,23,0.06)',
           fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
           transition: `left ${ease}, top ${ease}`,
+          animation: 'glow-scale-in 340ms cubic-bezier(0.34, 1.56, 0.64, 1) both',
         }}
       >
-        {/* 進度條 */}
-        <div style={{ display: 'flex', gap: '5px', marginBottom: '16px' }}>
-          {TOUR_STEPS.map((_, i) => (
-            <div key={i} style={{
-              height: '3px',
-              width: i === step ? '22px' : '6px',
-              borderRadius: '999px',
-              backgroundColor: i <= step ? T.accent : 'rgba(196,137,122,0.2)',
-              transition: 'width 350ms ease, background-color 350ms ease',
-            }} />
-          ))}
+        {/* Gradient 標頭 */}
+        <div style={{
+          background: `linear-gradient(130deg, ${T.accent} 0%, #D4A090 100%)`,
+          padding: '12px 18px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.92)', letterSpacing: '0.12em' }}>
+            STEP {step + 1} / {TOUR_STEPS.length}
+          </span>
+          <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+            {TOUR_STEPS.map((_, i) => (
+              <div key={i} style={{
+                height: '3px',
+                width: i === step ? '18px' : '5px',
+                borderRadius: '999px',
+                backgroundColor: i <= step ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.3)',
+                transition: 'width 350ms ease, background-color 350ms ease',
+              }} />
+            ))}
+          </div>
         </div>
 
-        <p style={{ margin: '0 0 5px', fontSize: '14px', fontWeight: 600, color: T.textPrimary, letterSpacing: '0.01em' }}>
-          {info.title}
-        </p>
-        <p style={{ margin: '0 0 18px', fontSize: '12px', color: T.textSecondary, lineHeight: 1.75 }}>
-          {info.desc}
-        </p>
-
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={onSkip}
-            style={{
-              flex: 1, padding: '8px',
-              background: 'none', border: '1px solid rgba(196,137,122,0.22)',
-              borderRadius: '10px', fontSize: '12px', cursor: 'pointer',
-              color: T.textTertiary, fontFamily: 'inherit',
-            }}
-          >跳過</button>
-          <button
-            onClick={onNext}
-            style={{
-              flex: 2, padding: '9px',
-              background: T.accent, border: 'none',
-              borderRadius: '10px', fontSize: '12px', cursor: 'pointer',
-              color: '#fff', fontFamily: 'inherit', fontWeight: 500,
-            }}
-          >
-            {step < TOUR_STEPS.length - 1 ? '下一步 →' : '完成 ✓'}
-          </button>
+        {/* 內文 */}
+        <div style={{ padding: '16px 18px' }}>
+          <p style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 600, color: T.textPrimary, letterSpacing: '0.01em' }}>
+            {info.title}
+          </p>
+          <p style={{ margin: '0 0 16px', fontSize: '12px', color: T.textSecondary, lineHeight: 1.75 }}>
+            {info.desc}
+          </p>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={onSkip}
+              style={{
+                flex: 1, padding: '8px',
+                background: 'none', border: '1px solid rgba(196,137,122,0.22)',
+                borderRadius: '10px', fontSize: '12px', cursor: 'pointer',
+                color: T.textTertiary, fontFamily: 'inherit',
+              }}
+            >跳過</button>
+            <button
+              onClick={onNext}
+              style={{
+                flex: 2, padding: '9px',
+                background: T.accent, border: 'none',
+                borderRadius: '10px', fontSize: '12px', cursor: 'pointer',
+                color: '#fff', fontFamily: 'inherit', fontWeight: 500,
+              }}
+            >
+              {step < TOUR_STEPS.length - 1 ? '下一步 →' : '完成 ✓'}
+            </button>
+          </div>
         </div>
       </div>
     </>
