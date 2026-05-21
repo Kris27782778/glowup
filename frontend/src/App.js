@@ -86,6 +86,7 @@ function Layout() {
   useEffect(() => {
     if (prevPath.current !== null && prevPath.current !== pathname) {
       setMountKey(k => k + 1);
+      window.scrollTo(0, 0);
     }
     prevPath.current = pathname;
   }, [pathname]);
