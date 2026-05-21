@@ -104,6 +104,34 @@ const TRENDING_FALLBACK = [
 ];
 
 
+/* ─── 小圖示 ─────────────────────────────────────────────── */
+function AIIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+      <path d="M7 1l1.5 3.5L12 6l-3.5 1.5L7 11l-1.5-3.5L2 6l3.5-1.5L7 1z"
+        fill="currentColor" fillOpacity="0.9"/>
+    </svg>
+  );
+}
+function ExpertIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+      <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M4.5 7l2 2 3-3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function CommunityIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+      <circle cx="5" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.2"/>
+      <circle cx="10" cy="5" r="2" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M1 12c0-2.2 1.8-4 4-4s4 1.8 4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <path d="M10 9c1.6.4 3 1.7 3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 /* ─── 輔助元件：成分 Pill ─────────────────────────────────── */
 function IngredientPill({ name, navigate }) {
   return (
@@ -637,6 +665,47 @@ export default function Community() {
             )}
           </div>
 
+          {/* 回答系統 */}
+          <div style={s.sideCard} className="g-reveal delay-3">
+            <p style={s.sideTitle}>回答系統</p>
+            <div style={s.tierList}>
+              <div style={s.tierRow}>
+                <div style={{ ...s.tierDot, backgroundColor: '#6B8CBA' }}><AIIcon size={10} /></div>
+                <div style={s.tierInfo}>
+                  <span style={s.tierName}>GLŌW AI</span>
+                  <span style={s.tierDesc}>成分科學分析</span>
+                </div>
+              </div>
+              <div style={s.tierRow}>
+                <div style={{ ...s.tierDot, backgroundColor: '#C4A35A' }}><ExpertIcon size={10} /></div>
+                <div style={s.tierInfo}>
+                  <span style={s.tierName}>專家解答</span>
+                  <span style={s.tierDesc}>專業背景認證</span>
+                </div>
+              </div>
+              <div style={s.tierRow}>
+                <div style={{ ...s.tierDot, backgroundColor: '#7AAE8A' }}><CommunityIcon size={10} /></div>
+                <div style={s.tierInfo}>
+                  <span style={s.tierName}>社群回答</span>
+                  <span style={s.tierDesc}>真實使用經驗</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 快速入口 */}
+          <div style={s.sideCard} className="g-reveal delay-3">
+            <p style={s.sideTitle}>快速入口</p>
+            <button style={s.quickBtn} onClick={() => navigate('/qa')}>
+              <span>前往發問</span>
+              <span style={{ color: T.textTertiary }}>→</span>
+            </button>
+            <button style={s.quickBtn} onClick={() => navigate('/products')}>
+              <span>成分資料庫</span>
+              <span style={{ color: T.textTertiary }}>→</span>
+            </button>
+          </div>
+
         </aside>
       </div>
     </div>
@@ -1138,5 +1207,33 @@ const s = {
     width: '6px', height: '6px', borderRadius: '50%',
     backgroundColor: T.textTertiary, flexShrink: 0, marginBottom: '1px',
     opacity: 0.45,
+  },
+
+  /* 回答系統 */
+  tierList: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  tierRow:  { display: 'flex', alignItems: 'center', gap: '10px' },
+  tierDot: {
+    width: '26px', height: '26px', borderRadius: '50%',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color: '#FFFFFF', flexShrink: 0,
+  },
+  tierInfo: { display: 'flex', flexDirection: 'column', gap: '1px' },
+  tierName: {
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '12px', fontWeight: 500, color: T.textPrimary,
+  },
+  tierDesc: {
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '10px', color: T.textTertiary,
+  },
+
+  /* 快速入口 */
+  quickBtn: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    width: '100%', padding: '9px 12px',
+    backgroundColor: T.bgSubtle, border: `1px solid ${T.border}`,
+    borderRadius: '8px',
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '13px', color: T.textSecondary, cursor: 'pointer',
   },
 };
