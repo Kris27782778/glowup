@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useReveal } from './hooks/useReveal';
 import { useLang } from './hooks/useLang';
+import API_BASE from './config';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -18,41 +19,6 @@ const T = {
   border:        '#E5DDD9',
 };
 
-/* ── 登入頁 Mock 資料 ── */
-const MOCK_POSTS = [
-  {
-    id: 1,
-    author: '林小羽', initial: '林', dept: '化妝品系',
-    time: '2 小時前', tag: '油性肌',
-    title: '用了一個月角鯊烷的心得：油肌也能超水嫩',
-    excerpt: '一直以為油肌不能碰油，但加了角鯊烷之後膚況穩了很多，皮脂分泌反而變少…',
-    likes: 48, comments: 12, hot: true,
-  },
-  {
-    id: 2,
-    author: '陳柔安', initial: '陳', dept: '護理學系',
-    time: '5 小時前', tag: '敏感肌',
-    title: '終於找到敏感肌也能用的去角質方法',
-    excerpt: '試過幾款果酸都刺激到不行，後來換成低濃度杏仁酸每週一次，完全沒有泛紅…',
-    likes: 31, comments: 7, hot: false,
-  },
-  {
-    id: 3,
-    author: '王思涵', initial: '王', dept: '化學系',
-    time: '昨天', tag: '成分討論',
-    title: '菸鹼醯胺 5% vs 10%，整理研究與實測差異',
-    excerpt: '整理了幾篇期刊和自身使用三個月的結果，兩個濃度對色沉的影響差距其實不如想像中大…',
-    likes: 87, comments: 24, hot: true,
-  },
-  {
-    id: 4,
-    author: '張宇軒', initial: '張', dept: '資訊管理學系',
-    time: '昨天', tag: '混合性肌',
-    title: 'T 區控油、兩頰保濕：分區保養的實際操作法',
-    excerpt: '混合肌最麻煩的就是兩個區域的需求完全不同，這是我目前在用的早晚保養流程分享…',
-    likes: 22, comments: 5, hot: false,
-  },
-];
 
 const MOCK_EVENTS = [
   {
@@ -346,6 +312,14 @@ function Hero() {
 /* ═══════════════════════════════════════
    登入後主頁
    ═══════════════════════════════════════ */
+function timeAgo(dateStr) {
+  const diff = (Date.now() - new Date(dateStr)) / 1000;
+  if (diff < 60)    return '剛剛';
+  if (diff < 3600)  return `${Math.floor(diff / 60)} 分鐘前`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} 小時前`;
+  const d = Math.floor(diff / 86400); return d === 1 ? '昨天' : `${d} 天前`;
+}
+
 function LoggedInHome({ user }) {
   const navigate = useNavigate();
   const { t } = useLang();
@@ -353,7 +327,38 @@ function LoggedInHome({ user }) {
   const [announceDismissed, setAnnounceDismissed] = useState(false);
   const [eventPop, setEventPop] = useState(false);
   const [eventPopDismissed, setEventPopDismissed] = useState(false);
+  const [apiPosts, setApiPosts] = useState([]);
+  const [hotPosts, setHotPosts] = useState([]);
   useReveal();
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/posts?limit=20`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data.data)) setApiPosts(data.data.map(p => ({
+          id: p.post_id, initial: (p.users?.nickname || '?')[0],
+          author: p.users?.nickname || '匿名', dept: p.users?.department_grade || '',
+          time: timeAgo(p.created_at), tag: p.skin_type || p.domain || '',
+          title: p.title, excerpt: p.content,
+          likes: p.helpful_count || 0, comments: p.comment_count || 0,
+          hot: (p.helpful_count || 0) >= 20,
+        })));
+      })
+      .catch(() => {});
+    fetch(`${API_BASE}/api/posts/hot?limit=20`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data.data)) setHotPosts(data.data.map(p => ({
+          id: p.post_id, initial: (p.users?.nickname || '?')[0],
+          author: p.users?.nickname || '匿名', dept: p.users?.department_grade || '',
+          time: timeAgo(p.created_at), tag: p.skin_type || p.domain || '',
+          title: p.title, excerpt: p.content,
+          likes: p.helpful_count || 0, comments: p.comment_count || 0,
+          hot: true,
+        })));
+      })
+      .catch(() => {});
+  }, []);
 
   /* 活動 pop：1.8 秒後浮現 */
   useEffect(() => {
@@ -361,9 +366,7 @@ function LoggedInHome({ user }) {
     return () => clearTimeout(t);
   }, []);
 
-  const filteredPosts = tab === 'hot'
-    ? [...MOCK_POSTS].sort((a, b) => b.likes - a.likes)
-    : MOCK_POSTS;
+  const filteredPosts = tab === 'hot' ? hotPosts : apiPosts;
 
   return (
     <div style={H.page} className="home-page">
