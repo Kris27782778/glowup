@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import Navbar from './Navbar';
-import Hero from './Hero';
 import Footer from './Footer';
 import AuthGate from './components/AuthGate';
 import { applyTheme, getStoredSettings } from './hooks/useSettings';
