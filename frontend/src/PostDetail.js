@@ -184,15 +184,15 @@ export default function PostDetail() {
   const authorColor   = avatarColor(post.users?.nickname || '');
 
   return (
-    <div style={s.page}>
-      <div style={s.container}>
+    <div style={s.page} className="postdetail-page">
+      <div style={s.container} className="postdetail-container">
 
         {/* 麵包屑 */}
         <button style={s.back} onClick={() => navigate('/community')}>
           ← {t('返回社群') || '返回社群'}
         </button>
 
-        <div style={s.layout}>
+        <div style={s.layout} className="postdetail-layout">
           {/* ── 主內容 ── */}
           <article style={s.article}>
 
@@ -385,7 +385,7 @@ export default function PostDetail() {
           </article>
 
           {/* ── Sidebar ── */}
-          <aside style={s.sidebar}>
+          <aside style={s.sidebar} className="postdetail-sidebar">
             <div style={s.sideCard}>
               <p style={s.sideTitle}>貼文資訊</p>
               <InfoRow label="作者" value={post.users?.nickname || '匿名'} />

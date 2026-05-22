@@ -87,8 +87,8 @@ function Settings() {
   };
 
   return (
-    <div style={s.page}>
-      <div style={s.container}>
+    <div style={s.page} className="settings-page">
+      <div style={s.container} className="settings-inner">
 
         {/* Header */}
         <div style={s.header}>

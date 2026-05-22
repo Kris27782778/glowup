@@ -188,7 +188,7 @@ function Dashboard() {
   })();
 
   return (
-    <div style={styles.page}>
+    <div style={styles.page} className="dashboard-page">
 
       {/* ══ 年度驗證到期警告 ══ */}
       {verifyDaysLeft !== null && (
@@ -241,10 +241,10 @@ function Dashboard() {
       </div>
 
       {/* ══ 主體：左欄 + 右欄 ══ */}
-      <div style={styles.body}>
+      <div style={styles.body} className="dashboard-body">
 
         {/* ── 左欄：個人資訊 ── */}
-        <aside style={styles.sidebar}>
+        <aside style={styles.sidebar} className="dashboard-sidebar">
 
           {/* 頭像 */}
           <div style={styles.avatarWrap} className="g-scale-in gd-1">
@@ -337,7 +337,7 @@ function Dashboard() {
         </aside>
 
         {/* ── 右欄：Tab 內容 ── */}
-        <main style={styles.main}>
+        <main style={styles.main} className="dashboard-main">
 
           {/* Tab 列 */}
           <div style={styles.tabBar}>

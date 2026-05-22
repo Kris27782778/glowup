@@ -456,14 +456,35 @@
 }
 
 /* ══════════════════════════
-   Dashboard / Settings
+   Dashboard
+══════════════════════════ */
+.dashboard-body {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+.dashboard-sidebar { width: 280px; flex-shrink: 0; }
+.dashboard-main   { flex: 1; min-width: 0; }
+
+@media (max-width: 1024px) {
+  .dashboard-body    { gap: 24px !important; padding: 24px !important; }
+  .dashboard-sidebar { width: 240px !important; }
+}
+@media (max-width: 768px) {
+  .dashboard-page    { padding-top: 64px !important; }
+  .dashboard-body    { flex-direction: column !important; padding: 16px !important; gap: 16px !important; }
+  .dashboard-sidebar { width: 100% !important; position: static !important; }
+  .dashboard-main    { width: 100% !important; }
+  .dashboard-inner   { padding: 16px !important; }
+}
+
+/* ══════════════════════════
+   Settings
 ══════════════════════════ */
 @media (max-width: 768px) {
-  .dashboard-inner {
-    padding: 16px !important;
-  }
+  .settings-page  { padding-top: 64px !important; }
   .settings-inner {
-    padding: 16px !important;
+    padding: 20px 16px !important;
     max-width: 100% !important;
   }
 }
@@ -472,14 +493,76 @@
    QA page
 ══════════════════════════ */
 @media (max-width: 768px) {
+  .qa-page { padding-top: 64px !important; }
+  .qa-hero { padding: 32px 16px 28px !important; }
   .qa-body {
     flex-direction: column !important;
     padding: 16px !important;
+    gap: 16px !important;
   }
   .qa-sidebar {
     width: 100% !important;
     position: static !important;
   }
+}
+
+/* ══════════════════════════
+   AskQuestion
+══════════════════════════ */
+@media (max-width: 768px) {
+  .askq-page { padding-top: 64px !important; }
+  .askq-hero { padding: 28px 16px 24px !important; }
+  .askq-body {
+    flex-direction: column !important;
+    padding: 16px !important;
+    gap: 16px !important;
+  }
+  .askq-form    { width: 100% !important; }
+  .askq-sidebar { width: 100% !important; position: static !important; }
+}
+
+/* ══════════════════════════
+   PostDetail
+══════════════════════════ */
+.postdetail-layout {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+.postdetail-sidebar { width: 220px; flex-shrink: 0; }
+
+@media (max-width: 1024px) {
+  .postdetail-container { padding: 24px !important; }
+  .postdetail-layout    { gap: 24px !important; }
+  .postdetail-sidebar   { width: 200px !important; }
+}
+@media (max-width: 768px) {
+  .postdetail-page      { padding-top: 64px !important; }
+  .postdetail-container { padding: 16px !important; }
+  .postdetail-layout    { flex-direction: column !important; gap: 16px !important; }
+  .postdetail-sidebar   { width: 100% !important; position: static !important; }
+}
+
+/* ══════════════════════════
+   NewPost
+══════════════════════════ */
+.newpost-body {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.newpost-preview { width: 240px; flex-shrink: 0; }
+
+@media (max-width: 1024px) {
+  .newpost-container { padding: 24px !important; }
+  .newpost-preview   { width: 200px !important; }
+}
+@media (max-width: 768px) {
+  .newpost-page      { padding-top: 64px !important; }
+  .newpost-container { padding: 16px !important; }
+  .newpost-body      { flex-direction: column !important; gap: 16px !important; }
+  .newpost-form      { width: 100% !important; }
+  .newpost-preview   { width: 100% !important; position: static !important; order: -1; }
 }
 
 /* ══════════════════════════

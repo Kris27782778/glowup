@@ -142,10 +142,10 @@ export default function AskQuestion() {
   };
 
   return (
-    <div style={s.page}>
+    <div style={s.page} className="askq-page">
 
       {/* ── Hero ── */}
-      <div style={s.hero}>
+      <div style={s.hero} className="askq-hero">
         <div style={s.heroDeco1} />
         <div style={s.heroDeco2} />
         <div style={s.heroInner}>
@@ -178,10 +178,10 @@ export default function AskQuestion() {
         </div>
       ) : (
         /* ── 主體 ── */
-        <div style={s.body}>
+        <div style={s.body} className="askq-body">
 
           {/* ── 左側表單 ── */}
-          <main style={s.formArea}>
+          <main style={s.formArea} className="askq-form">
 
             {/* 問題標題 */}
             <section style={{ ...s.section, borderRadius: '12px 12px 0 0' }}>
@@ -337,7 +337,7 @@ export default function AskQuestion() {
           </main>
 
           {/* ── 右側 Sidebar ── */}
-          <aside style={s.sidebar}>
+          <aside style={s.sidebar} className="askq-sidebar">
 
             {/* 相似問題面板 */}
             <div style={s.sideCard}>

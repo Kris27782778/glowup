@@ -82,8 +82,8 @@ export default function NewPost() {
   };
 
   return (
-    <div style={s.page}>
-      <div style={s.container}>
+    <div style={s.page} className="newpost-page">
+      <div style={s.container} className="newpost-container">
 
         {/* Header */}
         <div style={s.header}>
@@ -94,9 +94,9 @@ export default function NewPost() {
           <p style={s.pageSub}>{t('分享你的保養心得，讓社群看見你的經驗') || '分享你的保養心得，讓社群看見你的經驗'}</p>
         </div>
 
-        <div style={s.body}>
+        <div style={s.body} className="newpost-body">
           {/* 左：表單 */}
-          <main style={s.form}>
+          <main style={s.form} className="newpost-form">
 
             {/* 標題 */}
             <div style={s.field}>
@@ -286,7 +286,7 @@ export default function NewPost() {
           </main>
 
           {/* 右：預覽 */}
-          <aside style={s.preview}>
+          <aside style={s.preview} className="newpost-preview">
             <p style={s.previewLabel}>發文規則</p>
             <div style={s.ruleCard}>
               <RuleRow text="標題至少 6 個字" ok={title.length >= 6} />

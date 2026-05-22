@@ -206,10 +206,10 @@ export default function QA() {
   const handleToggle = (id) => setExpandedId(prev => prev === id ? null : id);
 
   return (
-    <div style={s.page}>
+    <div style={s.page} className="qa-page">
 
       {/* ── Hero ── */}
-      <div style={s.hero}>
+      <div style={s.hero} className="qa-hero">
         {/* 裝飾圓 */}
         <div style={s.heroDeco1} />
         <div style={s.heroDeco2} />
