@@ -18,6 +18,7 @@ const LANG = {
     currentPw: '目前密碼',
     newPw: '新密碼',
     confirmPw: '確認新密碼',
+    savePw: '儲存新密碼',
     account: '帳號',
     logout: '登出',
     version: '版本',
@@ -36,6 +37,7 @@ const LANG = {
     currentPw: 'Current Password',
     newPw: 'New Password',
     confirmPw: 'Confirm New Password',
+    savePw: 'Save New Password',
     account: 'Account',
     logout: 'Sign Out',
     version: 'Version',
@@ -178,7 +180,7 @@ function Settings() {
                 onClick={handleChangePw}
                 disabled={pwLoading}
               >
-                {pwLoading ? '更新中…' : t('儲存') || '儲存新密碼'}
+                {pwLoading ? '更新中…' : t.savePw}
               </button>
             </div>
           )}
