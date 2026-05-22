@@ -380,7 +380,7 @@ export default function Community() {
   const [myPosts,     setMyPosts]     = useState([]);
   const [myNotes,     setMyNotes]     = useState([]);
   const [apiLoaded,   setApiLoaded]   = useState(false);
-  const [hotLoaded,   setHotLoaded]   = useState(false);
+  const [, setHotLoaded] = useState(false);
   const [myLoaded,    setMyLoaded]    = useState(false);
   const [notesLoaded, setNotesLoaded] = useState(false);
   const [trending,    setTrending]    = useState([]);
@@ -485,12 +485,11 @@ export default function Community() {
     { key: 'bookmarks', label: '我的筆記' },
   ];
 
-  const fallback = apiLoaded && apiPosts.length > 0 ? apiPosts : MOCK_POSTS;
   const sourcePosts =
-    tab === 'hot'       ? (hotLoaded   && hotPosts.length  > 0 ? hotPosts  : fallback)
+    tab === 'hot'       ? hotPosts
     : tab === 'mine'      ? myPosts
     : tab === 'bookmarks' ? myNotes
-    : fallback;
+    : apiPosts;
 
   const toggleTag = tag =>
     setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
@@ -502,8 +501,8 @@ export default function Community() {
     .sort((a, b) => tab === 'hot' ? 0 : b.id - a.id);
 
   // 根據用戶膚質推薦貼文
-  const recommended = userSkinType
-    ? MOCK_POSTS.filter(p => p.skinTypes?.includes(userSkinType) && p.id !== 3).slice(0, 2)
+  const recommended = userSkinType && apiPosts.length > 0
+    ? apiPosts.filter(p => p.skinTypes?.includes(userSkinType)).slice(0, 2)
     : [];
 
 
