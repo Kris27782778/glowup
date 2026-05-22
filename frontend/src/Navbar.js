@@ -86,7 +86,7 @@ function Navbar() {
 
         {/* ── 左側：Logo + 導覽 ── */}
         <div style={styles.left}>
-          <Link to="/" style={styles.logo}>GLŌW</Link>
+          <Link to="/community" style={styles.logo}>GLŌW</Link>
           <div style={styles.divider} className="nav-divider" />
           <div style={styles.navLinks} className="nav-links">
             {NAV_KEYS.map(({ key, to }) => (
