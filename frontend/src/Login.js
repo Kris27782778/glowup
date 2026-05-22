@@ -55,7 +55,7 @@ function Login() {
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        navigate('/', { state: { showSplash: true } });
+        navigate('/community');
       } else if (res.status === 403 && data.code === 'REVERIFY_REQUIRED') {
         navigate('/reverify', { state: { student_id: studentId, email: data.email } });
       } else {
