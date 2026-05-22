@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import Hero from './Hero';
 import AuthGate from './components/AuthGate';
 import { applyTheme, getStoredSettings } from './hooks/useSettings';
 import './animations.css';
@@ -96,7 +97,7 @@ function Layout() {
       <div key={`${pathname}-${mountKey}`} className="glow-page">
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/"          element={<Navigate to="/community" replace />} />
+            <Route path="/"          element={<Hero />} />
             <Route path="/login"     element={<Login />} />
             <Route path="/register"  element={<Register />} />
             <Route path="/reverify"        element={<Reverify />} />
