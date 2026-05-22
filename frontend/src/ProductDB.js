@@ -64,7 +64,7 @@ function ProductDB() {
   const compareFabRef = useRef(null);
   const tourRefs = useRef([]);
   const skipNextPageEffect = useRef(false);
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 6;
 
   const currentUser = (() => {
     try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
