@@ -514,14 +514,14 @@ export default function Community() {
       {showNewPost && <NewPostModal onClose={() => setShowNewPost(false)} />}
 
       {/* ── Hero ── */}
-      <div style={s.hero}>
-        <div style={s.heroInner}>
+      <div style={s.hero} className="community-hero">
+        <div style={s.heroInner} className="community-hero-inner">
           <div style={s.heroLeft}>
             <p style={s.heroEyebrow}>COMMUNITY</p>
-            <h1 style={s.heroTitle}>社群討論</h1>
+            <h1 style={s.heroTitle} className="community-hero-title">社群討論</h1>
             <p style={s.heroSub}>與輔大同學交流真實的保養心得，找到你信任的美妝知識。</p>
           </div>
-          <div style={s.heroStats}>
+          <div style={s.heroStats} className="community-hero-stats">
             {[
               { num: apiLoaded ? String(apiPosts.length) : '—', label: '篇貼文' },
               { num: '1',   label: '位成員' },
@@ -534,8 +534,8 @@ export default function Community() {
             ))}
           </div>
         </div>
-        <div style={s.searchRow}>
-          <div style={{ ...s.searchBox, ...(searchFocus ? s.searchBoxFocus : {}) }}>
+        <div style={s.searchRow} className="community-search">
+          <div style={{ ...s.searchBox, ...(searchFocus ? s.searchBoxFocus : {}) }} className="community-search-box">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ flexShrink: 0 }}>
               <circle cx="6.5" cy="6.5" r="4.5" stroke="rgba(247,244,242,0.45)" strokeWidth="1.4"/>
               <path d="M10 10L13 13" stroke="rgba(247,244,242,0.45)" strokeWidth="1.4" strokeLinecap="round"/>
@@ -553,7 +553,7 @@ export default function Community() {
               <button style={s.searchClear} onClick={() => setSearch('')}>✕</button>
             )}
           </div>
-          <button style={s.newPostBtn} onClick={() => navigate('/community/new')}>
+          <button style={s.newPostBtn} className="community-new-post-btn" onClick={() => navigate('/community/new')}>
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
               <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
             </svg>
@@ -563,7 +563,7 @@ export default function Community() {
       </div>
 
       {/* ── Body ── */}
-      <div style={s.body}>
+      <div style={s.body} className="community-body">
         {/* ── Main ── */}
         <main style={s.main}>
 
@@ -664,7 +664,7 @@ export default function Community() {
         </main>
 
         {/* ── Sidebar ── */}
-        <aside style={s.sidebar}>
+        <aside style={s.sidebar} className="community-sidebar">
 
           {/* 回答系統 */}
           <div style={s.sideCard} className="g-reveal">
