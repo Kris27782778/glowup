@@ -231,9 +231,9 @@ const fetchProducts = async (pageNum = page) => {
   };
 
   return (
-    <div style={styles.page}>
+    <div style={styles.page} className="productdb-page">
       {/* 搜尋 Hero */}
-      <div style={styles.searchHero}>
+      <div style={styles.searchHero} className="productdb-hero">
         <p style={styles.heroEyebrow}>INGREDIENT LIBRARY</p>
         <h1 style={styles.heroTitle}>{t('產品資料庫')}</h1>
         <p style={styles.heroSub}>{t('依膚質、功效找到真正適合你的產品')}</p>
@@ -258,10 +258,11 @@ const fetchProducts = async (pageNum = page) => {
       </div>
 
       {/* 主體：篩選 + 結果 */}
-      <div style={styles.body}>
+      <div style={styles.body} className="productdb-body">
         {/* 側欄篩選 */}
         <aside
           style={styles.sidebar}
+          className="productdb-sidebar"
           ref={el => (tourRefs.current[1] = el)}
         >
 
@@ -381,6 +382,7 @@ const fetchProducts = async (pageNum = page) => {
         {/* 結果區 */}
         <main
           style={styles.results}
+          className="productdb-results"
           ref={el => (tourRefs.current[2] = el)}
         >
           {hasFilter ? (

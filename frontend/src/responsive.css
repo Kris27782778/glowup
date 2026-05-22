@@ -380,22 +380,54 @@
 /* ══════════════════════════
    ProductDB
 ══════════════════════════ */
-.productdb-page {
-  padding: 96px 40px 64px;
+.productdb-body {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px;
 }
-.product-grid {
-  display: grid;
+.productdb-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+}
+.productdb-results {
+  flex: 1;
+  min-width: 0;
 }
 
 @media (max-width: 1024px) {
-  .productdb-page {
-    padding: 80px 24px 48px !important;
+  .productdb-hero {
+    padding: 40px 24px 40px !important;
+  }
+  .productdb-body {
+    padding: 24px !important;
+    gap: 24px !important;
+  }
+  .productdb-sidebar {
+    width: 220px !important;
   }
 }
 
 @media (max-width: 768px) {
   .productdb-page {
-    padding: 76px 16px 48px !important;
+    padding-top: 64px !important;
+  }
+  .productdb-hero {
+    padding: 32px 16px 36px !important;
+  }
+  .productdb-body {
+    flex-direction: column !important;
+    padding: 16px !important;
+    gap: 16px !important;
+  }
+  .productdb-sidebar {
+    width: 100% !important;
+    position: static !important;
+  }
+  .productdb-results {
+    width: 100% !important;
   }
   .filter-row {
     flex-wrap: wrap !important;
