@@ -9,7 +9,7 @@ const LANG = {
     title: '設定',
     appearance: '外觀',
     themeLabel: '色彩模式',
-    themes: { light: '日間', dark: '夜間', system: '系統' },
+    themes: { light: '日間', dark: '夜間' },
     language: '語言',
     langLabel: '介面語言',
     langs: { 'zh-TW': '繁體中文', en: 'English' },
@@ -28,7 +28,7 @@ const LANG = {
     title: 'Settings',
     appearance: 'Appearance',
     themeLabel: 'Color Mode',
-    themes: { light: 'Light', dark: 'Dark', system: 'System' },
+    themes: { light: 'Light', dark: 'Dark' },
     language: 'Language',
     langLabel: 'Interface Language',
     langs: { 'zh-TW': 'Traditional Chinese', en: 'English' },
@@ -106,7 +106,7 @@ function Settings() {
         <Section label={t.appearance}>
           <RowLabel label={t.themeLabel} />
           <div style={s.segmentGroup}>
-            {['light', 'dark', 'system'].map(val => (
+            {['light', 'dark'].map(val => (
               <button
                 key={val}
                 style={{
