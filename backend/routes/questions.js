@@ -273,6 +273,47 @@ router.post('/', async (req, res) => {
   }
 });
 
+// POST /api/questions/:id/bookmark — 收藏 / 取消收藏問答（toggle）
+router.post('/:id/bookmark', async (req, res) => {
+  const { id } = req.params;
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ error: '需要登入' });
+  try {
+    const { data: existing, error: selErr } = await supabase
+      .from('question_bookmarks')
+      .select('id')
+      .eq('question_id', id)
+      .eq('user_id', user_id)
+      .maybeSingle();
+    if (selErr) {
+      console.error('[POST question bookmark] select error:', selErr);
+      return res.status(500).json({ error: selErr.message, hint: selErr.hint, code: selErr.code });
+    }
+
+    if (existing) {
+      const { error: delErr } = await supabase
+        .from('question_bookmarks').delete().eq('id', existing.id);
+      if (delErr) {
+        console.error('[POST question bookmark] delete error:', delErr);
+        return res.status(500).json({ error: delErr.message, hint: delErr.hint, code: delErr.code });
+      }
+      return res.json({ bookmarked: false });
+    }
+
+    const { error: insErr } = await supabase
+      .from('question_bookmarks')
+      .insert({ question_id: parseInt(id), user_id: parseInt(user_id) });
+    if (insErr) {
+      console.error('[POST question bookmark] insert error:', insErr);
+      return res.status(500).json({ error: insErr.message, hint: insErr.hint, code: insErr.code });
+    }
+    res.json({ bookmarked: true });
+  } catch (err) {
+    console.error('[POST question bookmark] unexpected:', err);
+    res.status(500).json({ error: err.message || '操作失敗' });
+  }
+});
+
 // GET /api/questions/bookmarks/:user_id — 取得使用者收藏的問答清單
 router.get('/bookmarks/:user_id', async (req, res) => {
   const { user_id } = req.params;
@@ -282,43 +323,22 @@ router.get('/bookmarks/:user_id', async (req, res) => {
       .select('question_id, questions(question_id, user_id, is_anonymous, title, tags, solved, views, created_at, ai_answer, users(nickname, department_grade), answers(count))')
       .eq('user_id', user_id)
       .order('created_at', { ascending: false });
-    if (error) return res.status(400).json({ error: error.message });
-    const result = (data || []).map(d => ({
-      ...d.questions,
-      answer_count: d.questions?.answers?.[0]?.count ?? 0,
-    }));
+    if (error) {
+      console.error('[GET question bookmarks]', error);
+      return res.status(400).json({ error: error.message, hint: error.hint, code: error.code });
+    }
+    const result = (data || [])
+      .filter(d => d.questions)
+      .map(d => ({
+        ...d.questions,
+        answer_count: d.questions?.answers?.[0]?.count ?? 0,
+      }));
     res.json(result);
   } catch (err) {
     console.error('[GET question bookmarks]', err.message);
     res.status(500).json({ error: '查詢失敗' });
   }
 });
-
-// POST /api/questions/:id/bookmark — 收藏 / 取消收藏問答（toggle）
-router.post('/:id/bookmark', async (req, res) => {
-  const { id } = req.params;
-  const { user_id } = req.body;
-  if (!user_id) return res.status(400).json({ error: '需要登入' });
-  try {
-    const { data: existing } = await supabase
-      .from('question_bookmarks')
-      .select('id')
-      .eq('question_id', id)
-      .eq('user_id', user_id)
-      .maybeSingle();
-    if (existing) {
-      await supabase.from('question_bookmarks').delete().eq('id', existing.id);
-      return res.json({ bookmarked: false });
-    }
-    await supabase.from('question_bookmarks')
-      .insert({ question_id: parseInt(id), user_id: parseInt(user_id) });
-    res.json({ bookmarked: true });
-  } catch (err) {
-    console.error('[POST question bookmark]', err.message);
-    res.status(500).json({ error: '操作失敗' });
-  }
-});
-
 // GET /api/questions/:id/bookmark-status?user_id= — 查詢是否已收藏
 router.get('/:id/bookmark-status', async (req, res) => {
   const { id } = req.params;

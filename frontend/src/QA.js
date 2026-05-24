@@ -328,11 +328,25 @@ export default function QA() {
             )}
           </div>
 
-          {/* 問題列表 */}
+         {/* 問題列表 */}
           {filtered.length === 0 ? (
             <div style={s.empty}>
-              <p style={s.emptyTitle}>{t('找不到符合的問題') || '找不到符合的問題'}</p>
-              <p style={s.emptySub}>{t('試試其他關鍵字或標籤') || '試試其他關鍵字或標籤'}</p>
+              {tab === 'saved' && savedQuestions.length === 0 ? (
+                <>
+                  <p style={s.emptyTitle}>還沒關注任何問題</p>
+                  <p style={s.emptySub}>看到有興趣的問題時，點右側的「☆ 關注」就能收進這裡</p>
+                </>
+              ) : tab === 'mine' && !userId ? (
+                <>
+                  <p style={s.emptyTitle}>請先登入</p>
+                  <p style={s.emptySub}>登入後就能看到自己的提問</p>
+                </>
+              ) : (
+                <>
+                  <p style={s.emptyTitle}>{t('找不到符合的問題') || '找不到符合的問題'}</p>
+                  <p style={s.emptySub}>{t('試試其他關鍵字或標籤') || '試試其他關鍵字或標籤'}</p>
+                </>
+              )}
             </div>
           ) : (
             filtered.map((q, i) => (
