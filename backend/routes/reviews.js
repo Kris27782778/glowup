@@ -22,7 +22,7 @@ router.get('/:product_id', async (req, res) => {
   const { product_id } = req.params;
   const { data, error } = await supabase
     .from('reviews')
-    .select('*, users(nickname)')
+    .select('*, users(nickname, skin_type)')
     .eq('product_id', product_id)
     .order('created_at', { ascending: false });
 

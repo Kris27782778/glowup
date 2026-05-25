@@ -16,6 +16,16 @@ const T = {
 
 const EMOJI = { '粉底液':'💄','遮瑕':'✨','防曬':'🌞','化妝水':'💧','乳液':'🧴','霜':'🫙' };
 
+const SKIN_TYPE_LABEL = {
+  oily:       '油性肌',
+  dry:        '乾性肌',
+  combo:      '混合性肌',
+  combo_dry:  '混合偏乾肌',
+  combo_oily: '混合偏油肌',
+  normal:     '中性肌',
+  sensitive:  '敏感性肌',
+};
+
 function Stars({ value, onChange, readonly = false }) {
   return (
     <div style={{ display:'flex', gap:'3px' }}>
@@ -73,6 +83,14 @@ export default function ProductPopover({ product, onClose, currentUser }) {
 
   const avgRating = reviews.length
     ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+    : null;
+
+  const userSkinType = currentUser?.skin_type;
+  const sameTypeReviews = userSkinType
+    ? reviews.filter(r => r.users?.skin_type === userSkinType)
+    : [];
+  const skinTypeAvg = sameTypeReviews.length
+    ? (sameTypeReviews.reduce((s, r) => s + r.rating, 0) / sameTypeReviews.length).toFixed(1)
     : null;
 
   const scoreNum   = parseFloat(product.score);
@@ -200,12 +218,30 @@ export default function ProductPopover({ product, onClose, currentUser }) {
             </div>
           )}
 
-          {/* 平均星等 */}
-          {avgRating && (
-            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-              <Stars value={Math.round(parseFloat(avgRating))} readonly />
-              <span style={{ fontSize:'13px', fontWeight:600, color:T.textPrimary }}>{avgRating}</span>
-              <span style={{ fontSize:'12px', color:T.textTertiary }}>({reviews.length} 則評論)</span>
+          {/* 評分區塊 */}
+          {(avgRating || skinTypeAvg) && (
+            <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+              {avgRating && (
+                <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                  <Stars value={Math.round(parseFloat(avgRating))} readonly />
+                  <span style={{ fontSize:'13px', fontWeight:600, color:T.textPrimary }}>{avgRating}</span>
+                  <span style={{ fontSize:'12px', color:T.textTertiary }}>({reviews.length} 則評論)</span>
+                </div>
+              )}
+              {skinTypeAvg && (
+                <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                  <Stars value={Math.round(parseFloat(skinTypeAvg))} readonly />
+                  <span style={{ fontSize:'13px', fontWeight:600, color:T.accent }}>{skinTypeAvg}</span>
+                  <span style={{ fontSize:'12px', color:T.textTertiary }}>
+                    與你同樣{SKIN_TYPE_LABEL[userSkinType] || '膚質'}的人（{sameTypeReviews.length} 人）
+                  </span>
+                </div>
+              )}
+              {userSkinType && !skinTypeAvg && avgRating && (
+                <p style={{ margin:0, fontSize:'11px', color:T.textTertiary }}>
+                  暫無{SKIN_TYPE_LABEL[userSkinType] || '同膚質'}用戶評分
+                </p>
+              )}
             </div>
           )}
 
