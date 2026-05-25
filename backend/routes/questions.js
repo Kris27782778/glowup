@@ -256,7 +256,7 @@ router.post('/', async (req, res) => {
             max_tokens: 400,
             messages: [{
               role: 'user',
-              content: `你是 GLŌW AI，輔大美妝交流平台的智能助理，專精保養成分分析。請針對以下問題，提供簡潔、科學的初步分析（150字以內），重點放在成分、膚質適合性或保養建議，語氣親切自然。\n\n問題標題：${title}\n問題說明：${detail}`,
+              content: `你是 GLŌW AI，輔大美妝交流平台的智能助理，專精保養成分分析。請針對以下問題，提供簡潔、科學的初步分析（150字以內），重點放在成分、膚質適合性或保養建議，語氣親切自然。\n\n重要規則：直接給出分析結論，不要詢問使用者是否有更多問題，不要邀請追問，不要以「如果有任何問題」或類似句子結尾。\n\n問題標題：${title}\n問題說明：${detail}`,
             }],
           });
           const aiText = msg.content?.[0]?.text || '';
@@ -339,6 +339,18 @@ router.get('/bookmarks/:user_id', async (req, res) => {
     res.status(500).json({ error: '查詢失敗' });
   }
 });
+// GET /api/questions/:id — 取得單筆問題（含 ai_answer）
+router.get('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { data, error } = await supabase
+    .from('questions')
+    .select('question_id, user_id, is_anonymous, title, detail, tags, solved, views, created_at, ai_answer, users(nickname, department_grade), answers(count)')
+    .eq('question_id', id)
+    .single();
+  if (error) return res.status(404).json({ error: '找不到問題' });
+  res.json(data);
+});
+
 // GET /api/questions/:id/bookmark-status?user_id= — 查詢是否已收藏
 router.get('/:id/bookmark-status', async (req, res) => {
   const { id } = req.params;

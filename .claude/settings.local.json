@@ -62,7 +62,9 @@
       "Bash(node server.js)",
       "Bash(curl -s -X PATCH http://localhost:5001/api/admin/products/1/restore -H \"Content-Type: application/json\" -H \"x-admin-key: glowadmin2026\")",
       "Bash(node -e \"require\\('/Users/wyk/Desktop/美妝樣本/backend/routes/admin.js'\\)\")",
-      "Bash(kill -9 4476)"
+      "Bash(kill -9 4476)",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)"
     ]
   }
 }

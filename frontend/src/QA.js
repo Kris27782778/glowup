@@ -4,6 +4,7 @@ import { useReveal } from './hooks/useReveal';
 import { useLang } from './hooks/useLang';
 import API_BASE from './config';
 import ReportModal from './components/ReportModal';
+import ReactMarkdown from 'react-markdown';
 
 
 
@@ -203,7 +204,23 @@ export default function QA() {
     }
   };
 
-  const handleToggle = (id) => setExpandedId(prev => prev === id ? null : id);
+  const handleToggle = (id) => {
+    setExpandedId(prev => prev === id ? null : id);
+
+    // 展開時，若 aiAnswer 還是空的就去重新抓（AI 可能還在背景生成中）
+    const q = questions.find(q => q.id === id) || savedQuestions.find(q => q.id === id);
+    if (q && !q.aiAnswer) {
+      fetch(`${API_BASE}/api/questions/${id}`)
+        .then(r => r.json())
+        .then(data => {
+          if (!data.ai_answer) return;
+          const update = q => q.id === id ? { ...q, aiAnswer: data.ai_answer } : q;
+          setQuestions(prev => prev.map(update));
+          setSavedQuestions(prev => prev.map(update));
+        })
+        .catch(() => {});
+    }
+  };
 
   return (
     <div style={s.page} className="qa-page">
@@ -646,14 +663,27 @@ function QuestionCard({ question: q, idx, t, expanded, onToggle, onReport, curre
             </div>
             <div style={s.tierBodyAI}>
               <div style={s.aiGlow} />
-              <p style={s.tierText}>
+              <div style={{ ...s.tierText, lineHeight: 1.7 }}>
                 {q.aiAnswer
-                  ? q.aiAnswer.split('\n\n').map((para, i, arr) => (
-                      <span key={i}>{para}{i < arr.length - 1 && <><br /><br /></>}</span>
-                    ))
+                  ? <ReactMarkdown
+                      components={{
+                        p:      ({ children }) => <p style={{ margin: '0 0 8px' }}>{children}</p>,
+                        strong: ({ children }) => <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{children}</strong>,
+                        em:     ({ children }) => <em style={{ fontStyle: 'italic' }}>{children}</em>,
+                        ul:     ({ children }) => <ul style={{ margin: '4px 0 8px', paddingLeft: '18px' }}>{children}</ul>,
+                        ol:     ({ children }) => <ol style={{ margin: '4px 0 8px', paddingLeft: '18px' }}>{children}</ol>,
+                        li:     ({ children }) => <li style={{ marginBottom: '2px' }}>{children}</li>,
+                        h1:     ({ children }) => <p style={{ margin: '0 0 6px', fontWeight: 600 }}>{children}</p>,
+                        h2:     ({ children }) => <p style={{ margin: '0 0 6px', fontWeight: 600 }}>{children}</p>,
+                        h3:     ({ children }) => <p style={{ margin: '0 0 4px', fontWeight: 600 }}>{children}</p>,
+                        code:   ({ children }) => <code style={{ background: 'rgba(0,0,0,0.06)', borderRadius: '3px', padding: '1px 5px', fontSize: '12px' }}>{children}</code>,
+                      }}
+                    >
+                      {q.aiAnswer}
+                    </ReactMarkdown>
                   : <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>AI 回覆功能即將上線</span>
                 }
-              </p>
+              </div>
             </div>
           </div>
 
