@@ -45,18 +45,6 @@ const MOCK_TAGS = ['保濕', '控油', '敏感肌', '成分討論', '防曬推�
 /* ── 輪播資料 ── */
 const BANNER_SLIDES = [
   {
-    id: 1,
-    tag: '限時活動',
-    tagColor: '#C4897A',
-    title: '保養品交換會',
-    sub: '5 月 18 日（六）14:00・學生活動中心 B1',
-    desc: '帶一件你不再使用的好品，換一件新驚喜。免費參加，名額有限。',
-    cta: '立即報名',
-    ctaColor: '#C4897A',
-    bg: 'linear-gradient(135deg, #1C1917 0%, #2D2218 60%, #3A2820 100%)',
-    accentBlob: 'rgba(196,137,122,0.18)',
-  },
-  {
     id: 2,
     tag: '新功能上線',
     tagColor: '#7BAF7B',
