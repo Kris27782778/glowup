@@ -19,7 +19,8 @@ const Reverify       = lazy(() => import('./Reverify'));
 const ForgotPassword = lazy(() => import('./ForgotPassword'));
 const NewPost    = lazy(() => import('./NewPost'));
 const PostDetail = lazy(() => import('./PostDetail'));
-const About   = lazy(() => import('./About'));
+const About      = lazy(() => import('./About'));
+const AIAdvisor  = lazy(() => import('./AIAdvisor'));
 const Terms   = lazy(() => import('./Terms'));
 const Privacy = lazy(() => import('./Privacy'));
 
@@ -112,6 +113,7 @@ function Layout() {
             <Route path="/products"  element={<RequireAuth feature="products"><ProductDB /></RequireAuth>} />
             <Route path="/dashboard" element={<RequireAuth feature="dashboard"><Dashboard /></RequireAuth>} />
             <Route path="/settings"  element={<RequireAuth feature="settings"><Settings /></RequireAuth>} />
+            <Route path="/ai-advisor" element={<RequireAuth feature="ai-advisor"><AIAdvisor /></RequireAuth>} />
             <Route path="/about"   element={<About />} />
             <Route path="/terms"   element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />

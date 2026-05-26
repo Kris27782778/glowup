@@ -1991,7 +1991,7 @@ function AuditTab() {
 function ToolsTab() {
   const [noAiList,    setNoAiList]    = useState(null);
   const [retrying,    setRetrying]    = useState({});
-  const [retryDone,   setRetryDone]   = useState({});
+  const [retryDone,   setRetryDone]   = useState({}); // eslint-disable-line no-unused-vars
   const [verifyEmail, setVerifyEmail] = useState('');
   const [sending,     setSending]     = useState(false);
   const [sendResult,  setSendResult]  = useState(null);
