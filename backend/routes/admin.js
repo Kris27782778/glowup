@@ -239,7 +239,8 @@ router.get('/questions', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT qu.question_id, qu.title, qu.tags, qu.solved, qu.views, qu.created_at,
-              u.nickname, u.student_id
+              u.nickname, u.student_id,
+              (SELECT COUNT(*) FROM answers a WHERE a.question_id = qu.question_id)::int AS answer_count
        FROM questions qu
        LEFT JOIN users u ON u.user_id = qu.user_id
        WHERE qu.title ILIKE $1 OR u.nickname ILIKE $1
