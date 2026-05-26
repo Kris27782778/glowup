@@ -897,7 +897,7 @@ function HBar({ label, value, max, color, suffix = '' }) {
       <div style={{ flex:1, background:C.bgCard, borderRadius:'4px', height:'6px', overflow:'hidden' }}>
         <div style={{
           width:`${pct}%`, height:'100%', borderRadius:'4px',
-          background:`linear-gradient(90deg, ${color}cc, ${color})`,
+          background: color,
           transition:'width 700ms cubic-bezier(0.16,1,0.3,1)',
         }} />
       </div>
@@ -941,7 +941,7 @@ function WeeklyBar({ data, color, label, total }) {
                   style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-end', height:'100%' }}>
                   <div style={{
                     width:'100%', height:`${h}px`, borderRadius:'3px 3px 0 0',
-                    background: isLast ? `linear-gradient(180deg, ${color}, ${color}99)` : `${color}55`,
+                    background: isLast ? color : `${color}55`,
                     transition:'height 600ms cubic-bezier(0.16,1,0.3,1)', position:'relative',
                   }}>
                     {isLast && d.count > 0 && (
@@ -1051,7 +1051,7 @@ function AnalyticsTab() {
                   <div style={{ background:C.bgCard, borderRadius:'4px', height:'6px', overflow:'hidden' }}>
                     <div style={{
                       width:`${pct}%`, height:'100%', borderRadius:'4px',
-                      background:`linear-gradient(90deg,${CAT_COLORS_A[i]}99,${CAT_COLORS_A[i]})`,
+                      background: CAT_COLORS_A[i],
                       transition:'width 700ms cubic-bezier(0.16,1,0.3,1)',
                     }} />
                   </div>
