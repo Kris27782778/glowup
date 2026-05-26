@@ -1987,14 +1987,181 @@ function AuditTab() {
   );
 }
 
+// ── ToolsTab ──────────────────────────────────────────────────────
+function ToolsTab() {
+  const [noAiList,    setNoAiList]    = useState(null);
+  const [retrying,    setRetrying]    = useState({});
+  const [retryDone,   setRetryDone]   = useState({});
+  const [verifyEmail, setVerifyEmail] = useState('');
+  const [sending,     setSending]     = useState(false);
+  const [sendResult,  setSendResult]  = useState(null);
+
+  useEffect(() => {
+    adminFetch('/questions/no-ai').then(d => setNoAiList(d.data || [])).catch(() => setNoAiList([]));
+  }, []);
+
+  const handleRetry = async (id) => {
+    setRetrying(r => ({ ...r, [id]: true }));
+    try {
+      const res = await adminFetch(`/questions/${id}/ai-retry`, { method:'POST', body:{} });
+      if (res.ok) {
+        setRetryDone(d => ({ ...d, [id]: true }));
+        setNoAiList(l => l.filter(q => q.question_id !== id));
+      } else {
+        alert(res.error || 'AI 補送失敗');
+      }
+    } catch { alert('補送失敗'); }
+    finally { setRetrying(r => ({ ...r, [id]: false })); }
+  };
+
+  const handleResend = async () => {
+    if (!verifyEmail.trim()) return;
+    setSending(true); setSendResult(null);
+    try {
+      const res = await adminFetch('/resend-verification', {
+        method: 'POST', body: { email: verifyEmail.trim() },
+      });
+      setSendResult(res.ok ? { ok: true, msg: res.message } : { ok: false, msg: res.error });
+    } catch { setSendResult({ ok: false, msg: '補送失敗' }); }
+    finally { setSending(false); }
+  };
+
+  const inputSt = {
+    height:'38px', padding:'0 12px', borderRadius:'8px',
+    border:`1px solid ${C.border}`, background:C.bgCard,
+    fontSize:'13px', fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
+    color:C.text, outline:'none', minWidth:'280px',
+  };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:'28px' }}>
+
+      {/* 驗證信補送 */}
+      <div style={sectionStyle}>
+        <h3 style={sectionTitle}>驗證信補送</h3>
+        <div style={{ padding:'0 20px 20px', display:'flex', flexDirection:'column', gap:'12px' }}>
+          <p style={{ margin:0, fontSize:'13px', color:C.textSub }}>
+            針對因 Bug 未收到驗證信的使用者，直接補寄新的驗證碼。
+          </p>
+          <div style={{ display:'flex', gap:'10px', alignItems:'center', flexWrap:'wrap' }}>
+            <input
+              style={inputSt}
+              type="text"
+              placeholder="使用者 Email（例：413401364@cloud.fju.edu.tw）"
+              value={verifyEmail}
+              onChange={e => { setVerifyEmail(e.target.value); setSendResult(null); }}
+              onKeyDown={e => e.key === 'Enter' && !sending && handleResend()}
+            />
+            <button
+              onClick={handleResend}
+              disabled={sending || !verifyEmail.trim()}
+              style={{
+                height:'38px', padding:'0 18px', borderRadius:'8px', border:'none',
+                background: (sending || !verifyEmail.trim()) ? C.accentLight : C.accent,
+                color: (sending || !verifyEmail.trim()) ? C.accentText : '#fff',
+                fontSize:'13px', fontWeight:600,
+                fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
+                cursor: (sending || !verifyEmail.trim()) ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {sending ? '補送中…' : '補送驗證信'}
+            </button>
+          </div>
+          {sendResult && (
+            <p style={{
+              margin:0, fontSize:'13px', fontWeight:500,
+              color: sendResult.ok ? C.green : C.red,
+            }}>
+              {sendResult.ok ? '✓ ' : '✕ '}{sendResult.msg}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* AI 回覆補送 */}
+      <div style={sectionStyle}>
+        <h3 style={sectionTitle}>AI 回覆補送</h3>
+        <div style={{ padding:'0 20px 4px' }}>
+          <p style={{ margin:'0 0 16px', fontSize:'13px', color:C.textSub }}>
+            列出尚未獲得 AI 初步回覆的問題，點擊補送即可立即生成。
+          </p>
+        </div>
+        {noAiList === null ? (
+          <p style={{ padding:'20px', fontSize:'13px', color:C.textDim }}>載入中…</p>
+        ) : noAiList.length === 0 ? (
+          <p style={{ padding:'20px', fontSize:'13px', color:C.green }}>✓ 所有問題都已有 AI 回覆</p>
+        ) : (
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>問題標題</th>
+                <th style={thStyle}>發問者</th>
+                <th style={thStyle}>發問時間</th>
+                <th style={{ ...thStyle, width:'90px' }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {noAiList.map(q => (
+                <tr key={q.question_id} style={{ borderTop:`1px solid ${C.border}` }}>
+                  <td style={{ ...tdStyle, maxWidth:'320px' }}>
+                    <span style={{ display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>
+                      {q.title}
+                    </span>
+                  </td>
+                  <td style={tdStyle}>{q.users?.nickname || '—'}</td>
+                  <td style={tdStyle}>{fmtDate(q.created_at)}</td>
+                  <td style={tdStyle}>
+                    <button
+                      onClick={() => handleRetry(q.question_id)}
+                      disabled={retrying[q.question_id]}
+                      style={{
+                        height:'28px', padding:'0 12px', borderRadius:'6px', border:'none',
+                        background: retrying[q.question_id] ? C.accentLight : C.accentLight,
+                        color: C.accentText,
+                        fontSize:'12px', fontWeight:600,
+                        fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
+                        cursor: retrying[q.question_id] ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {retrying[q.question_id] ? '生成中…' : '補送 AI'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── AdminLogin ────────────────────────────────────────────────────
 function AdminLogin({ onSuccess }) {
-  const [pw,  setPw]  = useState('');
-  const [err, setErr] = useState('');
+  const [studentId, setStudentId] = useState('');
+  const [err,       setErr]       = useState('');
+  const [loading,   setLoading]   = useState(false);
 
-  const handleLogin = () => {
-    if (pw === ADMIN_KEY) { onSuccess(); }
-    else { setErr('密碼錯誤'); }
+  const handleLogin = async () => {
+    if (!studentId.trim()) { setErr('請輸入學號'); return; }
+    setLoading(true); setErr('');
+    try {
+      const res = await fetch(`${API}/verify-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_id: studentId.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onSuccess(data.nickname || studentId.trim());
+      } else {
+        setErr(data.error || '驗證失敗');
+      }
+    } catch {
+      setErr('無法連線至伺服器');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -2014,11 +2181,11 @@ function AdminLogin({ onSuccess }) {
           color:C.textDim, fontFamily:'"DM Sans",sans-serif', fontWeight:500,
           textTransform:'uppercase' }}>管理後台</p>
         <input
-          type="password"
-          value={pw}
-          onChange={e => { setPw(e.target.value); setErr(''); }}
-          onKeyDown={e => e.key === 'Enter' && handleLogin()}
-          placeholder="管理員密碼"
+          type="text"
+          value={studentId}
+          onChange={e => { setStudentId(e.target.value); setErr(''); }}
+          onKeyDown={e => e.key === 'Enter' && !loading && handleLogin()}
+          placeholder="管理員學號"
           style={{
             width:'100%', boxSizing:'border-box',
             padding:'12px 16px', borderRadius:'10px',
@@ -2029,13 +2196,15 @@ function AdminLogin({ onSuccess }) {
           }}
         />
         {err && <p style={{ color:C.red, fontSize:'12px', marginBottom:'12px' }}>{err}</p>}
-        <button onClick={handleLogin} style={{
+        <button onClick={handleLogin} disabled={loading} style={{
           width:'100%', height:'44px', borderRadius:'10px', border:'none',
-          background: C.accent, color:'#fff', fontSize:'14px', fontWeight:600,
-          fontFamily:'"DM Sans",sans-serif', cursor:'pointer',
+          background: loading ? C.accentLight : C.accent,
+          color: loading ? C.accentText : '#fff',
+          fontSize:'14px', fontWeight:600,
+          fontFamily:'"DM Sans",sans-serif', cursor: loading ? 'not-allowed' : 'pointer',
           letterSpacing:'0.04em',
         }}>
-          登入
+          {loading ? '驗證中…' : '登入'}
         </button>
       </div>
     </div>
@@ -2079,6 +2248,9 @@ function IconHeart() {
 function IconLog() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>;
 }
+function IconWrench() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>;
+}
 
 // ── Sidebar nav config ────────────────────────────────────────────
 const NAV_GROUPS = [
@@ -2112,6 +2284,7 @@ const NAV_GROUPS = [
     items: [
       { key:'health', label:'系統健康', Icon: IconHeart, badge:'NEW' },
       { key:'audit',  label:'審計日誌', Icon: IconLog,   badge:'NEW' },
+      { key:'tools',  label:'補救工具', Icon: IconWrench },
     ],
   },
 ];
@@ -2129,6 +2302,7 @@ const TAB_META = {
   reports:      { title:'檢舉管理', desc:'處理用戶檢舉案件' },
   health:       { title:'系統健康', desc:'監控後端服務與資料庫狀態' },
   audit:        { title:'審計日誌', desc:'管理員操作記錄追蹤' },
+  tools:        { title:'補救工具', desc:'人工補送 AI 回覆與驗證信' },
 };
 
 // ── Admin（主元件）───────────────────────────────────────────────
@@ -2146,12 +2320,14 @@ export default function Admin() {
     }
   }, [authed, refreshKey]);
 
-  const handleLogin = () => {
+  const handleLogin = (nickname) => {
     sessionStorage.setItem('admin_authed', '1');
+    sessionStorage.setItem('admin_nickname', nickname || '');
     setAuthed(true);
   };
   const handleLogout = () => {
     sessionStorage.removeItem('admin_authed');
+    sessionStorage.removeItem('admin_nickname');
     setAuthed(false);
   };
 
@@ -2295,6 +2471,7 @@ export default function Admin() {
           {tab === 'reports'     && <ReportsTab      key={refreshKey} />}
           {tab === 'health'      && <HealthTab       key={refreshKey} />}
           {tab === 'audit'       && <AuditTab />}
+          {tab === 'tools'       && <ToolsTab        key={refreshKey} />}
         </div>
       </main>
     </div>

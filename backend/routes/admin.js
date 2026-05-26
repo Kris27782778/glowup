@@ -1,6 +1,28 @@
-const express = require('express');
-const router  = express.Router();
-const pool    = require('../config/db');
+const express    = require('express');
+const router     = express.Router();
+const pool       = require('../config/db');
+const supabase   = require('../config/supabase');
+const Anthropic  = require('@anthropic-ai/sdk');
+const crypto     = require('crypto');
+const { sendVerificationEmail } = require('../config/mailer');
+
+// ── 驗證管理員身份（不需 admin key，用學號驗證）───────────────────
+router.post('/verify-admin', async (req, res) => {
+  const { student_id } = req.body;
+  if (!student_id) return res.status(400).json({ error: '請提供學號' });
+  try {
+    const result = await pool.query(
+      `SELECT user_id, nickname FROM users
+       WHERE student_id = $1 AND is_admin = true AND COALESCE(is_banned, false) = false`,
+      [student_id]
+    );
+    if (result.rows.length === 0) return res.status(403).json({ error: '此學號不具管理員權限' });
+    res.json({ ok: true, nickname: result.rows[0].nickname });
+  } catch (err) {
+    console.error('[admin/verify-admin]', err.message);
+    res.status(500).json({ error: '驗證失敗' });
+  }
+});
 
 // ── Admin Key 驗證 middleware ──────────────────────────────────────
 function requireAdmin(req, res, next) {
@@ -577,6 +599,78 @@ router.get('/audit', async (req, res) => {
   } catch (err) {
     console.error('[admin/audit]', err.message);
     res.status(500).json({ error: '查詢失敗' });
+  }
+});
+
+// ── 無 AI 回覆的問題列表 GET /api/admin/questions/no-ai ──────────
+router.get('/questions/no-ai', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('questions')
+      .select('question_id, title, detail, created_at, users(nickname)')
+      .is('ai_answer', null)
+      .order('created_at', { ascending: false })
+      .limit(60);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ data: data || [] });
+  } catch (err) {
+    console.error('[admin/questions/no-ai]', err.message);
+    res.status(500).json({ error: '查詢失敗' });
+  }
+});
+
+// ── 人工補送 AI 回覆 POST /api/admin/questions/:id/ai-retry ──────
+router.post('/questions/:id/ai-retry', async (req, res) => {
+  const { id } = req.params;
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) return res.status(503).json({ error: 'ANTHROPIC_API_KEY 未設定' });
+
+  try {
+    const { data: q, error } = await supabase
+      .from('questions')
+      .select('question_id, title, detail')
+      .eq('question_id', id)
+      .single();
+    if (error || !q) return res.status(404).json({ error: '找不到問題' });
+
+    const anthropic = new Anthropic({ apiKey, timeout: 30000 });
+    const msg = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 400,
+      messages: [{
+        role: 'user',
+        content: `你是 GLŌW AI，輔大美妝交流平台的智能助理，專精保養成分分析。請針對以下問題，提供簡潔、科學的初步分析（150字以內），重點放在成分、膚質適合性或保養建議，語氣親切自然。\n\n重要規則：直接給出分析結論，不要詢問使用者是否有更多問題，不要邀請追問，不要以「如果有任何問題」或類似句子結尾。\n\n問題標題：${q.title}\n問題說明：${q.detail}`,
+      }],
+    });
+
+    const aiText = msg.content?.[0]?.text || '';
+    await supabase.from('questions').update({ ai_answer: aiText }).eq('question_id', id);
+    res.json({ ok: true, ai_answer: aiText });
+  } catch (err) {
+    console.error('[admin/ai-retry]', err.message);
+    res.status(500).json({ error: 'AI 生成失敗：' + err.message });
+  }
+});
+
+// ── 人工補送驗證信 POST /api/admin/resend-verification ───────────
+router.post('/resend-verification', async (req, res) => {
+  const { email } = req.body;
+  if (!email || !email.includes('@')) return res.status(400).json({ error: '請提供有效 email' });
+
+  try {
+    const otp = String(crypto.randomInt(100000, 999999));
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await pool.query('DELETE FROM email_verifications WHERE email = $1', [email]);
+    await pool.query(
+      'INSERT INTO email_verifications (email, otp, expires_at) VALUES ($1, $2, $3)',
+      [email, otp, expiresAt]
+    );
+    await sendVerificationEmail(email, otp);
+    res.json({ ok: true, message: '驗證信已補送' });
+  } catch (err) {
+    console.error('[admin/resend-verification]', err.message);
+    res.status(500).json({ error: '補送失敗：' + err.message });
   }
 });
 
