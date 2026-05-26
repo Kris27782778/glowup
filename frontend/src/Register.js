@@ -146,7 +146,7 @@ function Register() {
   const fullEmail = `${form.email}@cloud.fju.edu.tw`;
 
   const sendVerification = async () => {
-    if (isSendingRef.current) return;
+    if (isSendingRef.current) throw new Error('驗證碼傳送中，請稍候');
     isSendingRef.current = true;
     try {
       const res = await fetch(`${API_BASE}/api/auth/send-verification`, {
@@ -164,6 +164,7 @@ function Register() {
   };
 
   const handleResend = async () => {
+    if (isSendingRef.current) return;
     setError('');
     setOtpDigits(Array(6).fill(''));
     setOtpAttempts(0);
