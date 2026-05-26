@@ -19,6 +19,7 @@ const Reverify       = lazy(() => import('./Reverify'));
 const ForgotPassword = lazy(() => import('./ForgotPassword'));
 const NewPost    = lazy(() => import('./NewPost'));
 const PostDetail = lazy(() => import('./PostDetail'));
+const Hero    = lazy(() => import('./Hero'));
 const About   = lazy(() => import('./About'));
 const Terms   = lazy(() => import('./Terms'));
 const Privacy = lazy(() => import('./Privacy'));
@@ -99,7 +100,7 @@ function Layout() {
       <div key={`${pathname}-${mountKey}`} className="glow-page">
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/"          element={<Navigate to="/community" replace />} />
+            <Route path="/"          element={<Hero />} />
             <Route path="/login"     element={<Login />} />
             <Route path="/register"  element={<Register />} />
             <Route path="/reverify"        element={<Reverify />} />
