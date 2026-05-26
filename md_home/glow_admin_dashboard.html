@@ -1,0 +1,605 @@
+
+<h2 class="sr-only">GLŌW 管理後台完整儀表板原型，包含概覽、行銷分析、會員、產品、成分、問答、貼文、檢舉、系統健康、審計日誌等頁籤</h2>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--sidebar:220px;--accent:#C4897A;--accent-light:rgba(196,137,122,0.12)}
+body{font-family:var(--font-sans)}
+.layout{display:flex;min-height:600px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;background:var(--color-background-primary)}
+.sidebar{width:var(--sidebar);background:var(--color-background-secondary);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:20px 16px 12px;font-size:18px;font-weight:500;color:var(--color-text-primary);letter-spacing:0.04em;border-bottom:0.5px solid var(--color-border-tertiary)}
+.sidebar-logo span{color:var(--accent)}
+.sidebar-section{padding:12px 8px 4px;font-size:10px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:0.08em;text-transform:uppercase;padding-left:16px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 16px;font-size:13px;color:var(--color-text-secondary);cursor:pointer;border-radius:0;transition:all 0.15s;border-left:2px solid transparent}
+.nav-item i{font-size:15px;width:18px;flex-shrink:0}
+.nav-item:hover{color:var(--color-text-primary);background:var(--color-background-primary)}
+.nav-item.active{color:var(--accent);background:var(--accent-light);border-left-color:var(--accent);font-weight:500}
+.nav-badge{margin-left:auto;background:#E24B4A;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px;font-weight:500}
+.content{flex:1;overflow:auto;padding:24px}
+.page{display:none}.page.active{display:block}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.page-title{font-size:16px;font-weight:500;color:var(--color-text-primary)}
+.page-sub{font-size:12px;color:var(--color-text-tertiary);margin-top:2px}
+.btn{padding:6px 14px;font-size:12px;border-radius:var(--border-radius-md);cursor:pointer;border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:var(--color-background-secondary)}
+.btn-accent{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-accent:hover{opacity:0.9}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px}
+.metric-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:6px}
+.metric-value{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.metric-delta{font-size:11px;margin-top:4px}
+.delta-up{color:#3B6D11}.delta-down{color:#A32D2D}.delta-neu{color:var(--color-text-tertiary)}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px;margin-bottom:14px}
+.card-title{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.card-title i{font-size:14px;color:var(--color-text-secondary)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.chart-wrap{position:relative;width:100%}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;font-size:10px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:6px 10px;border-bottom:0.5px solid var(--color-border-tertiary)}
+td{padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--color-background-secondary)}
+.badge{display:inline-flex;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500}
+.badge-green{background:#EAF3DE;color:#3B6D11}.badge-red{background:#FCEBEB;color:#A32D2D}.badge-amber{background:#FAEEDA;color:#854F0B}.badge-blue{background:#E6F1FB;color:#185FA5}.badge-gray{background:#F1EFE8;color:#5F5E5A}.badge-pink{background:#FBEAF0;color:#993556}
+.search-bar{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.search-bar input{flex:1;padding:6px 10px;font-size:13px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-secondary);color:var(--color-text-primary)}
+.filter-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.chip{padding:4px 10px;font-size:12px;border-radius:20px;cursor:pointer;border:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary);background:var(--color-background-primary)}
+.chip.active{background:var(--accent-light);color:var(--accent);border-color:var(--accent)}
+.action-btn{padding:4px 8px;font-size:11px;border-radius:var(--border-radius-md);cursor:pointer;border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-secondary)}
+.action-btn:hover{background:var(--color-background-secondary);color:var(--color-text-primary)}
+.action-btn.danger:hover{background:#FCEBEB;color:#A32D2D;border-color:#F09595}
+.progress{height:4px;background:var(--color-background-secondary);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:2px}
+.system-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.health-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;border-left:3px solid #5DCAA5}
+.health-card.warn{border-left-color:#EF9F27}.health-card.err{border-left-color:#E24B4A}
+.health-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:4px}
+.health-val{font-size:18px;font-weight:500;color:var(--color-text-primary)}
+.health-status{font-size:11px;margin-top:3px}
+.divider{height:0.5px;background:var(--color-border-tertiary);margin:12px 0}
+.log-entry{display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);align-items:flex-start}
+.log-entry:last-child{border-bottom:none}
+.log-time{font-size:11px;color:var(--color-text-tertiary);min-width:80px;padding-top:1px}
+.log-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px}
+.log-text{font-size:12px;color:var(--color-text-primary);line-height:1.4}
+.log-meta{font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
+.funnels{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.funnel-step{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.funnel-label{font-size:12px;color:var(--color-text-secondary);min-width:110px}
+.funnel-bar{flex:1;height:6px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden}
+.funnel-fill{height:100%;border-radius:3px}
+.funnel-pct{font-size:12px;font-weight:500;min-width:36px;text-align:right;color:var(--color-text-primary)}
+.stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px}
+.stat-row:last-child{border-bottom:none}
+.stat-key{color:var(--color-text-secondary)}
+.stat-val{font-weight:500;color:var(--color-text-primary)}
+.new-badge{display:inline-flex;padding:1px 5px;font-size:10px;border-radius:4px;background:var(--accent-light);color:var(--accent);font-weight:500;vertical-align:middle;margin-left:4px}
+</style>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-logo">GL<span>Ō</span>W</div>
+    <div style="overflow-y:auto;flex:1">
+      <div class="sidebar-section">概覽</div>
+      <div class="nav-item active" onclick="nav('overview',this)"><i class="ti ti-layout-dashboard" aria-hidden="true"></i>概覽</div>
+      <div class="nav-item" onclick="nav('analytics',this)"><i class="ti ti-chart-bar" aria-hidden="true"></i>行銷分析</div>
+      <div class="nav-item" onclick="nav('funnel',this)"><i class="ti ti-filter" aria-hidden="true"></i>轉換漏斗 <span class="new-badge">NEW</span></div>
+
+      <div class="sidebar-section">用戶</div>
+      <div class="nav-item" onclick="nav('users',this)"><i class="ti ti-users" aria-hidden="true"></i>會員管理</div>
+      <div class="nav-item" onclick="nav('retention',this)"><i class="ti ti-repeat" aria-hidden="true"></i>留存分析 <span class="new-badge">NEW</span></div>
+
+      <div class="sidebar-section">內容</div>
+      <div class="nav-item" onclick="nav('products',this)"><i class="ti ti-box" aria-hidden="true"></i>產品管理</div>
+      <div class="nav-item" onclick="nav('ingredients',this)"><i class="ti ti-flask" aria-hidden="true"></i>成分管理</div>
+      <div class="nav-item" onclick="nav('qa',this)"><i class="ti ti-message-circle-question" aria-hidden="true"></i>問答管理</div>
+      <div class="nav-item" onclick="nav('posts',this)"><i class="ti ti-article" aria-hidden="true"></i>貼文審核</div>
+      <div class="nav-item" onclick="nav('reports',this)"><i class="ti ti-flag" aria-hidden="true"></i>檢舉管理 <span class="nav-badge">3</span></div>
+
+      <div class="sidebar-section">系統</div>
+      <div class="nav-item" onclick="nav('health',this)"><i class="ti ti-heartbeat" aria-hidden="true"></i>系統健康 <span class="new-badge">NEW</span></div>
+      <div class="nav-item" onclick="nav('audit',this)"><i class="ti ti-shield-check" aria-hidden="true"></i>審計日誌 <span class="new-badge">NEW</span></div>
+    </div>
+    <div style="padding:12px 16px;border-top:0.5px solid var(--color-border-tertiary)">
+      <div style="font-size:11px;color:var(--color-text-tertiary)">管理員登入中</div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px">session 有效</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- 概覽 -->
+    <div class="page active" id="page-overview">
+      <div class="page-header">
+        <div><div class="page-title">平台概覽</div><div class="page-sub">即時數據快照</div></div>
+        <button class="btn"><i class="ti ti-refresh" aria-hidden="true"></i>重新整理</button>
+      </div>
+      <div class="metrics">
+        <div class="metric"><div class="metric-label">總用戶數</div><div class="metric-value">1,284</div><div class="metric-delta delta-up">↑ 今日 +12</div></div>
+        <div class="metric"><div class="metric-label">已驗證 Email</div><div class="metric-value">89%</div><div class="metric-delta delta-neu">1,143 / 1,284</div></div>
+        <div class="metric"><div class="metric-label">總產品數</div><div class="metric-value">3,021</div><div class="metric-delta delta-up">↑ 本週 +45</div></div>
+        <div class="metric"><div class="metric-label">今日問題數</div><div class="metric-value">27</div><div class="metric-delta delta-up">↑ 較昨日 +8</div></div>
+        <div class="metric"><div class="metric-label">待處理檢舉</div><div class="metric-value">3</div><div class="metric-delta delta-down">需處理</div></div>
+        <div class="metric"><div class="metric-label">7 日活躍用戶</div><div class="metric-value">312</div><div class="metric-delta delta-neu">DAU 24.3%</div></div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title"><i class="ti ti-users" aria-hidden="true"></i>最新加入會員</div>
+          <table>
+            <thead><tr><th>暱稱</th><th>系所</th><th>膚質</th><th>驗證</th></tr></thead>
+            <tbody>
+              <tr><td>claire_skin</td><td>織品二</td><td><span class="badge badge-blue">混合</span></td><td><span class="badge badge-green">✓</span></td></tr>
+              <tr><td>min0715</td><td>資管三</td><td><span class="badge badge-pink">敏感</span></td><td><span class="badge badge-green">✓</span></td></tr>
+              <tr><td>yuki_fw</td><td>法文一</td><td><span class="badge badge-amber">油性</span></td><td><span class="badge badge-red">待驗</span></td></tr>
+              <tr><td>peach_tone</td><td>社工二</td><td><span class="badge badge-blue">乾性</span></td><td><span class="badge badge-green">✓</span></td></tr>
+              <tr><td>lena_2025</td><td>心理一</td><td><span class="badge badge-gray">未設定</span></td><td><span class="badge badge-red">待驗</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-trending-up" aria-hidden="true"></i>本週成長摘要</div>
+          <div class="stat-row"><span class="stat-key">新增用戶</span><span class="stat-val">+87</span></div>
+          <div class="stat-row"><span class="stat-key">新增貼文</span><span class="stat-val">+134</span></div>
+          <div class="stat-row"><span class="stat-key">新增問題</span><span class="stat-val">+198</span></div>
+          <div class="stat-row"><span class="stat-key">新增收藏</span><span class="stat-val">+521</span></div>
+          <div class="stat-row"><span class="stat-key">新增評論</span><span class="stat-val">+89</span></div>
+          <div class="stat-row"><span class="stat-key">問題解決率</span><span class="stat-val" style="color:#3B6D11">68.4%</span></div>
+          <div class="stat-row"><span class="stat-key">Email 驗證率</span><span class="stat-val">89.0%</span></div>
+          <div class="stat-row"><span class="stat-key">貼文下架率</span><span class="stat-val" style="color:#A32D2D">2.1%</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-chart-area" aria-hidden="true"></i>近 7 日日活躍用戶 (DAU)</div>
+        <div class="chart-wrap" style="height:140px"><canvas id="dauChart" role="img" aria-label="近七日DAU折線圖">DAU 近七日走勢</canvas></div>
+      </div>
+    </div>
+
+    <!-- 行銷分析 -->
+    <div class="page" id="page-analytics">
+      <div class="page-header">
+        <div><div class="page-title">行銷分析</div><div class="page-sub">用戶輪廓與內容數據</div></div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title"><i class="ti ti-chart-donut" aria-hidden="true"></i>膚質分佈</div>
+          <div class="chart-wrap" style="height:180px"><canvas id="skinChart" role="img" aria-label="膚質分佈長條圖">各膚質用戶分佈</canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-chart-bar" aria-hidden="true"></i>產品主分類分佈</div>
+          <div class="chart-wrap" style="height:180px"><canvas id="catChart" role="img" aria-label="產品分類分佈">各分類產品數量</canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-chart-line" aria-hidden="true"></i>用戶 & 問答成長（近 12 週）</div>
+        <div class="chart-wrap" style="height:160px"><canvas id="growthChart" role="img" aria-label="用戶與問答週成長折線圖">用戶與問答週成長</canvas></div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title"><i class="ti ti-heart" aria-hidden="true"></i>熱門收藏 Top 8</div>
+          <div class="chart-wrap" style="height:200px"><canvas id="wishChart" role="img" aria-label="熱門收藏產品排行">熱門收藏排行</canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-tags" aria-hidden="true"></i>問答標籤 Top 10</div>
+          <div class="chart-wrap" style="height:200px"><canvas id="tagChart" role="img" aria-label="問答標籤排行">問答標籤排行</canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-clock" aria-hidden="true"></i>用戶活躍時段分佈（每小時 PV）<span class="new-badge">NEW</span></div>
+        <div class="chart-wrap" style="height:120px"><canvas id="hourChart" role="img" aria-label="每小時頁面瀏覽分佈">每小時活躍度</canvas></div>
+      </div>
+    </div>
+
+    <!-- 轉換漏斗 -->
+    <div class="page" id="page-funnel">
+      <div class="page-header">
+        <div><div class="page-title">轉換漏斗</div><div class="page-sub">用戶 onboarding 路徑分析</div></div>
+      </div>
+      <div class="funnels">
+        <div class="card">
+          <div class="card-title"><i class="ti ti-door-enter" aria-hidden="true"></i>Onboarding 漏斗</div>
+          <div class="funnel-step"><span class="funnel-label">訪問註冊頁</span><div class="funnel-bar"><div class="funnel-fill" style="width:100%;background:#C4897A"></div></div><span class="funnel-pct">1,284</span></div>
+          <div class="funnel-step"><span class="funnel-label">完成 Email 驗證</span><div class="funnel-bar"><div class="funnel-fill" style="width:89%;background:#C4897A"></div></div><span class="funnel-pct">89%</span></div>
+          <div class="funnel-step"><span class="funnel-label">完成膚質測驗</span><div class="funnel-bar"><div class="funnel-fill" style="width:72%;background:#C4897A"></div></div><span class="funnel-pct">72%</span></div>
+          <div class="funnel-step"><span class="funnel-label">第一次發貼文</span><div class="funnel-bar"><div class="funnel-fill" style="width:38%;background:#C4897A"></div></div><span class="funnel-pct">38%</span></div>
+          <div class="funnel-step"><span class="funnel-label">第一次收藏</span><div class="funnel-bar"><div class="funnel-fill" style="width:61%;background:#C4897A"></div></div><span class="funnel-pct">61%</span></div>
+          <div class="funnel-step"><span class="funnel-label">第一次提問</span><div class="funnel-bar"><div class="funnel-fill" style="width:44%;background:#C4897A"></div></div><span class="funnel-pct">44%</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-quiz" aria-hidden="true"></i>膚質測驗轉換</div>
+          <div class="stat-row"><span class="stat-key">開始測驗</span><span class="stat-val">923</span></div>
+          <div class="stat-row"><span class="stat-key">完成至第 3 題</span><span class="stat-val" style="color:#3B6D11">96%</span></div>
+          <div class="stat-row"><span class="stat-key">完成全部</span><span class="stat-val">89%</span></div>
+          <div class="stat-row"><span class="stat-key">點擊結果頁推薦</span><span class="stat-val">67%</span></div>
+          <div class="divider"></div>
+          <div class="card-title" style="margin-bottom:8px"><i class="ti ti-mail" aria-hidden="true"></i>Email 驗證</div>
+          <div class="stat-row"><span class="stat-key">發送驗證信</span><span class="stat-val">1,284</span></div>
+          <div class="stat-row"><span class="stat-key">24h 內完成</span><span class="stat-val" style="color:#3B6D11">78%</span></div>
+          <div class="stat-row"><span class="stat-key">72h 後仍未驗</span><span class="stat-val" style="color:#A32D2D">11%</span></div>
+          <div class="stat-row"><span class="stat-key">補寄後完成</span><span class="stat-val">4%</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-activity" aria-hidden="true"></i>用戶行為互動率</div>
+        <div class="two-col" style="margin-bottom:0">
+          <div>
+            <div class="stat-row"><span class="stat-key">平均貼文 helpful 率</span><span class="stat-val">4.2 / 貼文</span></div>
+            <div class="stat-row"><span class="stat-key">平均評論數 / 貼文</span><span class="stat-val">3.7</span></div>
+            <div class="stat-row"><span class="stat-key">問答平均回答數</span><span class="stat-val">2.1</span></div>
+          </div>
+          <div>
+            <div class="stat-row"><span class="stat-key">問題解決率</span><span class="stat-val" style="color:#3B6D11">68.4%</span></div>
+            <div class="stat-row"><span class="stat-key">成分頁停留 >30s</span><span class="stat-val">54%</span></div>
+            <div class="stat-row"><span class="stat-key">產品頁 → 收藏轉換</span><span class="stat-val">29%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 留存分析 -->
+    <div class="page" id="page-retention">
+      <div class="page-header">
+        <div><div class="page-title">留存分析</div><div class="page-sub">用戶回訪與生命週期</div></div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><div class="metric-label">Day 1 留存</div><div class="metric-value">61%</div><div class="metric-delta delta-up">↑ +3% 週環比</div></div>
+        <div class="metric"><div class="metric-label">Day 7 留存</div><div class="metric-value">34%</div><div class="metric-delta delta-neu">行業均值 ~28%</div></div>
+        <div class="metric"><div class="metric-label">Day 30 留存</div><div class="metric-value">18%</div><div class="metric-delta delta-down">↓ -2% 週環比</div></div>
+        <div class="metric"><div class="metric-label">流失用戶（30d）</div><div class="metric-value">156</div><div class="metric-delta delta-down">待再激活</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-table" aria-hidden="true"></i>同期群留存矩陣（週同期群）</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>同期群</th><th>Week 0</th><th>Week 1</th><th>Week 2</th><th>Week 3</th><th>Week 4</th></tr></thead>
+            <tbody>
+              <tr><td>W1 (87人)</td><td><span class="badge badge-green">100%</span></td><td><span class="badge badge-green">64%</span></td><td><span class="badge badge-blue">45%</span></td><td><span class="badge badge-amber">32%</span></td><td><span class="badge badge-amber">28%</span></td></tr>
+              <tr><td>W2 (102人)</td><td><span class="badge badge-green">100%</span></td><td><span class="badge badge-green">61%</span></td><td><span class="badge badge-blue">41%</span><td><span class="badge badge-amber">29%</span></td></tr>
+              <tr><td>W3 (94人)</td><td><span class="badge badge-green">100%</span></td><td><span class="badge badge-green">67%</span></td><td><span class="badge badge-blue">48%</span></td></tr>
+              <tr><td>W4 (115人)</td><td><span class="badge badge-green">100%</span></td><td><span class="badge badge-green">59%</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-chart-line" aria-hidden="true"></i>Week 0→1 留存趨勢（近 8 週）</div>
+        <div class="chart-wrap" style="height:140px"><canvas id="retentionChart" role="img" aria-label="週一留存率趨勢">週一留存趨勢</canvas></div>
+      </div>
+    </div>
+
+    <!-- 會員管理 -->
+    <div class="page" id="page-users">
+      <div class="page-header">
+        <div><div class="page-title">會員管理</div></div>
+        <button class="btn"><i class="ti ti-download" aria-hidden="true"></i>匯出 CSV</button>
+      </div>
+      <div class="search-bar">
+        <i class="ti ti-search" style="color:var(--color-text-tertiary)" aria-hidden="true"></i>
+        <input placeholder="搜尋暱稱、真實姓名、學號、Email…" style="flex:1">
+      </div>
+      <div class="filter-chips">
+        <span class="chip active">全部</span>
+        <span class="chip">已驗證</span>
+        <span class="chip">未驗證</span>
+        <span class="chip">已停權</span>
+        <span class="chip">完成膚測</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>暱稱</th><th>學號</th><th>系所</th><th>膚質</th><th>Email 驗證</th><th>狀態</th><th>加入日</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td>claire_skin</td><td>409111001</td><td>織品二</td><td><span class="badge badge-blue">混合</span></td><td><span class="badge badge-green">已驗證</span></td><td><span class="badge badge-green">正常</span></td><td>5/20</td><td><button class="action-btn">停權</button> <button class="action-btn danger">刪除</button></td></tr>
+            <tr><td>yuki_fw</td><td>412351201</td><td>法文一</td><td><span class="badge badge-amber">油性</span></td><td><span class="badge badge-amber">待驗</span></td><td><span class="badge badge-green">正常</span></td><td>5/22</td><td><button class="action-btn">補寄驗證信</button> <button class="action-btn danger">刪除</button></td></tr>
+            <tr><td>spam_acc99</td><td>—</td><td>—</td><td><span class="badge badge-gray">未設定</span></td><td><span class="badge badge-red">未驗</span></td><td><span class="badge badge-red">已停權</span></td><td>5/23</td><td><button class="action-btn">解除停權</button> <button class="action-btn danger">刪除</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 產品管理 -->
+    <div class="page" id="page-products">
+      <div class="page-header">
+        <div><div class="page-title">產品管理</div></div>
+        <button class="btn btn-accent"><i class="ti ti-plus" aria-hidden="true"></i>新增產品</button>
+      </div>
+      <div class="search-bar">
+        <i class="ti ti-search" style="color:var(--color-text-tertiary)" aria-hidden="true"></i>
+        <input placeholder="搜尋產品名稱、品牌、分類…" style="flex:1">
+      </div>
+      <div class="filter-chips">
+        <span class="chip active">全部 (3,021)</span>
+        <span class="chip">上架中 (2,987)</span>
+        <span class="chip">已下架 (34)</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>名稱</th><th>品牌</th><th>分類</th><th>收藏數</th><th>評論數</th><th>狀態</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td>水光精華 15ml</td><td>COSRX</td><td>精華液</td><td>142</td><td>28</td><td><span class="badge badge-green">上架</span></td><td><button class="action-btn">編輯</button> <button class="action-btn danger">下架</button></td></tr>
+            <tr><td>氣墊粉底 #21</td><td>Laneige</td><td>底妝</td><td>89</td><td>15</td><td><span class="badge badge-green">上架</span></td><td><button class="action-btn">編輯</button> <button class="action-btn danger">下架</button></td></tr>
+            <tr><td>舊版防曬 SPF50</td><td>Biore</td><td>防曬</td><td>3</td><td>0</td><td><span class="badge badge-gray">下架</span></td><td><button class="action-btn">重新上架</button> <button class="action-btn danger">刪除</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 成分管理 -->
+    <div class="page" id="page-ingredients">
+      <div class="page-header"><div class="page-title">成分管理</div></div>
+      <div class="search-bar">
+        <i class="ti ti-search" style="color:var(--color-text-tertiary)" aria-hidden="true"></i>
+        <input placeholder="搜尋成分名稱…" style="flex:1">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>成分名稱</th><th>油</th><th>乾</th><th>敏</th><th>混</th><th>中</th><th>保濕</th><th>控油</th><th>修復</th><th>抗痘</th><th>美白</th><th>抗老</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td>Niacinamide</td>
+              <td><span class="badge badge-green">✓</span></td><td><span class="badge badge-green">✓</span></td><td><span class="badge badge-green">✓</span></td><td><span class="badge badge-green">✓</span></td><td><span class="badge badge-green">✓</span></td>
+              <td>—</td><td><span class="badge badge-green">✓</span></td><td>—</td><td><span class="badge badge-green">✓</span></td><td><span class="badge badge-green">✓</span></td><td>—</td>
+              <td><button class="action-btn">編輯</button></td></tr>
+            <tr><td>Salicylic Acid</td>
+              <td><span class="badge badge-green">✓</span></td><td><span class="badge badge-red">✗</span></td><td><span class="badge badge-red">✗</span></td><td><span class="badge badge-green">✓</span></td><td><span class="badge badge-green">✓</span></td>
+              <td>—</td><td><span class="badge badge-green">✓</span></td><td>—</td><td><span class="badge badge-green">✓</span></td><td>—</td><td>—</td>
+              <td><button class="action-btn">編輯</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 問答管理 -->
+    <div class="page" id="page-qa">
+      <div class="page-header"><div class="page-title">問答管理</div></div>
+      <div class="search-bar"><i class="ti ti-search" style="color:var(--color-text-tertiary)" aria-hidden="true"></i><input placeholder="搜尋標題、發問者…" style="flex:1"></div>
+      <div class="filter-chips">
+        <span class="chip active">全部</span><span class="chip">未解決</span><span class="chip">已解決</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>標題</th><th>標籤</th><th>回答數</th><th>瀏覽</th><th>狀態</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td>油肌適合用含酒精爽膚水嗎</td><td><span class="badge badge-blue">油性肌</span></td><td>3</td><td>128</td><td><span class="badge badge-amber">未解決</span></td><td><button class="action-btn">標記解決</button> <button class="action-btn danger">刪除</button></td></tr>
+            <tr><td>COSRX 精華怎麼搭防曬</td><td><span class="badge badge-pink">精華</span></td><td>5</td><td>214</td><td><span class="badge badge-green">已解決</span></td><td><button class="action-btn danger">刪除</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 貼文審核 -->
+    <div class="page" id="page-posts">
+      <div class="page-header"><div class="page-title">貼文審核</div></div>
+      <div class="search-bar"><i class="ti ti-search" style="color:var(--color-text-tertiary)" aria-hidden="true"></i><input placeholder="搜尋標題、作者…" style="flex:1"></div>
+      <div class="filter-chips">
+        <span class="chip active">全部</span><span class="chip">上架中</span><span class="chip">已下架</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>標題</th><th>作者</th><th>膚質</th><th>讚數</th><th>評論</th><th>狀態</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td>我的夏季控油保養 routine</td><td>claire_skin</td><td><span class="badge badge-amber">油性</span></td><td>47</td><td>12</td><td><span class="badge badge-green">上架</span></td><td><button class="action-btn danger">下架</button></td></tr>
+            <tr><td>【廠商合作?】XX 品牌精華</td><td>unknown_acc</td><td><span class="badge badge-gray">—</span></td><td>2</td><td>0</td><td><span class="badge badge-red">已下架</span></td><td><button class="action-btn">恢復</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 檢舉管理 -->
+    <div class="page" id="page-reports">
+      <div class="page-header"><div class="page-title">檢舉管理</div><div style="font-size:12px;color:#A32D2D;font-weight:500">3 件待處理</div></div>
+      <div class="filter-chips">
+        <span class="chip active">待處理 (3)</span><span class="chip">已處理</span><span class="chip">已關閉</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>類型</th><th>內容摘要</th><th>檢舉原因</th><th>檢舉者</th><th>時間</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-pink">貼文</span></td><td>【廠商合作?】XX 品牌…</td><td>疑似業配未揭露</td><td>min0715</td><td>5/25 14:32</td><td><button class="action-btn danger">核准刪除</button> <button class="action-btn">關閉</button></td></tr>
+            <tr><td><span class="badge badge-amber">回答</span></td><td>「直接買這個牌子就好」</td><td>廣告嫌疑</td><td>peach_tone</td><td>5/25 09:11</td><td><button class="action-btn danger">核准刪除</button> <button class="action-btn">關閉</button></td></tr>
+            <tr><td><span class="badge badge-blue">評論</span></td><td>「不好用，退錢！」</td><td>不當言論</td><td>claire_skin</td><td>5/24 22:45</td><td><button class="action-btn danger">核准刪除</button> <button class="action-btn">關閉</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 系統健康 -->
+    <div class="page" id="page-health">
+      <div class="page-header">
+        <div><div class="page-title">系統健康</div><div class="page-sub">即時服務狀態監控</div></div>
+        <button class="btn"><i class="ti ti-refresh" aria-hidden="true"></i>刷新</button>
+      </div>
+      <div class="system-grid">
+        <div class="health-card"><div class="health-label">PostgreSQL</div><div class="health-val">12ms</div><div class="health-status" style="color:#3B6D11">● 正常</div></div>
+        <div class="health-card"><div class="health-label">Redis</div><div class="health-val">2ms</div><div class="health-status" style="color:#3B6D11">● 正常</div></div>
+        <div class="health-card warn"><div class="health-label">Meilisearch</div><div class="health-val">145ms</div><div class="health-status" style="color:#854F0B">● 稍慢</div></div>
+        <div class="health-card"><div class="health-label">Node.js API</div><div class="health-val">23ms</div><div class="health-status" style="color:#3B6D11">● 正常</div></div>
+        <div class="health-card"><div class="health-label">Email (Resend)</div><div class="health-val">99.2%</div><div class="health-status" style="color:#3B6D11">● 正常</div></div>
+        <div class="health-card"><div class="health-label">儲存空間</div><div class="health-val">34%</div><div class="health-status" style="color:#3B6D11">● 充裕</div></div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title"><i class="ti ti-chart-line" aria-hidden="true"></i>API 請求量（近 24h）</div>
+          <div class="chart-wrap" style="height:130px"><canvas id="apiChart" role="img" aria-label="近24小時API請求量">API 請求趨勢</canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-alert-triangle" aria-hidden="true"></i>近期錯誤</div>
+          <div class="stat-row"><span class="stat-key">4xx 錯誤率</span><span class="stat-val" style="color:#854F0B">1.8%</span></div>
+          <div class="stat-row"><span class="stat-key">5xx 錯誤率</span><span class="stat-val" style="color:#3B6D11">0.02%</span></div>
+          <div class="stat-row"><span class="stat-key">Email 發送失敗</span><span class="stat-val">3 件</span></div>
+          <div class="stat-row"><span class="stat-key">上線時間</span><span class="stat-val" style="color:#3B6D11">99.97%</span></div>
+          <div class="stat-row"><span class="stat-key">平均回應時間</span><span class="stat-val">28ms</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-database" aria-hidden="true"></i>資料庫統計</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+          <div><div style="font-size:11px;color:var(--color-text-secondary)">users</div><div style="font-size:16px;font-weight:500">1,284</div></div>
+          <div><div style="font-size:11px;color:var(--color-text-secondary)">products</div><div style="font-size:16px;font-weight:500">3,021</div></div>
+          <div><div style="font-size:11px;color:var(--color-text-secondary)">ingredients</div><div style="font-size:16px;font-weight:500">8,412</div></div>
+          <div><div style="font-size:11px;color:var(--color-text-secondary)">posts</div><div style="font-size:16px;font-weight:500">2,187</div></div>
+          <div><div style="font-size:11px;color:var(--color-text-secondary)">questions</div><div style="font-size:16px;font-weight:500">4,521</div></div>
+          <div><div style="font-size:11px;color:var(--color-text-secondary)">wishlists</div><div style="font-size:16px;font-weight:500">15,830</div></div>
+          <div><div style="font-size:11px;color:var(--color-text-secondary)">reports</div><div style="font-size:16px;font-weight:500">47</div></div>
+          <div><div style="font-size:11px;color:var(--color-text-secondary)">audit_logs</div><div style="font-size:16px;font-weight:500">12,394</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 審計日誌 -->
+    <div class="page" id="page-audit">
+      <div class="page-header">
+        <div><div class="page-title">審計日誌</div><div class="page-sub">管理員操作紀錄</div></div>
+        <button class="btn"><i class="ti ti-download" aria-hidden="true"></i>匯出</button>
+      </div>
+      <div class="filter-chips">
+        <span class="chip active">全部</span><span class="chip">用戶操作</span><span class="chip">內容操作</span><span class="chip">系統設定</span>
+      </div>
+      <div class="card" style="padding:12px">
+        <div class="log-entry">
+          <span class="log-time">05/25 16:42</span>
+          <div class="log-icon" style="background:#FCEBEB;color:#A32D2D"><i class="ti ti-ban" aria-hidden="true"></i></div>
+          <div><div class="log-text">停權用戶 <strong>spam_acc99</strong>（永久）</div><div class="log-meta">原因：重複發送廣告內容</div></div>
+        </div>
+        <div class="log-entry">
+          <span class="log-time">05/25 14:38</span>
+          <div class="log-icon" style="background:#FCEBEB;color:#A32D2D"><i class="ti ti-trash" aria-hidden="true"></i></div>
+          <div><div class="log-text">下架貼文 #post_2841「【廠商合作?】XX 品牌精華」</div><div class="log-meta">檢舉 #rpt_104 核准刪除</div></div>
+        </div>
+        <div class="log-entry">
+          <span class="log-time">05/25 10:12</span>
+          <div class="log-icon" style="background:#EAF3DE;color:#3B6D11"><i class="ti ti-plus" aria-hidden="true"></i></div>
+          <div><div class="log-text">新增產品「Laneige 氣墊粉底 #23」</div><div class="log-meta">分類：底妝 / 氣墊</div></div>
+        </div>
+        <div class="log-entry">
+          <span class="log-time">05/24 22:30</span>
+          <div class="log-icon" style="background:#E6F1FB;color:#185FA5"><i class="ti ti-edit" aria-hidden="true"></i></div>
+          <div><div class="log-text">編輯成分 Niacinamide 膚質標籤</div><div class="log-meta">修改：skin_sensitive true → false</div></div>
+        </div>
+        <div class="log-entry">
+          <span class="log-time">05/24 18:05</span>
+          <div class="log-icon" style="background:#FAEEDA;color:#854F0B"><i class="ti ti-x" aria-hidden="true"></i></div>
+          <div><div class="log-text">關閉檢舉 #rpt_098</div><div class="log-meta">備註：內容符合社群規範，無需處理</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+function nav(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  el.classList.add('active');
+  if (id === 'analytics') initAnalytics();
+  if (id === 'overview') initOverview();
+  if (id === 'retention') initRetention();
+  if (id === 'health') initHealth();
+}
+
+const AC = '#C4897A', BL = '#378ADD', GR = '#639922', AM = '#BA7517', PK = '#D4537E', TE = '#1D9E75';
+const gridOpts = {color: 'rgba(128,128,128,0.1)'};
+const baseOpts = {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:gridOpts,ticks:{font:{size:10}}},y:{grid:gridOpts,ticks:{font:{size:10}}}}};
+
+let chartsInited = {};
+
+function initOverview() {
+  if (chartsInited.overview) return;
+  chartsInited.overview = true;
+  new Chart(document.getElementById('dauChart'), {
+    type: 'line',
+    data: {
+      labels: ['5/19','5/20','5/21','5/22','5/23','5/24','5/25'],
+      datasets: [{data:[245,289,312,278,334,298,312], borderColor:AC, backgroundColor:'rgba(196,137,122,0.08)', tension:0.4, pointRadius:3, fill:true}]
+    },
+    options: {...baseOpts, scales:{x:{grid:gridOpts,ticks:{font:{size:10}}},y:{grid:gridOpts,ticks:{font:{size:10}},beginAtZero:false}}}
+  });
+}
+
+function initAnalytics() {
+  if (chartsInited.analytics) return;
+  chartsInited.analytics = true;
+  new Chart(document.getElementById('skinChart'), {
+    type: 'bar',
+    data: {
+      labels: ['混合肌','油性肌','乾性肌','敏感肌','中性肌','混油','混乾'],
+      datasets: [{data:[312,241,189,178,156,134,74], backgroundColor:[AC,AM,BL,PK,TE,GR,'#7F77DD']}]
+    },
+    options: {...baseOpts, indexAxis:'y', scales:{x:{grid:gridOpts,ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+  new Chart(document.getElementById('catChart'), {
+    type: 'bar',
+    data: {
+      labels: ['精華液','底妝','防曬','乳液','洗臉','唇部','眼部','面膜'],
+      datasets: [{data:[642,521,438,389,312,287,241,191], backgroundColor:AC}]
+    },
+    options: baseOpts
+  });
+  new Chart(document.getElementById('growthChart'), {
+    type: 'line',
+    data: {
+      labels: ['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'],
+      datasets: [
+        {label:'用戶',data:[42,58,61,87,79,94,102,115,98,121,108,134], borderColor:AC, tension:0.4, pointRadius:2},
+        {label:'問答',data:[89,112,134,156,143,178,192,214,189,223,201,245], borderColor:BL, tension:0.4, pointRadius:2, borderDash:[4,3]}
+      ]
+    },
+    options: {...baseOpts, plugins:{legend:{display:true, labels:{font:{size:10}, boxWidth:10}}}}
+  });
+  new Chart(document.getElementById('wishChart'), {
+    type: 'bar',
+    data: {
+      labels: ['COSRX精華','Laneige氣墊','Biore防曬','SKII精華','Sulwhasoo霜','Dr.Jart面膜','AHC眼霜','Some By Mi'],
+      datasets: [{data:[142,124,118,97,89,78,71,64], backgroundColor:PK}]
+    },
+    options: {...baseOpts, indexAxis:'y', scales:{x:{grid:gridOpts,ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+  new Chart(document.getElementById('tagChart'), {
+    type: 'bar',
+    data: {
+      labels: ['保濕','油肌','防曬','痘痘','精華','底妝','成分','敏感肌','美白','抗老'],
+      datasets: [{data:[312,289,267,241,228,198,187,165,143,121], backgroundColor:TE}]
+    },
+    options: {...baseOpts, indexAxis:'y', scales:{x:{grid:gridOpts,ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:9}}}}}
+  });
+  new Chart(document.getElementById('hourChart'), {
+    type: 'bar',
+    data: {
+      labels: ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23'],
+      datasets: [{data:[12,8,5,4,3,6,15,34,67,89,102,98,87,94,88,91,104,112,134,142,128,98,67,34], backgroundColor:BL}]
+    },
+    options: baseOpts
+  });
+}
+
+function initRetention() {
+  if (chartsInited.retention) return;
+  chartsInited.retention = true;
+  new Chart(document.getElementById('retentionChart'), {
+    type: 'line',
+    data: {
+      labels: ['W1','W2','W3','W4','W5','W6','W7','W8'],
+      datasets: [{data:[58,61,55,67,63,59,64,67], borderColor:GR, backgroundColor:'rgba(99,153,34,0.08)', tension:0.4, pointRadius:3, fill:true}]
+    },
+    options: {...baseOpts, scales:{x:{grid:gridOpts,ticks:{font:{size:10}}},y:{grid:gridOpts,ticks:{font:{size:10},callback:v=>v+'%'},min:40,max:80}}}
+  });
+}
+
+function initHealth() {
+  if (chartsInited.health) return;
+  chartsInited.health = true;
+  new Chart(document.getElementById('apiChart'), {
+    type: 'line',
+    data: {
+      labels: Array.from({length:24},(_,i)=>i+':00'),
+      datasets: [{data:[234,189,145,112,89,78,134,312,524,612,589,634,567,612,589,601,623,678,734,812,789,712,589,432], borderColor:TE, tension:0.4, pointRadius:0, fill:false}]
+    },
+    options: {...baseOpts}
+  });
+}
+
+initOverview();
+</script>

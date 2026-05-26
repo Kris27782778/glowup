@@ -1594,37 +1594,124 @@ function HealthTab() {
 }
 
 // ── AuditTab（審計日誌）─────────────────────────────────────────
+const ACTION_LABELS = {
+  'user.ban':        { label:'停權用戶',     color: C.red,    bg: C.redBg },
+  'user.unban':      { label:'解除停權',     color: C.green,  bg: C.greenBg },
+  'user.delete':     { label:'刪除用戶',     color: C.red,    bg: C.redBg },
+  'product.create':  { label:'新增產品',     color: C.green,  bg: C.greenBg },
+  'product.update':  { label:'編輯產品',     color: C.orange, bg: C.orangeBg },
+  'product.remove':  { label:'下架產品',     color: C.red,    bg: C.redBg },
+  'product.restore': { label:'重新上架',     color: C.green,  bg: C.greenBg },
+  'ingredient.update':{ label:'編輯成分',    color: C.orange, bg: C.orangeBg },
+  'question.solve':  { label:'標記已解決',   color: C.green,  bg: C.greenBg },
+  'question.delete': { label:'刪除問題',     color: C.red,    bg: C.redBg },
+  'post.remove':     { label:'下架貼文',     color: C.red,    bg: C.redBg },
+  'post.restore':    { label:'恢復貼文',     color: C.green,  bg: C.greenBg },
+  'report.resolve':  { label:'核准並刪除',   color: C.red,    bg: C.redBg },
+  'report.dismiss':  { label:'關閉檢舉',     color: C.textDim, bg: 'rgba(0,0,0,0.05)' },
+};
+
+const ACTION_GROUPS = [
+  { label:'全部',   value:'' },
+  { label:'用戶',   value:'user' },
+  { label:'產品',   value:'product' },
+  { label:'內容',   value:'question' },
+  { label:'檢舉',   value:'report' },
+];
+
 function AuditTab() {
-  const sql = `CREATE TABLE IF NOT EXISTS audit_logs (
-  log_id       SERIAL PRIMARY KEY,
-  admin_key    VARCHAR(64),
-  action       VARCHAR(128) NOT NULL,
-  target_type  VARCHAR(64),
-  target_id    INTEGER,
-  meta         JSONB,
-  created_at   TIMESTAMPTZ DEFAULT NOW()
-);`;
+  const [logs, setLogs]       = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter]   = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch(`/audit?action=${filter}&limit=100`);
+      setLogs(Array.isArray(data) ? data : []);
+    } catch { setLogs([]); }
+    finally { setLoading(false); }
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const fmtDetail = (detail) => {
+    if (!detail || typeof detail !== 'object') return '—';
+    const entries = Object.entries(detail).filter(([, v]) => v != null && v !== '');
+    if (!entries.length) return '—';
+    return entries.map(([k, v]) => `${k}: ${v}`).join('　');
+  };
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
-      <div style={{ ...sectionStyle, padding:'40px 32px', textAlign:'center' }}>
-        <div style={{ display:'inline-flex', flexDirection:'column', alignItems:'center', gap:'12px', maxWidth:'560px' }}>
-          <div style={{ width:'48px', height:'48px', borderRadius:'12px', background:'rgba(138,106,30,0.1)',
-            display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px' }}>
-            📋
-          </div>
-          <p style={{ margin:0, fontSize:'15px', fontWeight:600, color:C.text }}>審計日誌功能未啟用</p>
-          <p style={{ margin:0, fontSize:'13px', color:C.textSub, lineHeight:1.7 }}>
-            需建立 <code style={{ background:C.bgCard, padding:'2px 6px', borderRadius:'4px', fontSize:'12px' }}>audit_logs</code> 資料表後啟用。
-          </p>
-        </div>
+      {/* 篩選列 */}
+      <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+        {ACTION_GROUPS.map(g => (
+          <button key={g.value} onClick={() => setFilter(g.value)}
+            style={{
+              padding:'6px 16px', borderRadius:'20px', border:'none', cursor:'pointer',
+              fontSize:'13px', fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
+              background: filter === g.value ? C.accent : C.card,
+              color: filter === g.value ? '#fff' : C.textSub,
+              border: `1px solid ${filter === g.value ? C.accent : C.border}`,
+              transition:'all 150ms',
+            }}>{g.label}</button>
+        ))}
+        <span style={{ marginLeft:'auto', fontSize:'13px', color:C.textDim, alignSelf:'center' }}>
+          共 {logs.length} 筆
+        </span>
       </div>
-      <div style={{ ...sectionStyle, padding:'24px' }}>
-        <p style={{ margin:'0 0 12px', fontSize:'13px', fontWeight:600, color:C.text }}>建表 SQL</p>
-        <pre style={{
-          margin:0, padding:'16px', borderRadius:'8px', background:'#1C1917', color:'#F8F6F4',
-          fontSize:'12px', lineHeight:1.8, overflowX:'auto', fontFamily:'monospace',
-        }}>{sql}</pre>
+
+      {/* 日誌表格 */}
+      <div style={sectionStyle}>
+        {loading ? <Loading /> : logs.length === 0 ? (
+          <div style={{ padding:'48px', textAlign:'center', color:C.textDim, fontSize:'14px' }}>
+            尚無操作紀錄
+          </div>
+        ) : (
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom:`1px solid ${C.border}` }}>
+                {['操作','類型','對象 ID','說明','時間'].map(h => (
+                  <th key={h} style={{ padding:'10px 16px', textAlign:'left', fontSize:'11px',
+                    fontWeight:600, color:C.textDim, letterSpacing:'0.06em', whiteSpace:'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map(row => {
+                const meta = ACTION_LABELS[row.action] || { label: row.action, color: C.textSub, bg: C.bgCard };
+                return (
+                  <tr key={row.id} style={{ borderBottom:`1px solid ${C.border}` }}
+                    onMouseEnter={e => e.currentTarget.style.background = C.bgRowHover}
+                    onMouseLeave={e => e.currentTarget.style.background = ''}>
+                    <td style={{ padding:'10px 16px' }}>
+                      <span style={{ display:'inline-block', padding:'2px 10px', borderRadius:'12px',
+                        fontSize:'12px', fontWeight:500, background:meta.bg, color:meta.color,
+                        whiteSpace:'nowrap' }}>
+                        {meta.label}
+                      </span>
+                    </td>
+                    <td style={{ padding:'10px 16px', fontSize:'13px', color:C.textSub }}>
+                      {row.target_type || '—'}
+                    </td>
+                    <td style={{ padding:'10px 16px', fontSize:'13px', color:C.textSub }}>
+                      {row.target_id ?? '—'}
+                    </td>
+                    <td style={{ padding:'10px 16px', fontSize:'12px', color:C.textDim, maxWidth:'320px',
+                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {row.admin_note || fmtDetail(row.detail) }
+                    </td>
+                    <td style={{ padding:'10px 16px', fontSize:'12px', color:C.textDim, whiteSpace:'nowrap' }}>
+                      {new Date(row.created_at).toLocaleString('zh-TW', { month:'2-digit', day:'2-digit',
+                        hour:'2-digit', minute:'2-digit' })}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

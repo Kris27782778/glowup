@@ -94,6 +94,7 @@ router.patch('/users/:id/ban', async (req, res) => {
       `UPDATE users SET is_banned = true, ban_reason = $1, banned_until = $2 WHERE user_id = $3`,
       [reason || null, bannedUntil, req.params.id]
     );
+    await writeAudit('user.ban', 'user', req.params.id, { reason, days });
     res.json({ message: '已停權' });
   } catch (err) {
     console.error('[admin/users ban]', err.message);
@@ -108,6 +109,7 @@ router.patch('/users/:id/unban', async (req, res) => {
       `UPDATE users SET is_banned = false, ban_reason = null, banned_until = null WHERE user_id = $1`,
       [req.params.id]
     );
+    await writeAudit('user.unban', 'user', req.params.id);
     res.json({ message: '已解除停權' });
   } catch (err) {
     console.error('[admin/users unban]', err.message);
@@ -121,6 +123,7 @@ router.delete('/users/:id', async (req, res) => {
     await pool.query('DELETE FROM wishlists WHERE user_id = $1', [req.params.id]);
     await pool.query('DELETE FROM questions  WHERE user_id = $1', [req.params.id]);
     await pool.query('DELETE FROM users      WHERE user_id = $1', [req.params.id]);
+    await writeAudit('user.delete', 'user', req.params.id);
     res.json({ message: '已刪除' });
   } catch (err) {
     console.error('[admin/users delete]', err.message);
@@ -165,6 +168,7 @@ router.patch('/products/:id', async (req, res) => {
       values
     );
     if (result.rows.length === 0) return res.status(404).json({ error: '找不到產品' });
+    await writeAudit('product.update', 'product', req.params.id, req.body);
     res.json({ message: '更新成功', product: result.rows[0] });
   } catch (err) {
     console.error('[admin/products patch]', err.message);
@@ -197,6 +201,7 @@ router.post('/products', async (req, res) => {
       `INSERT INTO products (name, brand, category, sub_category) VALUES ($1, $2, $3, $4) RETURNING *`,
       [name, brand, category, sub_category || null]
     );
+    await writeAudit('product.create', 'product', result.rows[0].product_id, { name, brand, category, sub_category });
     res.json({ product: result.rows[0] });
   } catch (err) {
     console.error('[admin/products post]', err.message);
@@ -208,6 +213,7 @@ router.post('/products', async (req, res) => {
 router.delete('/products/:id', async (req, res) => {
   try {
     await pool.query('UPDATE products SET is_deleted = true WHERE product_id = $1', [req.params.id]);
+    await writeAudit('product.remove', 'product', req.params.id);
     res.json({ message: '已下架' });
   } catch (err) {
     console.error('[admin/products delete]', err.message);
@@ -219,6 +225,7 @@ router.delete('/products/:id', async (req, res) => {
 router.patch('/products/:id/restore', async (req, res) => {
   try {
     await pool.query('UPDATE products SET is_deleted = false WHERE product_id = $1', [req.params.id]);
+    await writeAudit('product.restore', 'product', req.params.id);
     res.json({ message: '已重新上架' });
   } catch (err) {
     console.error('[admin/products restore]', err.message);
@@ -251,6 +258,7 @@ router.patch('/questions/:id', async (req, res) => {
   const { solved } = req.body;
   try {
     await pool.query('UPDATE questions SET solved = $1 WHERE question_id = $2', [solved, req.params.id]);
+    await writeAudit('question.solve', 'question', req.params.id, { solved });
     res.json({ message: '已更新' });
   } catch (err) {
     console.error('[admin/questions patch]', err.message);
@@ -262,6 +270,7 @@ router.patch('/questions/:id', async (req, res) => {
 router.delete('/questions/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM questions WHERE question_id = $1', [req.params.id]);
+    await writeAudit('question.delete', 'question', req.params.id);
     res.json({ message: '已刪除' });
   } catch (err) {
     console.error('[admin/questions delete]', err.message);
@@ -365,6 +374,7 @@ router.patch('/reports/:id/resolve', async (req, res) => {
       `UPDATE reports SET status = 'resolved', admin_note = $1, resolved_at = NOW() WHERE report_id = $2`,
       [admin_note || null, req.params.id]
     );
+    await writeAudit('report.resolve', 'report', req.params.id, { target_type, target_id }, admin_note);
     res.json({ message: '已處理' });
   } catch (err) {
     console.error('[resolve report]', err.message);
@@ -380,6 +390,7 @@ router.patch('/reports/:id/dismiss', async (req, res) => {
       `UPDATE reports SET status = 'dismissed', admin_note = $1, resolved_at = NOW() WHERE report_id = $2`,
       [admin_note || null, req.params.id]
     );
+    await writeAudit('report.dismiss', 'report', req.params.id, {}, admin_note);
     res.json({ message: '已關閉' });
   } catch (err) {
     res.status(500).json({ error: '更新失敗' });
@@ -512,6 +523,7 @@ router.patch('/posts/:id/remove', async (req, res) => {
   const { id } = req.params;
   try {
     await pool.query(`UPDATE forum_posts SET status='removed' WHERE post_id=$1`, [id]);
+    await writeAudit('post.remove', 'post', parseInt(id));
     res.json({ message: '已下架' });
   } catch (err) {
     console.error('[admin/posts/remove]', err.message);
@@ -524,6 +536,7 @@ router.patch('/posts/:id/restore', async (req, res) => {
   const { id } = req.params;
   try {
     await pool.query(`UPDATE forum_posts SET status='active' WHERE post_id=$1`, [id]);
+    await writeAudit('post.restore', 'post', parseInt(id));
     res.json({ message: '已恢復' });
   } catch (err) {
     console.error('[admin/posts/restore]', err.message);
@@ -531,5 +544,39 @@ router.patch('/posts/:id/restore', async (req, res) => {
   }
 });
 
+
+// ── 審計日誌 helper ───────────────────────────────────────────────
+async function writeAudit(action, target_type, target_id, detail = {}, admin_note = null) {
+  try {
+    await pool.query(
+      `INSERT INTO audit_logs (action, target_type, target_id, detail, admin_note) VALUES ($1,$2,$3,$4,$5)`,
+      [action, target_type, target_id ?? null, JSON.stringify(detail), admin_note]
+    );
+  } catch (e) {
+    console.error('[audit]', e.message);
+  }
+}
+
+// ── 審計日誌查詢 GET /api/admin/audit ────────────────────────────
+router.get('/audit', async (req, res) => {
+  const { action = '', limit = 50 } = req.query;
+  try {
+    const params = [];
+    let where = '';
+    if (action) {
+      params.push(`${action}%`);
+      where = `WHERE action ILIKE $1`;
+    }
+    params.push(Math.min(200, parseInt(limit) || 50));
+    const result = await pool.query(
+      `SELECT * FROM audit_logs ${where} ORDER BY created_at DESC LIMIT $${params.length}`,
+      params
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('[admin/audit]', err.message);
+    res.status(500).json({ error: '查詢失敗' });
+  }
+});
 
 module.exports = router;
