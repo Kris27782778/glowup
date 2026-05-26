@@ -83,9 +83,9 @@ const BANNER_SLIDES = [
 ];
 
 function BannerCarousel() {
-  const [idx, setIdx]       = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [animDir, setAnimDir] = useState('next'); // 'next' | 'prev'
+  const [idx, setIdx]         = useState(0);
+  const [paused, setPaused]   = useState(false);
+  const [animDir, setAnimDir] = useState('next');
   const [animating, setAnimating] = useState(false);
   const timerRef = useRef(null);
 
@@ -93,10 +93,7 @@ function BannerCarousel() {
     if (animating) return;
     setAnimDir(dir);
     setAnimating(true);
-    setTimeout(() => {
-      setIdx(next);
-      setAnimating(false);
-    }, 350);
+    setTimeout(() => { setIdx(next); setAnimating(false); }, 320);
   };
 
   const navigate_slide = useCallback((dir) => {
@@ -116,158 +113,122 @@ function BannerCarousel() {
 
   return (
     <div
-      style={{ position: 'relative', width: '100%', overflow: 'hidden', borderRadius: '16px',
-        margin: '0 0 28px', userSelect: 'none', flexShrink: 0 }}
+      style={{ position: 'relative', width: '100%', borderRadius: '18px', overflow: 'hidden', margin: '0 0 28px', userSelect: 'none' }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       {/* 卡片本體 */}
       <div style={{
         background: slide.bg,
-        borderRadius: '16px',
-        padding: '36px 44px',
-        minHeight: '160px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '24px',
+        padding: '40px 48px 56px',
+        minHeight: '180px',
         position: 'relative',
         overflow: 'hidden',
         opacity: animating ? 0 : 1,
-        transform: animating
-          ? `translateX(${animDir === 'next' ? '-24px' : '24px'})`
-          : 'translateX(0)',
-        transition: 'opacity 350ms ease, transform 350ms ease, background 400ms ease',
+        transform: animating ? `translateX(${animDir === 'next' ? '-16px' : '16px'})` : 'none',
+        transition: 'opacity 320ms ease, transform 320ms ease',
       }}>
         {/* 裝飾光暈 */}
         <div style={{
-          position: 'absolute', right: '-60px', top: '-60px',
-          width: '280px', height: '280px', borderRadius: '50%',
-          background: slide.accentBlob, pointerEvents: 'none',
-          filter: 'blur(40px)',
-          transition: 'background 400ms',
+          position: 'absolute', right: '-80px', top: '-80px',
+          width: '340px', height: '340px', borderRadius: '50%',
+          background: slide.accentBlob, filter: 'blur(56px)',
+          pointerEvents: 'none', transition: 'background 400ms',
         }} />
         <div style={{
-          position: 'absolute', left: '30%', bottom: '-80px',
-          width: '200px', height: '200px', borderRadius: '50%',
-          background: slide.accentBlob, pointerEvents: 'none',
-          filter: 'blur(60px)', opacity: 0.6,
-          transition: 'background 400ms',
+          position: 'absolute', left: '35%', bottom: '-100px',
+          width: '240px', height: '240px', borderRadius: '50%',
+          background: slide.accentBlob, filter: 'blur(70px)', opacity: 0.5,
+          pointerEvents: 'none', transition: 'background 400ms',
         }} />
 
         {/* 文字區 */}
-        <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: '580px' }}>
           <span style={{
-            display: 'inline-block',
-            padding: '3px 12px',
-            borderRadius: '999px',
-            background: `${slide.tagColor}22`,
-            color: slide.tagColor,
-            fontSize: '11px', fontWeight: 600,
-            letterSpacing: '0.08em',
-            fontFamily: '"DM Sans", sans-serif',
-            marginBottom: '12px',
-            border: `1px solid ${slide.tagColor}44`,
+            display: 'inline-flex', alignItems: 'center', gap: '7px',
+            padding: '4px 12px', borderRadius: '999px',
+            background: `${slide.tagColor}18`, border: `1px solid ${slide.tagColor}35`,
+            color: slide.tagColor, fontSize: '11px', fontWeight: 600,
+            letterSpacing: '0.08em', fontFamily: '"DM Sans", sans-serif',
+            marginBottom: '16px',
           }}>
+            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: slide.tagColor, flexShrink: 0 }} />
             {slide.tag}
           </span>
           <h2 style={{
-            margin: '0 0 6px',
+            margin: '0 0 8px',
             fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-            fontSize: '26px', fontWeight: 400,
-            color: '#F7F4F2', lineHeight: 1.2, letterSpacing: '0.02em',
+            fontSize: '28px', fontWeight: 400,
+            color: '#F7F4F2', lineHeight: 1.2, letterSpacing: '0.01em',
           }}>
             {slide.title}
           </h2>
           <p style={{
-            margin: '0 0 6px',
-            fontSize: '12px', color: 'rgba(247,244,242,0.55)',
+            margin: '0 0 6px', fontSize: '12px',
+            color: 'rgba(247,244,242,0.42)',
             fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-            letterSpacing: '0.02em',
+            letterSpacing: '0.03em',
           }}>
             {slide.sub}
           </p>
           <p style={{
-            margin: '0 0 20px',
-            fontSize: '13px', color: 'rgba(247,244,242,0.75)',
+            margin: '0 0 24px', fontSize: '13px',
+            color: 'rgba(247,244,242,0.7)',
             fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-            lineHeight: 1.6, maxWidth: '480px',
+            lineHeight: 1.65,
           }}>
             {slide.desc}
           </p>
-          <button style={{
-            padding: '8px 22px',
-            borderRadius: '8px',
-            border: `1px solid ${slide.ctaColor}`,
-            background: 'transparent',
-            color: slide.ctaColor,
-            fontSize: '13px', fontWeight: 500,
-            fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-            cursor: 'pointer',
-            transition: 'all 180ms',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.background = slide.ctaColor; e.currentTarget.style.color = '#1C1917'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = slide.ctaColor; }}
+          <button
+            style={{
+              padding: '9px 24px', borderRadius: '8px',
+              border: `1px solid ${slide.ctaColor}55`,
+              background: `${slide.ctaColor}18`,
+              color: slide.ctaColor, fontSize: '13px', fontWeight: 500,
+              fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+              cursor: 'pointer', letterSpacing: '0.02em',
+              transition: 'all 180ms',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = slide.ctaColor; e.currentTarget.style.color = '#1C1917'; e.currentTarget.style.borderColor = slide.ctaColor; }}
+            onMouseLeave={e => { e.currentTarget.style.background = `${slide.ctaColor}18`; e.currentTarget.style.color = slide.ctaColor; e.currentTarget.style.borderColor = `${slide.ctaColor}55`; }}
           >
             {slide.cta} →
           </button>
         </div>
 
-        {/* 幻燈片序號裝飾 */}
-        <div style={{
-          position: 'relative', zIndex: 1, flexShrink: 0,
-          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px',
-        }}>
-          <span style={{
-            fontFamily: '"Cormorant Garamond", serif',
-            fontSize: '64px', fontWeight: 300, lineHeight: 1,
-            color: 'rgba(247,244,242,0.08)',
-            letterSpacing: '-0.02em',
-          }}>
-            {String(idx + 1).padStart(2, '0')}
-          </span>
-        </div>
-      </div>
-
-      {/* 控制列：點 + 箭頭 */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 4px 0',
-      }}>
-        {/* 點指示器 */}
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+        {/* 點指示器（左下，卡片內） */}
+        <div style={{ position: 'absolute', bottom: '22px', left: '48px', display: 'flex', gap: '5px', alignItems: 'center', zIndex: 2 }}>
           {BANNER_SLIDES.map((s, i) => (
             <button
               key={s.id}
               onClick={() => goTo(i, i > idx ? 'next' : 'prev')}
               style={{
                 border: 'none', padding: 0, cursor: 'pointer',
-                width: i === idx ? '24px' : '6px',
-                height: '6px', borderRadius: '999px',
-                background: i === idx ? slide.ctaColor : T.border,
+                width: i === idx ? '20px' : '5px', height: '5px',
+                borderRadius: '999px',
+                background: i === idx ? slide.ctaColor : 'rgba(247,244,242,0.22)',
                 transition: 'all 300ms cubic-bezier(0.16,1,0.3,1)',
               }}
             />
           ))}
         </div>
 
-        {/* 上 / 下一張 */}
-        <div style={{ display: 'flex', gap: '6px' }}>
+        {/* 箭頭（右下，卡片內） */}
+        <div style={{ position: 'absolute', bottom: '16px', right: '24px', display: 'flex', gap: '6px', zIndex: 2 }}>
           {[{ dir: 'prev', icon: '←' }, { dir: 'next', icon: '→' }].map(({ dir, icon }) => (
             <button
               key={dir}
               onClick={() => navigate_slide(dir)}
               style={{
                 width: '30px', height: '30px', borderRadius: '50%',
-                border: `1px solid ${T.border}`,
-                background: 'transparent',
-                color: T.textTertiary,
-                fontSize: '14px', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1px solid rgba(247,244,242,0.15)',
+                background: 'rgba(247,244,242,0.07)',
+                color: 'rgba(247,244,242,0.45)', fontSize: '13px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all 150ms',
               }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = slide.ctaColor; e.currentTarget.style.color = slide.ctaColor; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.textTertiary; }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(247,244,242,0.16)'; e.currentTarget.style.color = '#F7F4F2'; e.currentTarget.style.borderColor = 'rgba(247,244,242,0.28)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(247,244,242,0.07)'; e.currentTarget.style.color = 'rgba(247,244,242,0.45)'; e.currentTarget.style.borderColor = 'rgba(247,244,242,0.15)'; }}
             >
               {icon}
             </button>
