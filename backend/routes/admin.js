@@ -15,7 +15,11 @@ router.use(requireAdmin);
 // ── 概覽統計 GET /api/admin/stats ─────────────────────────────────
 router.get('/stats', async (req, res) => {
   try {
-    const [users, products, questions, wishlists, newUsers, todayUsers, todayQuestions, pendingReports] = await Promise.all([
+    const [
+      users, products, questions, wishlists, newUsers, todayUsers, todayQuestions, pendingReports,
+      weeklyUsers, weeklyPosts, weeklyQuestions, weeklyWishlists, weeklyReviews, weeklySolved, weeklyRemoved,
+      yesterdayQ,
+    ] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM users'),
       pool.query('SELECT COUNT(*) FROM products'),
       pool.query('SELECT COUNT(*) FROM questions'),
@@ -25,6 +29,16 @@ router.get('/stats', async (req, res) => {
       pool.query(`SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '24 hours'`),
       pool.query(`SELECT COUNT(*) FROM questions WHERE created_at >= NOW() - INTERVAL '24 hours'`),
       pool.query(`SELECT COUNT(*) FROM reports WHERE status = 'pending'`).catch(() => ({ rows: [{ count: 0 }] })),
+      // 本週新增
+      pool.query(`SELECT COUNT(*) FROM users WHERE created_at >= date_trunc('week', NOW())`),
+      pool.query(`SELECT COUNT(*) FROM forum_posts WHERE created_at >= date_trunc('week', NOW())`).catch(() => ({ rows: [{ count: 0 }] })),
+      pool.query(`SELECT COUNT(*) FROM questions WHERE created_at >= date_trunc('week', NOW())`),
+      pool.query(`SELECT COUNT(*) FROM wishlists WHERE created_at >= date_trunc('week', NOW())`),
+      pool.query(`SELECT COUNT(*) FROM reviews WHERE created_at >= date_trunc('week', NOW())`).catch(() => ({ rows: [{ count: 0 }] })),
+      pool.query(`SELECT COUNT(*) FROM questions WHERE solved = true AND created_at >= date_trunc('week', NOW())`),
+      pool.query(`SELECT COUNT(*) FROM forum_posts WHERE status = 'removed' AND created_at >= date_trunc('week', NOW())`).catch(() => ({ rows: [{ count: 0 }] })),
+      // 昨日問題數（用於今日對比）
+      pool.query(`SELECT COUNT(*) FROM questions WHERE created_at >= NOW() - INTERVAL '48 hours' AND created_at < NOW() - INTERVAL '24 hours'`),
     ]);
     res.json({
       userCount:      parseInt(users.rows[0].count),
@@ -35,6 +49,16 @@ router.get('/stats', async (req, res) => {
       todayUsers:     parseInt(todayUsers.rows[0].count),
       todayQuestions: parseInt(todayQuestions.rows[0].count),
       pendingReports: parseInt(pendingReports.rows[0].count),
+      weeklyGrowth: {
+        users:           parseInt(weeklyUsers.rows[0].count),
+        posts:           parseInt(weeklyPosts.rows[0].count),
+        questions:       parseInt(weeklyQuestions.rows[0].count),
+        wishlists:       parseInt(weeklyWishlists.rows[0].count),
+        reviews:         parseInt(weeklyReviews.rows[0].count),
+        solvedQuestions: parseInt(weeklySolved.rows[0].count),
+        removedPosts:    parseInt(weeklyRemoved.rows[0].count),
+      },
+      yesterdayQuestions: parseInt(yesterdayQ.rows[0].count),
     });
   } catch (err) {
     console.error('[admin/stats]', err.message);
@@ -507,60 +531,5 @@ router.patch('/posts/:id/restore', async (req, res) => {
   }
 });
 
-// ── Sprint 3: 論壇貼文管理 ──────────────────────────────────────────
-// GET /api/admin/posts — 取全部貼文（含已下架）
-router.get('/posts', async (req, res) => {
-  const { q = '', status = '' } = req.query;
-  try {
-    let sql = `
-      SELECT fp.post_id, fp.title, fp.skin_type, fp.domain,
-             fp.effect_tags, fp.helpful_count, fp.comment_count,
-             fp.status, fp.created_at,
-             u.nickname, u.department_grade
-      FROM forum_posts fp
-      LEFT JOIN users u ON u.user_id = fp.user_id
-      WHERE 1=1
-    `;
-    const params = [];
-    if (q) {
-      params.push(`%${q}%`);
-      sql += ` AND (fp.title ILIKE $${params.length} OR u.nickname ILIKE $${params.length})`;
-    }
-    if (status) {
-      params.push(status);
-      sql += ` AND fp.status = $${params.length}`;
-    }
-    sql += ' ORDER BY fp.created_at DESC';
-    const result = await pool.query(sql, params);
-    res.json(result.rows);
-  } catch (err) {
-    console.error('[admin/posts]', err.message);
-    res.status(500).json({ error: '查詢失敗' });
-  }
-});
- 
-// PATCH /api/admin/posts/:id/remove — 下架貼文
-router.patch('/posts/:id/remove', async (req, res) => {
-  const { id } = req.params;
-  try {
-    await pool.query(`UPDATE forum_posts SET status='removed' WHERE post_id=$1`, [id]);
-    res.json({ message: '已下架' });
-  } catch (err) {
-    console.error('[admin/posts/remove]', err.message);
-    res.status(500).json({ error: '操作失敗' });
-  }
-});
- 
-// PATCH /api/admin/posts/:id/restore — 恢復上架
-router.patch('/posts/:id/restore', async (req, res) => {
-  const { id } = req.params;
-  try {
-    await pool.query(`UPDATE forum_posts SET status='active' WHERE post_id=$1`, [id]);
-    res.json({ message: '已恢復' });
-  } catch (err) {
-    console.error('[admin/posts/restore]', err.message);
-    res.status(500).json({ error: '操作失敗' });
-  }
-});
 
 module.exports = router;
