@@ -64,7 +64,11 @@
       "Bash(node -e \"require\\('/Users/wyk/Desktop/美妝樣本/backend/routes/admin.js'\\)\")",
       "Bash(kill -9 4476)",
       "Skill(claude-api)",
-      "Skill(claude-api:*)"
+      "Skill(claude-api:*)",
+      "Bash(rm -rf /Users/xuan/Desktop/glowup/frontend/node_modules/.cache && echo \"Cache cleared\")"
+    ],
+    "additionalDirectories": [
+      "/Users/xuan/Desktop/glowup/frontend/node_modules/.cache"
     ]
   }
 }
