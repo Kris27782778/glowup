@@ -4,6 +4,7 @@ import API_BASE from './config';
 import { useReveal } from './hooks/useReveal';
 import SkinQuiz from './components/SkinQuiz';
 import { useLang } from './hooks/useLang';
+import AIAdvisor from './AIAdvisor';
 
 const T = {
   bgBase:        '#F7F4F2',
@@ -53,6 +54,7 @@ function Dashboard() {
   const [wishlistFilter,     setWishlistFilter]     = useState(null);
   const [myPosts,     setMyPosts]     = useState([]);
   const [myBookmarks, setMyBookmarks] = useState([]);
+  const [showAI,      setShowAI]      = useState(false);
   const navigate = useNavigate();
   const { t } = useLang();
 
@@ -366,7 +368,8 @@ function Dashboard() {
                     <div key={p.post_id} style={wishlistStyle.card}>
                       <div style={wishlistStyle.cardHeader}>
                         <span style={wishlistStyle.brand}>{new Date(p.created_at).toLocaleDateString('zh-TW')}</span>
-                        <button style={{ ...wishlistStyle.deleteBtn, marginRight: '6px', borderColor: 'var(--accent)', color: 'var(--accent)' }}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button style={{ padding: '3px 10px', fontSize: '11px', cursor: 'pointer', background: 'none', border: `1px solid var(--accent)`, borderRadius: '6px', color: 'var(--accent)', whiteSpace: 'nowrap' }}
                           onClick={() => navigate(`/community/${p.post_id}?edit=true`)}>編輯</button>
                         <button style={wishlistStyle.deleteBtn} title="刪除貼文" onClick={async () => {
                           if (!window.confirm('確定要刪除這篇貼文嗎？')) return;
@@ -377,6 +380,7 @@ function Dashboard() {
                           });
                           if (res.ok) setMyPosts(prev => prev.filter(x => x.post_id !== p.post_id));
                         }}>✕</button>
+                        </div>
                       </div>
                       <p style={{ ...wishlistStyle.name, cursor: 'pointer' }}
                         onClick={() => navigate(`/community/${p.post_id}`)}>
@@ -386,10 +390,6 @@ function Dashboard() {
                         <span style={wishlistStyle.tag}>{p.skin_type}</span>
                         <span style={wishlistStyle.tag}>{p.domain}</span>
                         {p.sub_category && <span style={wishlistStyle.tag}>{p.sub_category}</span>}
-                      </div>
-                      <div style={{ display: 'flex', gap: '12px', paddingTop: '4px' }}>
-                        <span style={{ fontSize: '11px', color: T.textTertiary }}>❤ {p.helpful_count || 0} 有幫助</span>
-                        <span style={{ fontSize: '11px', color: T.textTertiary }}>💬 {p.comment_count || 0} 留言</span>
                       </div>
                     </div>
                   ))}
@@ -677,6 +677,47 @@ function Dashboard() {
 
         </main>
       </div>
+
+      {/* ── AI 顧問浮動按鈕 ── */}
+      <button
+        style={{
+          position: 'fixed', bottom: '32px', right: '32px', zIndex: 300,
+          width: '52px', height: '52px', borderRadius: '50%',
+          background: T.bgInverse, border: 'none', cursor: 'pointer',
+          boxShadow: '0 4px 20px rgba(28,25,23,0.25)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '22px', transition: 'transform 180ms, box-shadow 180ms',
+        }}
+        title="AI 保養顧問"
+        onClick={() => setShowAI(true)}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(28,25,23,0.35)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(28,25,23,0.25)'; }}
+      >
+        ✦
+      </button>
+
+      {/* ── AI 顧問 Modal ── */}
+      {showAI && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 400,
+            background: 'rgba(28,25,23,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setShowAI(false); }}
+        >
+          <div style={{
+            width: '100%', maxWidth: '560px', maxHeight: '85vh',
+            borderRadius: '20px', overflow: 'hidden',
+            boxShadow: '0 20px 60px rgba(28,25,23,0.3)',
+            display: 'flex', flexDirection: 'column',
+          }}>
+            <AIAdvisor embedded onClose={() => setShowAI(false)} />
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -1128,6 +1169,8 @@ const wishlistStyle = {
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
+    minWidth: 0,
+    overflow: 'hidden',
   },
   cardHeader: {
     display: 'flex',
@@ -1496,6 +1539,7 @@ const styles = {
     gap: '8px',
   },
   editBtn: {
+    width: '100%',
     height: '40px',
     backgroundColor: 'var(--bg-inverse)',
     color: 'var(--text-inverse)',
