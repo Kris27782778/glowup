@@ -51,13 +51,13 @@ router.post('/send-verification', async (req, res) => {
       [email, otp, expiresAt]
     );
 
-    // 寄信
-    await sendVerificationEmail(email, otp);
-
-    // 新驗證碼寄出後重置嘗試計數
+    // 先回應前端，背景發信（不阻塞請求）
     otpAttemptMap.delete(email);
-
     res.json({ message: '驗證碼已寄出' });
+
+    sendVerificationEmail(email, otp).catch(err =>
+      console.error('[send-verification] 發信失敗:', err.message)
+    );
   } catch (err) {
     console.error('[send-verification]', err.message);
     res.status(500).json({ error: '驗證碼寄送失敗，請稍後再試' });
