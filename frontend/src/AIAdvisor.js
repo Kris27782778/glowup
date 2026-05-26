@@ -47,17 +47,16 @@ function parseResult(text) {
 
 export default function AIAdvisor({ onClose, embedded = false }) {
   const navigate = useNavigate();
-  const [step, setStep]           = useState(1);
-  const [skinType, setSkinType]   = useState('');
-  const [concerns, setConcerns]   = useState([]);
-  const [products, setProducts]   = useState([]);
-  const [search, setSearch]       = useState('');
-  const [searchRes, setSearchRes] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [loading, setLoading]     = useState(false);
-  const [result, setResult]       = useState('');
-  const resultRef  = useRef(null);
-  const searchTimer = useRef(null);
+  const [step, setStep]               = useState(1);
+  const [skinType, setSkinType]       = useState('');
+  const [concerns, setConcerns]       = useState([]);
+  const [products, setProducts]       = useState([]);
+  const [search, setSearch]           = useState('');
+  const [allProducts, setAllProducts] = useState([]);
+  const [loadingP, setLoadingP]       = useState(false);
+  const [loading, setLoading]         = useState(false);
+  const [result, setResult]           = useState('');
+  const resultRef = useRef(null);
 
   useEffect(() => {
     if (step === 4 && resultRef.current) {
@@ -66,23 +65,14 @@ export default function AIAdvisor({ onClose, embedded = false }) {
   }, [step]);
 
   useEffect(() => {
-    if (search.length < 1) { setSearchRes([]); return; }
-    clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const r = await fetch(`${API_BASE}/api/products?search=${encodeURIComponent(search)}&limit=5`);
-        const j = await r.json();
-        setSearchRes(
-          Array.isArray(j.data)
-            ? j.data.filter(p => !products.find(x => x.product_id === p.product_id))
-            : []
-        );
-      } catch { setSearchRes([]); }
-      setSearching(false);
-    }, 300);
-    return () => clearTimeout(searchTimer.current);
-  }, [search, products]);
+    if (step !== 3) return;
+    setLoadingP(true);
+    fetch(`${API_BASE}/api/products?limit=100&sort=score`)
+      .then(r => r.json())
+      .then(j => setAllProducts(Array.isArray(j.data) ? j.data : []))
+      .catch(() => {})
+      .finally(() => setLoadingP(false));
+  }, [step]);
 
   const toggleConcern = c =>
     setConcerns(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
@@ -90,7 +80,6 @@ export default function AIAdvisor({ onClose, embedded = false }) {
   const addProduct = p => {
     setProducts(prev => [...prev, p]);
     setSearch('');
-    setSearchRes([]);
   };
 
   const removeProduct = id => setProducts(prev => prev.filter(p => p.product_id !== id));
@@ -268,8 +257,9 @@ export default function AIAdvisor({ onClose, embedded = false }) {
         {step === 3 && (
           <div>
             <h3 style={S.stepTitle}>目前使用哪些產品？</h3>
-            <p style={S.hint}>選填・搜尋加入，讓建議更精準</p>
+            <p style={S.hint}>選填・點選加入，讓建議更精準</p>
 
+            {/* 已選標籤 */}
             {products.length > 0 && (
               <div style={S.tagsWrap}>
                 {products.map(p => (
@@ -281,47 +271,60 @@ export default function AIAdvisor({ onClose, embedded = false }) {
               </div>
             )}
 
-            <div style={{ position: 'relative' }}>
-              <div style={S.searchWrap}>
-                <span style={S.searchIcon}>{searching ? '⟳' : '⌕'}</span>
-                <input
-                  style={S.searchInput}
-                  placeholder="輸入產品名稱或品牌..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
-              </div>
+            {/* 搜尋過濾 */}
+            <div style={S.searchWrap}>
+              <span style={S.searchIcon}>⌕</span>
+              <input
+                style={S.searchInput}
+                placeholder="搜尋品牌或產品名稱..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              {search && (
+                <button style={{ ...S.removeBtn, padding: '0 12px', fontSize: '13px' }} onClick={() => setSearch('')}>✕</button>
+              )}
+            </div>
 
-              {searchRes.length > 0 && (
-                <div style={S.searchDrop}>
-                  {searchRes.map((p, i) => (
+            {/* 產品清單 */}
+            {loadingP ? (
+              <div style={{ textAlign: 'center', padding: '24px', color: C.textDim, fontSize: '13px', fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>
+                載入中...
+              </div>
+            ) : (
+              <div style={S.productList}>
+                {allProducts
+                  .filter(p =>
+                    !products.find(x => x.product_id === p.product_id) &&
+                    (!search.trim() || p.name.includes(search.trim()) || p.brand.includes(search.trim()))
+                  )
+                  .slice(0, 30)
+                  .map((p, i, arr) => (
                     <button
                       key={p.product_id}
                       style={{
-                        ...S.searchItem,
-                        borderBottom: i < searchRes.length - 1 ? `1px solid ${C.border}` : 'none',
+                        ...S.productRow,
+                        borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : 'none',
                       }}
                       onClick={() => addProduct(p)}
                     >
-                      <span style={S.searchName}>{p.name}</span>
-                      <span style={S.searchMeta}>{p.brand} · {p.sub_category}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={S.productName}>{p.name}</p>
+                        <p style={S.productMeta}>{p.brand} · {p.sub_category}</p>
+                      </div>
+                      <span style={S.addBtn}>+</span>
                     </button>
-                  ))}
-                </div>
-              )}
-
-              {search.length > 0 && !searching && searchRes.length === 0 && (
-                <div style={{
-                  ...S.searchDrop,
-                  padding: '14px 16px',
-                  color: C.textDim,
-                  fontSize: '13px',
-                  fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
-                }}>
-                  找不到相關產品
-                </div>
-              )}
-            </div>
+                  ))
+                }
+                {allProducts.filter(p =>
+                  !products.find(x => x.product_id === p.product_id) &&
+                  (!search.trim() || p.name.includes(search.trim()) || p.brand.includes(search.trim()))
+                ).length === 0 && (
+                  <p style={{ textAlign: 'center', color: C.textDim, fontSize: '13px', padding: '20px 0', fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>
+                    找不到相關產品
+                  </p>
+                )}
+              </div>
+            )}
 
             <div style={S.btnRow}>
               <button style={S.backBtn} onClick={() => setStep(2)}>← 上一步</button>
@@ -524,25 +527,31 @@ const S = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px', color: C.text, outline: 'none',
   },
-  searchDrop: {
-    position: 'absolute', left: 0, right: 0, top: '50px',
-    background: C.surface, border: `1px solid ${C.border}`,
-    borderRadius: '10px', zIndex: 100,
-    boxShadow: '0 8px 24px rgba(28,25,23,0.10)',
-    overflow: 'hidden',
+  productList: {
+    marginTop: '10px',
+    maxHeight: '220px', overflowY: 'auto',
+    border: `1px solid ${C.border}`, borderRadius: '10px',
+    background: C.surface,
   },
-  searchItem: {
-    width: '100%', padding: '10px 16px', textAlign: 'left',
-    background: 'none', border: 'none',
-    cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px',
+  productRow: {
+    width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+    padding: '10px 14px', background: 'none', border: 'none',
+    cursor: 'pointer', textAlign: 'left',
   },
-  searchName: {
+  productName: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '13px', fontWeight: 500, color: C.text,
+    margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   },
-  searchMeta: {
+  productMeta: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '11px', color: C.textDim,
+    fontSize: '11px', color: C.textDim, margin: 0,
+  },
+  addBtn: {
+    flexShrink: 0, width: '22px', height: '22px', borderRadius: '50%',
+    background: 'rgba(196,137,122,0.12)', color: C.accent,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '16px', lineHeight: 1,
   },
   btnRow: {
     display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px',
