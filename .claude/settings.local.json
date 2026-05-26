@@ -65,7 +65,9 @@
       "Bash(kill -9 4476)",
       "Skill(claude-api)",
       "Skill(claude-api:*)",
-      "Bash(rm -rf /Users/xuan/Desktop/glowup/frontend/node_modules/.cache && echo \"Cache cleared\")"
+      "Bash(rm -rf /Users/xuan/Desktop/glowup/frontend/node_modules/.cache && echo \"Cache cleared\")",
+      "Bash(brctl status *)",
+      "Bash(xattr /Users/xuan/Desktop/glowup/frontend/node_modules/fork-ts-checker-webpack-plugin/lib/watch/InclusiveNodeWatchFileSystem.js)"
     ],
     "additionalDirectories": [
       "/Users/xuan/Desktop/glowup/frontend/node_modules/.cache"
