@@ -83,7 +83,7 @@ function Privacy() {
             <li style={s.item}>要求刪除您的帳號及相關資料</li>
             <li style={s.item}>撤回對資料處理的同意</li>
           </ul>
-          <p style={s.para} style={{ marginTop: '12px' }}>如需行使上述權利，請透過平台內的回報功能與我們聯繫。</p>
+          <p style={{ ...s.para, marginTop: '12px' }}>如需行使上述權利，請透過平台內的回報功能與我們聯繫。</p>
         </Article>
 
         <Article num="八" title="政策更新">

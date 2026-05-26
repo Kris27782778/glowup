@@ -1919,7 +1919,7 @@ function AuditTab() {
         {ACTION_GROUPS.map(g => (
           <button key={g.value} onClick={() => setFilter(g.value)}
             style={{
-              padding:'6px 16px', borderRadius:'20px', border:'none', cursor:'pointer',
+              padding:'6px 16px', borderRadius:'20px', cursor:'pointer',
               fontSize:'13px', fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
               background: filter === g.value ? C.accent : C.card,
               color: filter === g.value ? '#fff' : C.textSub,
