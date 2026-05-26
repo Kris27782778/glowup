@@ -65,6 +65,8 @@ function Register() {
     return () => clearInterval(cooldownRef.current);
   }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const [agreed, setAgreed] = useState(false);
+
   const [form, setForm] = useState({
     student_id: '',
     password: '',
@@ -188,6 +190,7 @@ function Register() {
     if (step === 1) {
       if (form.password.length < 6) return '密碼至少需要 6 個字元';
       if (form.password !== form.passwordConfirm) return '兩次密碼輸入不一致';
+      if (!agreed) return '請先閱讀並同意隱私政策與使用條款';
     }
     if (step === 2) {
       if (otpDigits.some(d => d === '')) return '請輸入完整的 6 位驗證碼';
@@ -527,6 +530,20 @@ function Register() {
                   autoComplete="new-password"
                 />
               </div>
+              <label style={agreeStyles.row}>
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={e => { setAgreed(e.target.checked); setError(''); }}
+                  style={agreeStyles.checkbox}
+                />
+                <span style={agreeStyles.text}>
+                  我已閱讀並同意{' '}
+                  <Link to="/privacy" target="_blank" style={agreeStyles.link}>隱私政策</Link>
+                  {' '}與{' '}
+                  <Link to="/terms" target="_blank" style={agreeStyles.link}>使用條款</Link>
+                </span>
+              </label>
             </div>
           )}
 
@@ -1042,6 +1059,34 @@ const styles = {
     color: tokens.accent,
     textDecoration: 'none',
     fontWeight: 500,
+  },
+};
+
+const agreeStyles = {
+  row: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px',
+    cursor: 'pointer',
+  },
+  checkbox: {
+    marginTop: '2px',
+    width: '16px',
+    height: '16px',
+    flexShrink: 0,
+    accentColor: tokens.accent,
+    cursor: 'pointer',
+  },
+  text: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: tokens.textSecondary,
+    lineHeight: 1.5,
+  },
+  link: {
+    color: tokens.accent,
+    textDecoration: 'underline',
+    textUnderlineOffset: '2px',
   },
 };
 

@@ -11,7 +11,7 @@ const T = {
 
 const LINKS = [
   { group: '平台',   items: [{ label: '首頁', to: '/' }, { label: '成分庫', to: '/products' }, { label: '社群討論', to: '#' }, { label: 'Q&A', to: '#' }] },
-  { group: '關於',   items: [{ label: '關於 GLŌW', to: '#' }, { label: '使用條款', to: '#' }, { label: '隱私政策', to: '#' }] },
+  { group: '關於',   items: [{ label: '關於 GLŌW', to: '/about' }, { label: '使用條款', to: '/terms' }, { label: '隱私政策', to: '/privacy' }] },
   { group: '帳號',   items: [{ label: '登入', to: '/login' }, { label: '註冊', to: '/register' }] },
 ];
 

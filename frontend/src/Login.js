@@ -1,6 +1,7 @@
 import API_BASE from "./config";
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+
 import { useLang } from './hooks/useLang';
 
 const T = {
@@ -30,6 +31,7 @@ function Login() {
   const [error,       setError]       = useState('');
   const [loading,     setLoading]     = useState(false);
   const [focusField,  setFocusField]  = useState(null);
+  const [agreed,      setAgreed]      = useState(false);
   // 頁面載入時的 splash：'in' → 'exit' → 'done'
   const [splash, setSplash] = useState('in');
   const navigate = useNavigate();
@@ -45,6 +47,7 @@ function Login() {
 
   const handleLogin = async () => {
     if (!studentId || !password) { setError(t('請填寫學號與密碼')); return; }
+    if (!agreed) { setError('請先閱讀並同意隱私政策與使用條款'); return; }
     setLoading(true); setError('');
     try {
       const res  = await fetch(API_BASE + '/api/auth/login', {
@@ -172,6 +175,22 @@ function Login() {
               />
             </div>
           </div>
+
+          {/* 同意條款 */}
+          <label style={lAgree.row}>
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={e => { setAgreed(e.target.checked); setError(''); }}
+              style={lAgree.checkbox}
+            />
+            <span style={lAgree.text}>
+              我已閱讀並同意{' '}
+              <Link to="/privacy" target="_blank" style={lAgree.link}>隱私政策</Link>
+              {' '}與{' '}
+              <Link to="/terms" target="_blank" style={lAgree.link}>使用條款</Link>
+            </span>
+          </label>
 
           {/* 重設密碼成功提示 */}
           {resetSuccess && (
@@ -571,6 +590,34 @@ const styles = {
     fontSize: '13px',
     color: 'var(--text-tertiary)',
     transition: 'color 150ms',
+  },
+};
+
+const lAgree = {
+  row: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px',
+    cursor: 'pointer',
+  },
+  checkbox: {
+    marginTop: '2px',
+    width: '16px',
+    height: '16px',
+    flexShrink: 0,
+    accentColor: T.accent,
+    cursor: 'pointer',
+  },
+  text: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: T.textSecondary,
+    lineHeight: 1.5,
+  },
+  link: {
+    color: T.accent,
+    textDecoration: 'underline',
+    textUnderlineOffset: '2px',
   },
 };
 
