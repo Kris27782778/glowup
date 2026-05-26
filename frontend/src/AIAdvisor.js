@@ -1,13 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API_BASE from './config';
 
 const SKIN_TYPES = [
-  { value: 'oily',      label: '油性肌',   desc: '容易出油、毛孔明顯',   color: '#7AAFC4', bg: 'rgba(122,175,196,0.12)' },
-  { value: 'dry',       label: '乾性肌',   desc: '容易緊繃、脫皮',       color: '#C4A87A', bg: 'rgba(196,168,122,0.12)' },
-  { value: 'combo',     label: '混合性肌', desc: 'T 區油、兩頰乾',       color: '#7BAE8A', bg: 'rgba(123,174,138,0.12)' },
-  { value: 'sensitive', label: '敏感性肌', desc: '容易泛紅、刺激',       color: '#C4897A', bg: 'rgba(196,137,122,0.12)' },
-  { value: 'normal',    label: '中性肌',   desc: '油水平衡、不易過敏',   color: '#A89AC4', bg: 'rgba(168,154,196,0.12)' },
+  { value: 'oily',      label: '油性肌',   desc: '容易出油、毛孔明顯',   color: '#5B9EC9', bg: 'rgba(91,158,201,0.10)' },
+  { value: 'dry',       label: '乾性肌',   desc: '容易緊繃、脫皮',       color: '#B8976A', bg: 'rgba(184,151,106,0.10)' },
+  { value: 'combo',     label: '混合性肌', desc: 'T 區油、兩頰乾',       color: '#6A9E78', bg: 'rgba(106,158,120,0.10)' },
+  { value: 'sensitive', label: '敏感性肌', desc: '容易泛紅、對刺激敏感', color: '#C4897A', bg: 'rgba(196,137,122,0.10)' },
+  { value: 'normal',    label: '中性肌',   desc: '油水平衡、不易過敏',   color: '#9985C2', bg: 'rgba(153,133,194,0.10)' },
 ];
 
 const CONCERNS = [
@@ -16,42 +16,48 @@ const CONCERNS = [
 ];
 
 const C = {
-  bg:           '#F7F4F2',
-  surface:      '#FFFFFF',
-  subtle:       '#F0EBE7',
-  border:       '#E5DDD9',
-  accent:       '#C4897A',
-  accentSub:    'rgba(196,137,122,0.12)',
-  accentBorder: 'rgba(196,137,122,0.3)',
-  text:         '#1C1917',
-  textSub:      '#6B5E58',
-  textDim:      '#A89990',
-  inverse:      '#1C1917',
+  bg:      '#F7F4F2',
+  surface: '#FFFFFF',
+  subtle:  '#F0EBE7',
+  border:  '#E5DDD9',
+  accent:  '#C4897A',
+  text:    '#1C1917',
+  textSub: '#6B5E58',
+  textDim: '#A89990',
+  inverse: '#1C1917',
 };
+
+function parseResult(text) {
+  const sections = [];
+  let current = null;
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    const h = line.match(/^##\s*(.+)/);
+    if (h) {
+      if (current) sections.push(current);
+      current = { title: h[1].trim(), lines: [] };
+    } else if (line) {
+      if (!current) current = { title: '', lines: [] };
+      current.lines.push(line);
+    }
+  }
+  if (current) sections.push(current);
+  return sections;
+}
 
 export default function AIAdvisor({ onClose, embedded = false }) {
   const navigate = useNavigate();
-  const [step, setStep]             = useState(1);
-  const [skinType, setSkinType]     = useState('');
-  const [concerns, setConcerns]     = useState([]);
-  const [products, setProducts]     = useState([]);
-  const [search, setSearch]         = useState('');
-  const [allProducts, setAllProducts] = useState([]);
-  const [loadingP, setLoadingP]     = useState(false);
-  const [loading, setLoading]       = useState(false);
-  const [result, setResult]         = useState('');
-  const resultRef = useRef(null);
-
-  /* 進入步驟三時載入產品 */
-  useEffect(() => {
-    if (step !== 3) return;
-    setLoadingP(true);
-    fetch(`${API_BASE}/api/products?limit=40&sort=score`)
-      .then(r => r.json())
-      .then(j => setAllProducts(Array.isArray(j.data) ? j.data : []))
-      .catch(() => {})
-      .finally(() => setLoadingP(false));
-  }, [step]);
+  const [step, setStep]           = useState(1);
+  const [skinType, setSkinType]   = useState('');
+  const [concerns, setConcerns]   = useState([]);
+  const [products, setProducts]   = useState([]);
+  const [search, setSearch]       = useState('');
+  const [searchRes, setSearchRes] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [loading, setLoading]     = useState(false);
+  const [result, setResult]       = useState('');
+  const resultRef  = useRef(null);
+  const searchTimer = useRef(null);
 
   useEffect(() => {
     if (step === 4 && resultRef.current) {
@@ -59,27 +65,42 @@ export default function AIAdvisor({ onClose, embedded = false }) {
     }
   }, [step]);
 
-  const toggleConcern = (c) =>
+  useEffect(() => {
+    if (search.length < 1) { setSearchRes([]); return; }
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const r = await fetch(`${API_BASE}/api/products?search=${encodeURIComponent(search)}&limit=5`);
+        const j = await r.json();
+        setSearchRes(
+          Array.isArray(j.data)
+            ? j.data.filter(p => !products.find(x => x.product_id === p.product_id))
+            : []
+        );
+      } catch { setSearchRes([]); }
+      setSearching(false);
+    }, 300);
+    return () => clearTimeout(searchTimer.current);
+  }, [search, products]);
+
+  const toggleConcern = c =>
     setConcerns(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
 
-  const addProduct = (p) => {
-    if (!products.find(x => x.product_id === p.product_id)) {
-      setProducts(prev => [...prev, p]);
-    }
+  const addProduct = p => {
+    setProducts(prev => [...prev, p]);
     setSearch('');
+    setSearchRes([]);
   };
 
-  const removeProduct = (id) => setProducts(prev => prev.filter(p => p.product_id !== id));
+  const removeProduct = id => setProducts(prev => prev.filter(p => p.product_id !== id));
 
   const reset = () => {
-    setStep(1); setSkinType(''); setConcerns([]);
-    setProducts([]); setResult('');
+    setStep(1); setSkinType(''); setConcerns([]); setProducts([]); setResult('');
   };
 
   const submit = async () => {
-    setStep(4);
-    setLoading(true);
-    setResult('');
+    setStep(4); setLoading(true); setResult('');
     try {
       const res = await fetch(`${API_BASE}/api/ai/recommend`, {
         method: 'POST',
@@ -106,39 +127,71 @@ export default function AIAdvisor({ onClose, embedded = false }) {
           if (!line.startsWith('data: ')) continue;
           const payload = line.slice(6).trim();
           if (payload === '[DONE]') break;
-          try { const { text } = JSON.parse(payload); if (text) setResult(prev => prev + text); }
-          catch { /* skip */ }
+          try {
+            const { text } = JSON.parse(payload);
+            if (text) setResult(prev => prev + text);
+          } catch { /* skip */ }
         }
       }
-    } catch { setResult('分析失敗，請稍後再試。'); }
+    } catch { setResult('## 發生錯誤\n分析失敗，請稍後再試。'); }
     setLoading(false);
   };
 
   const skinInfo = SKIN_TYPES.find(s => s.value === skinType);
+  const sections = result ? parseResult(result) : [];
 
   return (
     <div style={{ ...S.wrap, ...(embedded ? S.embedded : {}) }}>
+
       {/* Header */}
       <div style={S.header}>
         <div>
           <p style={S.eyebrow}>AI SKIN ADVISOR</p>
           <h2 style={S.title}>個人化保養顧問</h2>
         </div>
-        {onClose && (
-          <button style={S.closeBtn} onClick={onClose}>✕</button>
-        )}
+        {onClose && <button style={S.closeBtn} onClick={onClose}>✕</button>}
       </div>
 
-      {/* Progress bar */}
+      {/* Step indicators */}
       {step < 4 && (
-        <div style={S.progressBar}>
-          <div style={{ ...S.progressFill, width: `${(step / 3) * 100}%` }} />
+        <div style={S.stepRow}>
+          {['膚質', '訴求', '產品'].map((label, idx) => {
+            const n = idx + 1;
+            const done = step > n;
+            const active = step === n;
+            return (
+              <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{
+                  width: '22px', height: '22px', borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '11px', fontWeight: 600, flexShrink: 0,
+                  background: done ? C.accent : active ? C.inverse : 'transparent',
+                  color: (done || active) ? '#fff' : C.textDim,
+                  border: (!done && !active) ? `1.5px solid ${C.border}` : 'none',
+                  transition: 'all 250ms',
+                }}>
+                  {done ? '✓' : n}
+                </div>
+                <span style={{
+                  fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+                  fontSize: '12px',
+                  color: active ? C.text : C.textDim,
+                  fontWeight: active ? 500 : 400,
+                }}>
+                  {label}
+                </span>
+                {n < 3 && (
+                  <div style={{ width: '20px', height: '1px', background: C.border, margin: '0 2px' }} />
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
       <div style={S.body}>
 
-        {/* Step 1: 膚質 */}
+        {/* ── Step 1: 膚質 ── */}
         {step === 1 && (
           <div>
             <h3 style={S.stepTitle}>你的膚質是？</h3>
@@ -149,11 +202,11 @@ export default function AIAdvisor({ onClose, embedded = false }) {
                   style={{
                     ...S.skinBtn,
                     background: skinType === s.value ? s.bg : C.surface,
-                    border: `1.5px solid ${skinType === s.value ? s.color : C.border}`,
+                    borderColor: skinType === s.value ? s.color : C.border,
+                    borderLeftColor: s.color,
                   }}
                   onClick={() => setSkinType(s.value)}
                 >
-                  <div style={{ ...S.skinDot, background: s.color, boxShadow: `0 0 0 4px ${s.bg}` }} />
                   <span style={{ ...S.skinLabel, color: skinType === s.value ? s.color : C.text }}>
                     {s.label}
                   </span>
@@ -162,101 +215,113 @@ export default function AIAdvisor({ onClose, embedded = false }) {
               ))}
             </div>
             <div style={S.btnRow}>
-              <button style={{ ...S.nextBtn, opacity: skinType ? 1 : 0.4 }} disabled={!skinType} onClick={() => setStep(2)}>
+              <button
+                style={{ ...S.nextBtn, opacity: skinType ? 1 : 0.4 }}
+                disabled={!skinType}
+                onClick={() => setStep(2)}
+              >
                 下一步 →
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 2: 需求 */}
+        {/* ── Step 2: 訴求 ── */}
         {step === 2 && (
           <div>
             <h3 style={S.stepTitle}>最在意的肌膚問題？</h3>
-            <p style={S.hint}>可多選</p>
+            <p style={S.hint}>可多選・已選 {concerns.length} 項</p>
             <div style={S.chipWrap}>
-              {CONCERNS.map(c => (
-                <button
-                  key={c}
-                  style={{
-                    ...S.chip,
-                    background: concerns.includes(c) ? C.accent : C.surface,
-                    color: concerns.includes(c) ? '#fff' : C.textSub,
-                    border: `1.5px solid ${concerns.includes(c) ? C.accent : C.border}`,
-                  }}
-                  onClick={() => toggleConcern(c)}
-                >
-                  {c}
-                </button>
-              ))}
+              {CONCERNS.map(c => {
+                const active = concerns.includes(c);
+                return (
+                  <button
+                    key={c}
+                    style={{
+                      ...S.chip,
+                      background: active ? C.accent : C.surface,
+                      color: active ? '#fff' : C.textSub,
+                      border: `1.5px solid ${active ? C.accent : C.border}`,
+                    }}
+                    onClick={() => toggleConcern(c)}
+                  >
+                    {active && <span style={{ fontSize: '10px', marginRight: '5px', opacity: 0.85 }}>✓</span>}
+                    {c}
+                  </button>
+                );
+              })}
             </div>
             <div style={S.btnRow}>
               <button style={S.backBtn} onClick={() => setStep(1)}>← 上一步</button>
-              <button style={{ ...S.nextBtn, opacity: concerns.length ? 1 : 0.4 }} disabled={!concerns.length} onClick={() => setStep(3)}>
+              <button
+                style={{ ...S.nextBtn, opacity: concerns.length ? 1 : 0.4 }}
+                disabled={!concerns.length}
+                onClick={() => setStep(3)}
+              >
                 下一步 →
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 3: 產品（可選） */}
+        {/* ── Step 3: 產品（選填）── */}
         {step === 3 && (
           <div>
-            <h3 style={S.stepTitle}>現在在用哪些產品？</h3>
-            <p style={S.hint}>選填・點選加入，讓建議更精準</p>
+            <h3 style={S.stepTitle}>目前使用哪些產品？</h3>
+            <p style={S.hint}>選填・搜尋加入，讓建議更精準</p>
 
-            {/* 已選產品 */}
             {products.length > 0 && (
               <div style={S.tagsWrap}>
                 {products.map(p => (
                   <div key={p.product_id} style={S.productTag}>
-                    <span>{p.name}</span>
+                    <span style={{ fontSize: '12px', fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>{p.name}</span>
                     <button style={S.removeBtn} onClick={() => removeProduct(p.product_id)}>✕</button>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* 搜尋框 */}
-            <div style={S.searchWrap}>
-              <span style={S.searchIcon}>⌕</span>
-              <input
-                style={S.searchInput}
-                placeholder="搜尋產品名稱或品牌..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-
-            {/* 產品清單 */}
-            {loadingP ? (
-              <div style={{ textAlign: 'center', padding: '24px', color: C.textDim, fontSize: '13px' }}>載入中...</div>
-            ) : (
-              <div style={S.productList}>
-                {allProducts
-                  .filter(p =>
-                    !products.find(x => x.product_id === p.product_id) &&
-                    (!search.trim() || p.name.includes(search) || p.brand.includes(search))
-                  )
-                  .slice(0, 20)
-                  .map(p => (
-                    <button key={p.product_id} style={S.productRow} onClick={() => addProduct(p)}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={S.productName}>{p.name}</p>
-                        <p style={S.productMeta}>{p.brand} · {p.sub_category}</p>
-                      </div>
-                      <span style={S.addBtn}>+</span>
-                    </button>
-                  ))
-                }
-                {allProducts.filter(p =>
-                  !products.find(x => x.product_id === p.product_id) &&
-                  (!search.trim() || p.name.includes(search) || p.brand.includes(search))
-                ).length === 0 && (
-                  <p style={{ textAlign: 'center', color: C.textDim, fontSize: '13px', padding: '20px 0' }}>找不到相關產品</p>
-                )}
+            <div style={{ position: 'relative' }}>
+              <div style={S.searchWrap}>
+                <span style={S.searchIcon}>{searching ? '⟳' : '⌕'}</span>
+                <input
+                  style={S.searchInput}
+                  placeholder="輸入產品名稱或品牌..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
               </div>
-            )}
+
+              {searchRes.length > 0 && (
+                <div style={S.searchDrop}>
+                  {searchRes.map((p, i) => (
+                    <button
+                      key={p.product_id}
+                      style={{
+                        ...S.searchItem,
+                        borderBottom: i < searchRes.length - 1 ? `1px solid ${C.border}` : 'none',
+                      }}
+                      onClick={() => addProduct(p)}
+                    >
+                      <span style={S.searchName}>{p.name}</span>
+                      <span style={S.searchMeta}>{p.brand} · {p.sub_category}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {search.length > 0 && !searching && searchRes.length === 0 && (
+                <div style={{
+                  ...S.searchDrop,
+                  padding: '14px 16px',
+                  color: C.textDim,
+                  fontSize: '13px',
+                  fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+                }}>
+                  找不到相關產品
+                </div>
+              )}
+            </div>
 
             <div style={S.btnRow}>
               <button style={S.backBtn} onClick={() => setStep(2)}>← 上一步</button>
@@ -265,18 +330,21 @@ export default function AIAdvisor({ onClose, embedded = false }) {
           </div>
         )}
 
-        {/* Step 4: 結果 */}
+        {/* ── Step 4: 結果 ── */}
         {step === 4 && (
           <div ref={resultRef}>
             <div style={S.resultMeta}>
               {skinInfo && (
-                <span style={{ ...S.metaTag, background: skinInfo.bg, color: skinInfo.color, border: `1px solid ${skinInfo.color}44` }}>
+                <span style={{
+                  ...S.metaTag,
+                  background: skinInfo.bg,
+                  color: skinInfo.color,
+                  border: `1px solid ${skinInfo.color}55`,
+                }}>
                   {skinInfo.label}
                 </span>
               )}
-              {concerns.map(c => (
-                <span key={c} style={S.metaTag}>{c}</span>
-              ))}
+              {concerns.map(c => <span key={c} style={S.metaTag}>{c}</span>)}
             </div>
 
             {loading && !result && (
@@ -290,22 +358,51 @@ export default function AIAdvisor({ onClose, embedded = false }) {
               </div>
             )}
 
-            {result && (
-              <div style={S.resultBox}>
-                {result.split('\n').map((line, i) => {
-                  if (!line.trim()) return null;
-                  const isHeading = /^\d+[.、]|^#{1,3}\s/.test(line);
-                  return (
-                    <p key={i} style={isHeading ? S.resultH : S.resultP}>
-                      {line.replace(/^#+\s*/, '')}
-                    </p>
-                  );
-                })}
+            {/* 結構化段落 */}
+            {sections.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {sections.map((sec, i) => (
+                  <div key={i} style={{
+                    background: C.subtle,
+                    borderRadius: '10px',
+                    padding: '14px 18px',
+                    borderLeft: sec.title ? `3px solid ${C.accent}` : 'none',
+                  }}>
+                    {sec.title && (
+                      <p style={{
+                        fontFamily: '"Cormorant Garamond","Noto Serif TC",serif',
+                        fontSize: '15px', fontWeight: 400,
+                        color: C.accent, margin: '0 0 8px',
+                        letterSpacing: '0.02em',
+                      }}>
+                        {sec.title}
+                      </p>
+                    )}
+                    {sec.lines.map((line, j) => (
+                      <p key={j} style={{
+                        fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+                        fontSize: '13px', color: C.textSub,
+                        lineHeight: 1.8, margin: j < sec.lines.length - 1 ? '0 0 6px' : 0,
+                      }}>
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 串流中尚未出現 ## 的文字 */}
+            {loading && result && sections.length === 0 && (
+              <div style={{ background: C.subtle, borderRadius: '10px', padding: '14px 18px' }}>
+                <p style={{ fontFamily: '"DM Sans","Noto Sans TC",sans-serif', fontSize: '13px', color: C.textSub, lineHeight: 1.8, margin: 0 }}>
+                  {result}
+                </p>
               </div>
             )}
 
             {!loading && result && (
-              <div style={S.btnRow}>
+              <div style={{ ...S.btnRow, marginTop: '20px' }}>
                 <button style={S.backBtn} onClick={reset}>重新分析</button>
                 <button style={S.nextBtn} onClick={() => onClose ? onClose() : navigate('/products')}>
                   {onClose ? '關閉' : '瀏覽產品庫 →'}
@@ -318,8 +415,8 @@ export default function AIAdvisor({ onClose, embedded = false }) {
 
       <style>{`
         @keyframes ai-bounce {
-          0%,80%,100% { transform: translateY(0); opacity:.35; }
-          40% { transform: translateY(-7px); opacity:1; }
+          0%,80%,100% { transform: translateY(0); opacity: .35; }
+          40% { transform: translateY(-7px); opacity: 1; }
         }
       `}</style>
     </div>
@@ -334,9 +431,7 @@ const S = {
     display: 'flex',
     flexDirection: 'column',
   },
-  embedded: {
-    height: '100%',
-  },
+  embedded: { height: '100%' },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -354,24 +449,16 @@ const S = {
   },
   closeBtn: {
     background: 'none', border: 'none', cursor: 'pointer',
-    fontSize: '16px', color: C.textDim, padding: '4px',
-    lineHeight: 1,
+    fontSize: '16px', color: C.textDim, padding: '4px', lineHeight: 1,
   },
-  progressBar: {
-    height: '2px',
-    background: C.border,
-    margin: '20px 28px 0',
-    borderRadius: '999px',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    background: C.accent,
-    borderRadius: '999px',
-    transition: 'width 400ms cubic-bezier(0.22,1,0.36,1)',
+  stepRow: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '16px 28px 0',
+    gap: '4px',
   },
   body: {
-    padding: '24px 28px 28px',
+    padding: '20px 28px 28px',
     overflowY: 'auto',
     flex: 1,
   },
@@ -385,56 +472,68 @@ const S = {
   },
   skinGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-    gap: '10px', margin: '16px 0',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+    gap: '10px',
+    margin: '12px 0 20px',
   },
   skinBtn: {
-    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-    padding: '16px 12px', borderRadius: '12px', cursor: 'pointer',
-    transition: 'all 180ms',
-  },
-  skinDot: {
-    width: '36px', height: '36px', borderRadius: '50%',
-    transition: 'all 200ms',
+    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '5px',
+    padding: '14px 16px', borderRadius: '10px', cursor: 'pointer',
+    border: '1.5px solid', borderLeftWidth: '3px',
+    transition: 'all 180ms', textAlign: 'left',
   },
   skinLabel: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px', fontWeight: 600, transition: 'color 180ms',
+    fontSize: '14px', fontWeight: 600, transition: 'color 180ms',
   },
   skinDesc: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '11px', color: C.textDim, textAlign: 'center', lineHeight: 1.4,
+    fontSize: '11px', color: C.textDim, lineHeight: 1.4,
   },
   chipWrap: { display: 'flex', flexWrap: 'wrap', gap: '8px', margin: '0 0 24px' },
   chip: {
-    padding: '7px 16px', borderRadius: '999px', cursor: 'pointer',
+    padding: '8px 16px', borderRadius: '999px', cursor: 'pointer',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '13px', fontWeight: 500, transition: 'all 150ms',
+    display: 'flex', alignItems: 'center',
+  },
+  tagsWrap: {
+    display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px',
+  },
+  productTag: {
+    display: 'flex', alignItems: 'center', gap: '6px',
+    padding: '4px 10px 4px 12px',
+    background: 'rgba(196,137,122,0.10)',
+    border: '1px solid rgba(196,137,122,0.28)',
+    borderRadius: '999px',
+  },
+  removeBtn: {
+    background: 'none', border: 'none', cursor: 'pointer',
+    color: C.textDim, fontSize: '11px', padding: 0, lineHeight: 1,
   },
   searchWrap: {
     display: 'flex', alignItems: 'center',
     border: `1px solid ${C.border}`, borderRadius: '10px',
     background: C.subtle, overflow: 'hidden',
-    marginBottom: '0',
   },
-  searchIcon: { padding: '0 10px', fontSize: '13px', flexShrink: 0 },
+  searchIcon: {
+    padding: '0 12px', fontSize: '14px', flexShrink: 0, color: C.textDim,
+  },
   searchInput: {
-    flex: 1, height: '42px', border: 'none', background: 'transparent',
+    flex: 1, height: '44px', border: 'none', background: 'transparent',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '14px', color: C.text, outline: 'none',
   },
-  spin: { padding: '0 12px', color: C.textDim, fontSize: '14px', flexShrink: 0 },
   searchDrop: {
-    position: 'absolute', left: 0, right: 0, top: '48px',
+    position: 'absolute', left: 0, right: 0, top: '50px',
     background: C.surface, border: `1px solid ${C.border}`,
     borderRadius: '10px', zIndex: 100,
-    boxShadow: '0 8px 24px rgba(28,25,23,0.1)',
+    boxShadow: '0 8px 24px rgba(28,25,23,0.10)',
     overflow: 'hidden',
   },
   searchItem: {
-    width: '100%', padding: '11px 16px', textAlign: 'left',
+    width: '100%', padding: '10px 16px', textAlign: 'left',
     background: 'none', border: 'none',
-    borderBottom: `1px solid ${C.border}`,
     cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px',
   },
   searchName: {
@@ -444,46 +543,6 @@ const S = {
   searchMeta: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '11px', color: C.textDim,
-  },
-  tagsWrap: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px', marginBottom: '12px' },
-  productList: {
-    marginTop: '10px', marginBottom: '4px',
-    maxHeight: '220px', overflowY: 'auto',
-    border: `1px solid ${C.border}`, borderRadius: '10px',
-    background: C.surface,
-  },
-  productRow: {
-    width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-    padding: '10px 14px', background: 'none', border: 'none',
-    borderBottom: `1px solid ${C.border}`,
-    cursor: 'pointer', textAlign: 'left',
-    transition: 'background 120ms',
-  },
-  productName: {
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px', fontWeight: 500, color: C.text,
-    margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-  },
-  productMeta: {
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '11px', color: C.textDim, margin: 0,
-  },
-  addBtn: {
-    flexShrink: 0, width: '24px', height: '24px', borderRadius: '50%',
-    background: C.accentSub, color: C.accent,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '16px', lineHeight: 1, fontWeight: 400,
-  },
-  productTag: {
-    display: 'flex', alignItems: 'center', gap: '8px',
-    padding: '5px 10px 5px 14px',
-    background: 'rgba(196,137,122,0.10)', border: `1px solid rgba(196,137,122,0.28)`,
-    borderRadius: '999px', fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '12px', color: C.text,
-  },
-  removeBtn: {
-    background: 'none', border: 'none', cursor: 'pointer',
-    color: C.textDim, fontSize: '11px', padding: 0, lineHeight: 1,
   },
   btnRow: {
     display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px',
@@ -501,10 +560,11 @@ const S = {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '13px', cursor: 'pointer',
   },
-  resultMeta: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '20px' },
+  resultMeta: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' },
   metaTag: {
     padding: '3px 12px', borderRadius: '999px',
-    background: 'rgba(196,137,122,0.10)', border: `1px solid rgba(196,137,122,0.25)`,
+    background: 'rgba(196,137,122,0.10)',
+    border: '1px solid rgba(196,137,122,0.25)',
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '12px', color: C.accent,
   },
@@ -520,19 +580,5 @@ const S = {
   loadingText: {
     fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
     fontSize: '13px', color: C.textDim, margin: 0,
-  },
-  resultBox: {
-    background: C.subtle, borderRadius: '12px', padding: '20px 24px',
-    maxHeight: '320px', overflowY: 'auto',
-  },
-  resultH: {
-    fontFamily: '"Cormorant Garamond", "Noto Serif TC", serif',
-    fontSize: '17px', fontWeight: 400, color: C.text,
-    margin: '16px 0 4px', lineHeight: 1.4,
-  },
-  resultP: {
-    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
-    fontSize: '13px', color: C.textSub, lineHeight: 1.8,
-    margin: '0 0 6px',
   },
 };
