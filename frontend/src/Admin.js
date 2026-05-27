@@ -445,12 +445,21 @@ const USER_FILTER_CHIPS = [
   { label:'完成膚測', key:'skin' },
 ];
 
+const selectStyle = {
+  height:'32px', padding:'0 10px', borderRadius:'8px',
+  border:`1px solid ${C.border}`, background:C.card,
+  color:C.text, fontSize:'12px', fontFamily:'inherit', cursor:'pointer',
+  outline:'none', minWidth:'120px',
+};
+
 function UsersTab() {
-  const [users,      setUsers]    = useState([]);
-  const [q,          setQ]        = useState('');
-  const [statusFilter, setStatus] = useState('');
-  const [del,        setDel]      = useState(null);
-  const [banning,    setBanning]  = useState(null);
+  const [users,        setUsers]    = useState([]);
+  const [q,            setQ]        = useState('');
+  const [statusFilter, setStatus]   = useState('');
+  const [deptFilter,   setDept]     = useState('');
+  const [gradeFilter,  setGrade]    = useState('');
+  const [del,          setDel]      = useState(null);
+  const [banning,      setBanning]  = useState(null);
 
   const load = useCallback(() => {
     adminFetch(`/users?q=${encodeURIComponent(q)}`).then(d => { if (Array.isArray(d)) setUsers(d); });
@@ -473,19 +482,46 @@ function UsersTab() {
     load();
   };
 
+  // extract dept (first segment) and grade (last segment if contains 年級)
+  const parseDG = (dg) => {
+    if (!dg) return { dept: '', grade: '' };
+    const parts = dg.split(' · ');
+    const dept  = parts[0] || '';
+    const grade = parts.findLast?.(p => p.includes('年級')) || parts.slice(1).find(p => p.includes('年級')) || '';
+    return { dept, grade };
+  };
+
+  const depts  = [...new Set(users.map(u => parseDG(u.department_grade).dept).filter(Boolean))].sort();
+  const grades = [...new Set(users.map(u => parseDG(u.department_grade).grade).filter(Boolean))].sort();
+
   const filtered = users.filter(u => {
-    if (statusFilter === 'banned')     return u.is_banned;
-    if (statusFilter === 'verified')   return !u.is_banned;
-    if (statusFilter === 'unverified') return !u.is_banned;
-    if (statusFilter === 'skin')       return !!u.skin_type;
+    if (statusFilter === 'banned')     { if (!u.is_banned) return false; }
+    else if (statusFilter === 'verified')   { if (u.is_banned) return false; }
+    else if (statusFilter === 'unverified') { if (u.is_banned) return false; }
+    else if (statusFilter === 'skin')       { if (!u.skin_type) return false; }
+    if (deptFilter || gradeFilter) {
+      const { dept, grade } = parseDG(u.department_grade);
+      if (deptFilter  && dept  !== deptFilter)  return false;
+      if (gradeFilter && grade !== gradeFilter)  return false;
+    }
     return true;
   });
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px', flexWrap:'wrap' }}>
         <SearchBar value={q} onChange={setQ} placeholder="搜尋暱稱 / 學號 / Email" />
-        <span style={{ fontSize:'13px', color:C.textSub }}>{filtered.length} 筆</span>
+        <div style={{ display:'flex', gap:'8px', alignItems:'center', flexWrap:'wrap' }}>
+          <select value={deptFilter} onChange={e => setDept(e.target.value)} style={selectStyle}>
+            <option value="">所有系所</option>
+            {depts.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select value={gradeFilter} onChange={e => setGrade(e.target.value)} style={selectStyle}>
+            <option value="">所有年級</option>
+            {grades.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+          <span style={{ fontSize:'13px', color:C.textSub, whiteSpace:'nowrap' }}>{filtered.length} 筆</span>
+        </div>
       </div>
 
       <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
@@ -2485,8 +2521,21 @@ export default function Admin() {
           ))}
         </nav>
 
-        {/* 登出 */}
-        <div style={{ padding:'12px', borderTop:`1px solid ${C.border}` }}>
+        {/* 返回用戶端 + 登出 */}
+        <div style={{ padding:'12px', borderTop:`1px solid ${C.border}`, display:'flex', flexDirection:'column', gap:'6px' }}>
+          <button onClick={() => window.location.href = '/'} style={{
+            width:'100%', height:'34px', borderRadius:'8px',
+            border:`1px solid ${C.accent}`,
+            background: C.accentLight, color: C.accentText, fontSize:'12px',
+            fontFamily:'inherit', cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center', gap:'6px',
+            fontWeight:500,
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            返回用戶端
+          </button>
           <button onClick={handleLogout} style={{
             width:'100%', height:'34px', borderRadius:'8px', border:`1px solid ${C.border}`,
             background:'transparent', color:C.textSub, fontSize:'12px',
