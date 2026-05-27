@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import API_BASE from './config';
 
 const API = `${API_BASE}/api/admin`;
-const ADMIN_KEY = 'glowadmin2026';
+
+function getAdminToken() { return sessionStorage.getItem('admin_token') || ''; }
 
 // ── 色彩系統 ──────────────────────────────────────────────────────
 const C = {
@@ -50,7 +51,11 @@ const SKIN_BADGE = {
 function adminFetch(path, opts = {}) {
   return fetch(`${API}${path}`, {
     ...opts,
-    headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY, ...(opts.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getAdminToken()}`,
+      ...(opts.headers || {}),
+    },
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   }).then(r => r.json());
 }
@@ -2265,7 +2270,7 @@ function AdminLogin({ onSuccess }) {
       });
       const data = await res.json();
       if (res.ok) {
-        onSuccess(data.nickname || studentId.trim());
+        onSuccess(data.nickname || studentId.trim(), data.token);
       } else {
         setErr(data.error || '驗證失敗');
       }
@@ -2420,7 +2425,7 @@ const TAB_META = {
 // ── Admin（主元件）───────────────────────────────────────────────
 export default function Admin() {
   const [authed, setAuthed] = useState(
-    () => sessionStorage.getItem('admin_authed') === '1'
+    () => !!sessionStorage.getItem('admin_token')
   );
   const [tab,          setTab]          = useState('overview');
   const [pendingCount, setPendingCount] = useState(0);
@@ -2428,17 +2433,21 @@ export default function Admin() {
 
   useEffect(() => {
     if (authed) {
-      adminFetch('/stats').then(d => { if (d.pendingReports) setPendingCount(d.pendingReports); }).catch(() => {});
+      adminFetch('/stats').then(d => {
+        if (d.error === 'Token 無效或已過期，請重新登入') { handleLogout(); return; }
+        if (d.pendingReports) setPendingCount(d.pendingReports);
+      }).catch(() => {});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, refreshKey]);
 
-  const handleLogin = (nickname) => {
-    sessionStorage.setItem('admin_authed', '1');
+  const handleLogin = (nickname, token) => {
+    sessionStorage.setItem('admin_token',    token);
     sessionStorage.setItem('admin_nickname', nickname || '');
     setAuthed(true);
   };
   const handleLogout = () => {
-    sessionStorage.removeItem('admin_authed');
+    sessionStorage.removeItem('admin_token');
     sessionStorage.removeItem('admin_nickname');
     setAuthed(false);
   };

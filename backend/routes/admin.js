@@ -4,9 +4,13 @@ const pool       = require('../config/db');
 const supabase   = require('../config/supabase');
 const Anthropic  = require('@anthropic-ai/sdk');
 const crypto     = require('crypto');
+const jwt        = require('jsonwebtoken');
 const { sendVerificationEmail, sendWelcomeEmail } = require('../config/mailer');
 
-// ── 驗證管理員身份（不需 admin key，用學號驗證）───────────────────
+const JWT_SECRET  = process.env.ADMIN_JWT_SECRET || process.env.ADMIN_KEY;
+const JWT_EXPIRES = '8h';
+
+// ── 驗證管理員身份，簽發 JWT ──────────────────────────────────────
 router.post('/verify-admin', async (req, res) => {
   const { student_id } = req.body;
   if (!student_id) return res.status(400).json({ error: '請提供學號' });
@@ -17,20 +21,27 @@ router.post('/verify-admin', async (req, res) => {
       [student_id]
     );
     if (result.rows.length === 0) return res.status(403).json({ error: '此學號不具管理員權限' });
-    res.json({ ok: true, nickname: result.rows[0].nickname });
+    const { user_id, nickname } = result.rows[0];
+    const token = jwt.sign({ user_id, nickname, role: 'admin' }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+    res.json({ ok: true, nickname, token });
   } catch (err) {
     console.error('[admin/verify-admin]', err.message);
     res.status(500).json({ error: '驗證失敗' });
   }
 });
 
-// ── Admin Key 驗證 middleware ──────────────────────────────────────
+// ── JWT 驗證 middleware ───────────────────────────────────────────
 function requireAdmin(req, res, next) {
-  const key = req.headers['x-admin-key'];
-  if (!key || key !== process.env.ADMIN_KEY) {
+  const auth = req.headers['authorization'];
+  if (!auth || !auth.startsWith('Bearer ')) {
     return res.status(401).json({ error: '未授權' });
   }
-  next();
+  try {
+    req.admin = jwt.verify(auth.slice(7), JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Token 無效或已過期，請重新登入' });
+  }
 }
 router.use(requireAdmin);
 
