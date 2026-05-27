@@ -4,7 +4,7 @@ const pool       = require('../config/db');
 const supabase   = require('../config/supabase');
 const Anthropic  = require('@anthropic-ai/sdk');
 const crypto     = require('crypto');
-const { sendVerificationEmail } = require('../config/mailer');
+const { sendVerificationEmail, sendWelcomeEmail } = require('../config/mailer');
 
 // ── 驗證管理員身份（不需 admin key，用學號驗證）───────────────────
 router.post('/verify-admin', async (req, res) => {
@@ -604,20 +604,23 @@ router.get('/audit', async (req, res) => {
 
 // ── 手動新增會員 POST /api/admin/users ───────────────────────────
 router.post('/users', async (req, res) => {
-  const { student_id, email, nickname, real_name, department_grade, password } = req.body;
-  if (!student_id || !email || !nickname || !password) {
-    return res.status(400).json({ error: '學號、信箱、暱稱、密碼為必填' });
+  const { student_id, email, nickname, real_name, department_grade } = req.body;
+  if (!student_id || !email || !nickname) {
+    return res.status(400).json({ error: '學號、信箱、暱稱為必填' });
   }
-  if (password.length < 6) return res.status(400).json({ error: '密碼至少 6 個字元' });
   try {
     const bcrypt = require('bcrypt');
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const tempPassword = crypto.randomBytes(9).toString('base64url').slice(0, 12);
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
     const result = await pool.query(
-      `INSERT INTO users (student_id, password, nickname, real_name, department_grade, email, skin_type, last_verified_at)
-       VALUES ($1, $2, $3, $4, $5, $6, '', NOW()) RETURNING user_id, student_id, nickname, email, created_at`,
+      `INSERT INTO users (student_id, password, nickname, real_name, department_grade, email, skin_type, last_verified_at, must_change_password)
+       VALUES ($1, $2, $3, $4, $5, $6, '', NOW(), TRUE) RETURNING user_id, student_id, nickname, email, created_at`,
       [student_id, hashedPassword, nickname, real_name || null, department_grade || '', email]
     );
     res.json({ ok: true, user: result.rows[0] });
+    sendWelcomeEmail(email, nickname, student_id, tempPassword).catch(err =>
+      console.error('[admin/users] 歡迎信發送失敗:', err.message)
+    );
   } catch (err) {
     console.error('[admin/users post]', err.message);
     if (err.code === '23505') return res.status(409).json({ error: '此學號已被註冊' });

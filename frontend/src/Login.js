@@ -34,6 +34,12 @@ function Login() {
   const [agreed,      setAgreed]      = useState(false);
   // 頁面載入時的 splash：'in' → 'exit' → 'done'
   const [splash, setSplash] = useState('in');
+  // 首次登入強制改密碼
+  const [forcePwUser,  setForcePwUser]  = useState(null);
+  const [newPw,        setNewPw]        = useState('');
+  const [confirmPw,    setConfirmPw]    = useState('');
+  const [forcePwError, setForcePwError] = useState('');
+  const [forcePwLoading, setForcePwLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLang();
@@ -56,7 +62,9 @@ function Login() {
         body: JSON.stringify({ student_id: studentId, password }),
       });
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && data.mustChangePassword) {
+        setForcePwUser(data.user);
+      } else if (res.ok) {
         localStorage.setItem('user', JSON.stringify(data.user));
         navigate('/community');
       } else if (res.status === 403 && data.code === 'REVERIFY_REQUIRED') {
@@ -71,10 +79,76 @@ function Login() {
     }
   };
 
+  const handleForceChangePw = async () => {
+    if (!newPw || !confirmPw) { setForcePwError('請填寫所有欄位'); return; }
+    if (newPw.length < 6) { setForcePwError('密碼至少需要 6 個字元'); return; }
+    if (newPw !== confirmPw) { setForcePwError('兩次密碼輸入不一致'); return; }
+    setForcePwLoading(true); setForcePwError('');
+    try {
+      const res = await fetch(API_BASE + '/api/auth/force-change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: forcePwUser.user_id, new_password: newPw }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+        navigate('/community');
+      } else {
+        setForcePwError(data.error || '設定失敗，請稍後再試');
+      }
+    } catch {
+      setForcePwError('無法連接伺服器');
+    } finally {
+      setForcePwLoading(false);
+    }
+  };
+
   const inputStyle = (field) => ({
     ...styles.input,
     ...(focusField === field ? styles.inputFocus : {}),
   });
+
+  if (forcePwUser) {
+    return (
+      <div style={fpStyles.overlay}>
+        <div style={fpStyles.card}>
+          <p style={fpStyles.logo}>GLŌW</p>
+          <h2 style={fpStyles.title}>設定你的密碼</h2>
+          <p style={fpStyles.hint}>
+            你的帳號由管理員建立，為了安全請先設定自己的密碼。
+          </p>
+          <div style={fpStyles.fields}>
+            {[
+              { label: '新密碼',    val: newPw,      set: setNewPw,     key: 'np', ph: '至少 6 個字元' },
+              { label: '確認新密碼', val: confirmPw,  set: setConfirmPw, key: 'cp', ph: '再次輸入新密碼' },
+            ].map(({ label, val, set, key, ph }) => (
+              <div key={key} style={fpStyles.field}>
+                <label style={fpStyles.label}>{label}</label>
+                <input
+                  type="password"
+                  placeholder={ph}
+                  value={val}
+                  onChange={e => { set(e.target.value); setForcePwError(''); }}
+                  onKeyDown={e => e.key === 'Enter' && handleForceChangePw()}
+                  style={fpStyles.input}
+                  autoComplete="new-password"
+                />
+              </div>
+            ))}
+          </div>
+          {forcePwError && <p style={fpStyles.error}>{forcePwError}</p>}
+          <button
+            style={{ ...fpStyles.btn, ...(forcePwLoading ? { opacity: 0.5, cursor: 'not-allowed' } : {}) }}
+            onClick={handleForceChangePw}
+            disabled={forcePwLoading}
+          >
+            {forcePwLoading ? '設定中…' : '確認並進入'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page} className="auth-layout">
@@ -618,6 +692,103 @@ const lAgree = {
     color: T.accent,
     textDecoration: 'underline',
     textUnderlineOffset: '2px',
+  },
+};
+
+const fpStyles = {
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 999,
+    background: T.bgBase,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '24px',
+  },
+  card: {
+    width: '100%',
+    maxWidth: '380px',
+    background: T.bgSurface,
+    border: `1px solid ${T.border}`,
+    borderRadius: '16px',
+    padding: '44px 36px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+    boxShadow: '0 4px 32px rgba(0,0,0,0.08)',
+  },
+  logo: {
+    fontFamily: '"Cormorant Garamond","Noto Serif TC",serif',
+    fontSize: '32px',
+    fontWeight: 300,
+    letterSpacing: '0.18em',
+    color: T.textPrimary,
+    margin: 0,
+    textAlign: 'center',
+  },
+  title: {
+    fontFamily: '"Cormorant Garamond","Noto Serif TC",serif',
+    fontSize: '26px',
+    fontWeight: 400,
+    color: T.textPrimary,
+    margin: 0,
+    textAlign: 'center',
+  },
+  hint: {
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '13px',
+    color: T.textSecondary,
+    margin: 0,
+    lineHeight: 1.6,
+    textAlign: 'center',
+  },
+  fields: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+  },
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  label: {
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '12px',
+    fontWeight: 500,
+    color: T.textSecondary,
+  },
+  input: {
+    height: '44px',
+    padding: '0 14px',
+    borderRadius: '8px',
+    border: `1px solid ${T.border}`,
+    fontSize: '14px',
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    color: T.textPrimary,
+    backgroundColor: T.bgSubtle,
+    outline: 'none',
+    boxSizing: 'border-box',
+    width: '100%',
+  },
+  error: {
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '12px',
+    color: '#C4614A',
+    margin: 0,
+  },
+  btn: {
+    height: '44px',
+    backgroundColor: T.bgInverse,
+    color: T.textInverse,
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '15px',
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontWeight: 500,
+    cursor: 'pointer',
+    letterSpacing: '0.06em',
   },
 };
 

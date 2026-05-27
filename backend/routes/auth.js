@@ -209,6 +209,20 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: '此帳號已被停用，請聯絡管理員' });
     }
 
+    if (user.must_change_password) {
+      return res.json({
+        message: '登入成功，請設定新密碼',
+        mustChangePassword: true,
+        user: {
+          user_id: user.user_id, student_id: user.student_id,
+          nickname: user.nickname, department_grade: user.department_grade,
+          email: user.email, skin_type: user.skin_type,
+          is_admin: user.is_admin || false,
+          last_verified_at: user.last_verified_at,
+        },
+      });
+    }
+
     // 年度重驗檢查
     const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
     const WARN_DAYS = 30;
@@ -304,6 +318,28 @@ router.patch('/password', async (req, res) => {
   } catch (err) {
     console.error('[change-password]', err.message);
     res.status(500).json({ error: '更新密碼失敗' });
+  }
+});
+
+// ── 首次登入強制改密碼 POST /api/auth/force-change-password ───────
+router.post('/force-change-password', async (req, res) => {
+  const { user_id, new_password } = req.body;
+  if (!user_id || !new_password) return res.status(400).json({ error: '缺少必要欄位' });
+  if (new_password.length < 6) return res.status(400).json({ error: '密碼至少需要 6 個字元' });
+  try {
+    const check = await pool.query('SELECT must_change_password FROM users WHERE user_id = $1', [user_id]);
+    if (check.rows.length === 0) return res.status(404).json({ error: '找不到使用者' });
+    if (!check.rows[0].must_change_password) return res.status(403).json({ error: '此帳號無需強制更改密碼' });
+    const hashed = await bcrypt.hash(new_password, 10);
+    const result = await pool.query(
+      `UPDATE users SET password = $1, must_change_password = FALSE WHERE user_id = $2
+       RETURNING user_id, student_id, nickname, department_grade, email, skin_type, is_admin, last_verified_at`,
+      [hashed, user_id]
+    );
+    res.json({ message: '密碼已設定', user: result.rows[0] });
+  } catch (err) {
+    console.error('[force-change-password]', err.message);
+    res.status(500).json({ error: '密碼設定失敗' });
   }
 });
 
