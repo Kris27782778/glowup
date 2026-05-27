@@ -582,6 +582,104 @@
 }
 
 /* ══════════════════════════
+   Dashboard — Cover & Sidebar
+══════════════════════════ */
+@media (max-width: 768px) {
+  .dashboard-cover {
+    height: 160px !important;
+  }
+  /* Reset negative margin so sidebar doesn't clip into cover on mobile */
+  .dashboard-sidebar {
+    margin-top: -48px !important;
+  }
+}
+@media (max-width: 480px) {
+  .dashboard-cover {
+    height: 130px !important;
+  }
+  .dashboard-sidebar {
+    margin-top: -36px !important;
+  }
+}
+
+/* ══════════════════════════
+   Dashboard — Tab Bar (scrollable)
+══════════════════════════ */
+@media (max-width: 768px) {
+  .dashboard-tab-bar {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+  .dashboard-tab-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .dashboard-tab-btn {
+    padding: 12px 14px !important;
+    font-size: 13px !important;
+    flex-shrink: 0 !important;
+  }
+}
+@media (max-width: 360px) {
+  .dashboard-tab-btn {
+    padding: 12px 10px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* ══════════════════════════
+   AI Advisor (mobile padding)
+══════════════════════════ */
+@media (max-width: 768px) {
+  .ai-header {
+    padding: 20px 20px 0 !important;
+  }
+  .ai-step-row {
+    padding: 12px 20px 0 !important;
+    gap: 2px !important;
+  }
+  .ai-body {
+    padding: 16px 20px 20px !important;
+  }
+}
+@media (max-width: 480px) {
+  .ai-header {
+    padding: 16px 16px 0 !important;
+  }
+  .ai-step-row {
+    padding: 10px 16px 0 !important;
+  }
+  .ai-body {
+    padding: 14px 16px 18px !important;
+  }
+}
+
+/* ══════════════════════════
+   Community — tabs & recommend (mobile)
+══════════════════════════ */
+@media (max-width: 768px) {
+  /* Make tab row wrap so postCount doesn't push tabs off screen */
+  .community-tab-row {
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+  }
+  .community-tabs {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+  .community-tabs::-webkit-scrollbar {
+    display: none;
+  }
+}
+@media (max-width: 480px) {
+  /* Stack recommend cards single column on very small screens */
+  .community-recommend-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ══════════════════════════
    General utilities
 ══════════════════════════ */
 @media (max-width: 768px) {

@@ -574,7 +574,7 @@ export default function Community() {
                 <span style={s.recommendEyebrow}>為你推薦</span>
                 <span style={s.recommendSub}>根據你的膚質「{userSkinType}」</span>
               </div>
-              <div style={s.recommendRow}>
+              <div style={s.recommendRow} className="community-recommend-row">
                 {recommended.map(post => (
                   <div
                     key={post.id}
@@ -600,8 +600,8 @@ export default function Community() {
           
 
           {/* Tab 列 */}
-          <div style={s.tabRow}>
-            <div style={s.tabs}>
+          <div style={s.tabRow} className="community-tab-row">
+            <div style={s.tabs} className="community-tabs">
               {TABS.map(tab_ => (
                 <button
                   key={tab_.key}

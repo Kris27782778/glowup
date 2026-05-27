@@ -235,7 +235,7 @@ function Dashboard() {
       )}
 
       {/* ══ Cover Hero ══ */}
-      <div style={styles.cover}>
+      <div style={styles.cover} className="dashboard-cover">
         <div style={styles.coverOverlay} />
         {/* 裝飾圓 */}
         <div style={styles.coverDeco1} />
@@ -342,10 +342,11 @@ function Dashboard() {
         <main style={styles.main} className="dashboard-main">
 
           {/* Tab 列 */}
-          <div style={styles.tabBar}>
+          <div style={styles.tabBar} className="dashboard-tab-bar">
             {TAB_KEYS.map((key, i) => (
               <button
                 key={key}
+                className="dashboard-tab-btn"
                 style={{ ...styles.tabBtn, ...(tab === i ? styles.tabBtnActive : {}) }}
                 onClick={() => setTab(i)}
               >

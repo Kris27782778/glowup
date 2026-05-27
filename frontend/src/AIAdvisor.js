@@ -130,10 +130,10 @@ export default function AIAdvisor({ onClose, embedded = false }) {
   const sections = result ? parseResult(result) : [];
 
   return (
-    <div style={{ ...S.wrap, ...(embedded ? S.embedded : {}) }}>
+    <div style={{ ...S.wrap, ...(embedded ? S.embedded : {}) }} className="ai-advisor-wrap">
 
       {/* Header */}
-      <div style={S.header}>
+      <div style={S.header} className="ai-header">
         <div>
           <p style={S.eyebrow}>AI SKIN ADVISOR</p>
           <h2 style={S.title}>個人化保養顧問</h2>
@@ -143,7 +143,7 @@ export default function AIAdvisor({ onClose, embedded = false }) {
 
       {/* Step indicators */}
       {step < 4 && (
-        <div style={S.stepRow}>
+        <div style={S.stepRow} className="ai-step-row">
           {['膚質', '訴求', '產品'].map((label, idx) => {
             const n = idx + 1;
             const done = step > n;
@@ -178,7 +178,7 @@ export default function AIAdvisor({ onClose, embedded = false }) {
         </div>
       )}
 
-      <div style={S.body}>
+      <div style={S.body} className="ai-body">
 
         {/* ── Step 1: 膚質 ── */}
         {step === 1 && (
