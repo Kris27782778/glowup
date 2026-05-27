@@ -57,6 +57,58 @@ function Settings() {
   const [pwError,    setPwError]    = useState('');
   const [pwSuccess,  setPwSuccess]  = useState(false);
 
+  // Email verification state (for users who skipped during registration)
+  const user = (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
+  const needsVerify = user && !user.last_verified_at;
+  const [verifySent,    setVerifySent]    = useState(false);
+  const [verifyOtp,     setVerifyOtp]     = useState('');
+  const [verifyCooldown, setVerifyCooldown] = useState(0);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyError,   setVerifyError]   = useState('');
+  const [verifyDone,    setVerifyDone]    = useState(false);
+
+  const handleSendVerifyOtp = async () => {
+    if (verifyCooldown > 0 || verifyLoading) return;
+    setVerifyLoading(true); setVerifyError('');
+    try {
+      const res  = await fetch(`${API_BASE}/api/auth/send-verification`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setVerifySent(true);
+        setVerifyCooldown(60);
+        const timer = setInterval(() => {
+          setVerifyCooldown(prev => { if (prev <= 1) { clearInterval(timer); return 0; } return prev - 1; });
+        }, 1000);
+      } else {
+        setVerifyError(data.error || '傳送失敗，請稍後再試');
+      }
+    } catch { setVerifyError('無法連接伺服器'); }
+    finally { setVerifyLoading(false); }
+  };
+
+  const handleConfirmVerifyOtp = async () => {
+    if (!verifyOtp || verifyLoading) return;
+    setVerifyLoading(true); setVerifyError('');
+    try {
+      const res  = await fetch(`${API_BASE}/api/auth/reverify`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_id: user.student_id, email: user.email, otp: verifyOtp }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const updated = { ...user, last_verified_at: data.user.last_verified_at };
+        localStorage.setItem('user', JSON.stringify(updated));
+        setVerifyDone(true);
+      } else {
+        setVerifyError(data.error || '驗證失敗');
+      }
+    } catch { setVerifyError('無法連接伺服器'); }
+    finally { setVerifyLoading(false); }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('user');
     navigate('/');
@@ -140,6 +192,60 @@ function Settings() {
             ))}
           </div>
         </Section>
+
+        {/* ── 信箱驗證（跳過驗證的使用者） ── */}
+        {(needsVerify || verifyDone) && (
+          <Section label="信箱驗證">
+            <div style={s.verifyCard}>
+              {verifyDone ? (
+                <p style={{ ...s.verifyHint, color: '#5A9E6A' }}>信箱驗證已完成，感謝你！</p>
+              ) : (
+                <>
+                  <p style={s.verifyHint}>
+                    你的帳號尚未完成信箱驗證。請驗證 <strong>{user.email}</strong> 以確保帳號安全。
+                  </p>
+                  {!verifySent ? (
+                    <button
+                      style={{ ...s.verifyBtn, ...(verifyLoading ? { opacity: 0.5, cursor: 'not-allowed' } : {}) }}
+                      onClick={handleSendVerifyOtp}
+                      disabled={verifyLoading}
+                    >
+                      {verifyLoading ? '傳送中…' : '傳送驗證碼'}
+                    </button>
+                  ) : (
+                    <div style={s.otpRow}>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="輸入 6 位驗證碼"
+                        value={verifyOtp}
+                        onChange={e => { setVerifyOtp(e.target.value.replace(/\D/g, '')); setVerifyError(''); }}
+                        style={s.otpInput}
+                      />
+                      <button
+                        style={{ ...s.verifyBtn, ...(verifyLoading ? { opacity: 0.5, cursor: 'not-allowed' } : {}) }}
+                        onClick={handleConfirmVerifyOtp}
+                        disabled={verifyLoading}
+                      >
+                        {verifyLoading ? '驗證中…' : '確認'}
+                      </button>
+                    </div>
+                  )}
+                  {verifySent && (
+                    <p style={s.resendHint}>
+                      {verifyCooldown > 0
+                        ? `${verifyCooldown} 秒後可重新傳送`
+                        : <button style={s.resendLink} onClick={handleSendVerifyOtp}>重新傳送驗證碼</button>
+                      }
+                    </p>
+                  )}
+                  {verifyError && <p style={s.verifyErr}>{verifyError}</p>}
+                </>
+              )}
+            </div>
+          </Section>
+        )}
 
         {/* ── 帳號安全 ── */}
         <Section label={t.security}>
@@ -407,6 +513,75 @@ const s = {
     fontWeight: 500,
     cursor: 'pointer',
     transition: 'opacity 150ms',
+  },
+
+  /* Email verification */
+  verifyCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  verifyHint: {
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '13px',
+    color: 'var(--text-secondary)',
+    margin: 0,
+    lineHeight: 1.6,
+  },
+  verifyBtn: {
+    height: '38px',
+    padding: '0 18px',
+    backgroundColor: 'var(--accent)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '13px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    alignSelf: 'flex-start',
+  },
+  otpRow: {
+    display: 'flex',
+    gap: '10px',
+    alignItems: 'center',
+  },
+  otpInput: {
+    flex: 1,
+    height: '40px',
+    padding: '0 12px',
+    borderRadius: '8px',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-subtle)',
+    fontFamily: '"DM Sans",monospace,sans-serif',
+    fontSize: '18px',
+    letterSpacing: '0.2em',
+    color: 'var(--text-primary)',
+    outline: 'none',
+    boxSizing: 'border-box',
+    minWidth: 0,
+  },
+  resendHint: {
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '12px',
+    color: 'var(--text-tertiary)',
+    margin: 0,
+  },
+  resendLink: {
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '12px',
+    color: 'var(--accent)',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+  },
+  verifyErr: {
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '12px',
+    color: '#C4614A',
+    margin: 0,
   },
 
   /* Danger */

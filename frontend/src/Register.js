@@ -58,6 +58,7 @@ function Register() {
   const isSendingRef = useRef(false);
 
   const MAX_OTP_ATTEMPTS = 3;
+  const [skipVerification, setSkipVerification] = useState(false);
 
   // 進入驗證步驟時啟動倒計時
   useEffect(() => {
@@ -266,6 +267,7 @@ function Register() {
         email: `${form.email}@cloud.fju.edu.tw`,
         department_grade: departmentGrade,
         skin_type: skinTypeKey || '',
+        ...(skipVerification ? { skip_verification: true } : {}),
       };
       const response = await fetch(`${API_BASE}/api/auth/register`, {
         method: 'POST',
@@ -599,6 +601,22 @@ function Register() {
                   </button>
                 )}
               </div>
+
+              {/* 三次失敗後顯示跳過選項 */}
+              {otpAttempts >= MAX_OTP_ATTEMPTS && (
+                <div style={verifyStyles.skipBox}>
+                  <p style={verifyStyles.skipHint}>
+                    驗證碼輸入已達上限。你可以暫時跳過，稍後在「個人資料」頁面完成信箱驗證。
+                  </p>
+                  <button
+                    style={verifyStyles.skipBtn}
+                    onClick={() => { setSkipVerification(true); setStep(3); }}
+                    type="button"
+                  >
+                    暫時跳過，先完成註冊
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1184,6 +1202,33 @@ const verifyStyles = {
     cursor: 'pointer',
     textDecoration: 'underline',
     textUnderlineOffset: '3px',
+  },
+  skipBox: {
+    marginTop: '20px',
+    padding: '16px',
+    background: '#fff8e1',
+    border: '1px solid #ffe082',
+    borderRadius: '10px',
+    textAlign: 'center',
+  },
+  skipHint: {
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '13px',
+    color: '#795548',
+    marginBottom: '12px',
+    lineHeight: 1.6,
+  },
+  skipBtn: {
+    display: 'inline-block',
+    padding: '9px 20px',
+    background: '#ff9800',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontFamily: '"DM Sans", "Noto Sans TC", sans-serif',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
   },
 };
 

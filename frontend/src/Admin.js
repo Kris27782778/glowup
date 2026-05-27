@@ -1996,9 +1996,35 @@ function ToolsTab() {
   const [sending,     setSending]     = useState(false);
   const [sendResult,  setSendResult]  = useState(null);
 
+  // Manual user creation
+  const [newUser, setNewUser] = useState({ student_id:'', email:'', nickname:'', real_name:'', department_grade:'', password:'' });
+  const [creating,    setCreating]    = useState(false);
+  const [createResult, setCreateResult] = useState(null);
+
   useEffect(() => {
     adminFetch('/questions/no-ai').then(d => setNoAiList(d.data || [])).catch(() => setNoAiList([]));
   }, []);
+
+  const handleCreateUser = async () => {
+    const { student_id, email, nickname, password } = newUser;
+    if (!student_id || !email || !nickname || !password) {
+      setCreateResult({ ok: false, msg: '學號、信箱、暱稱、密碼為必填' }); return;
+    }
+    if (password.length < 6) {
+      setCreateResult({ ok: false, msg: '密碼至少 6 個字元' }); return;
+    }
+    setCreating(true); setCreateResult(null);
+    try {
+      const res = await adminFetch('/users', { method: 'POST', body: newUser });
+      if (res.ok) {
+        setCreateResult({ ok: true, msg: `✓ 已建立帳號：${res.user.student_id} / ${res.user.nickname}` });
+        setNewUser({ student_id:'', email:'', nickname:'', real_name:'', department_grade:'', password:'' });
+      } else {
+        setCreateResult({ ok: false, msg: res.error || '建立失敗' });
+      }
+    } catch { setCreateResult({ ok: false, msg: '無法連線至伺服器' }); }
+    finally { setCreating(false); }
+  };
 
   const handleRetry = async (id) => {
     setRetrying(r => ({ ...r, [id]: true }));
@@ -2033,8 +2059,62 @@ function ToolsTab() {
     color:C.text, outline:'none', minWidth:'280px',
   };
 
+  const newUserField = (label, key, opts = {}) => (
+    <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+      <label style={{ fontSize:'11px', fontWeight:500, color:C.textDim, fontFamily:'"DM Sans","Noto Sans TC",sans-serif', letterSpacing:'0.06em', textTransform:'uppercase' }}>
+        {label}{!opts.optional && <span style={{ color: C.red }}> *</span>}
+      </label>
+      <input
+        style={inputSt}
+        type={opts.type || 'text'}
+        placeholder={opts.placeholder || ''}
+        value={newUser[key]}
+        onChange={e => { setNewUser(u => ({ ...u, [key]: e.target.value })); setCreateResult(null); }}
+        autoComplete="off"
+      />
+    </div>
+  );
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'28px' }}>
+
+      {/* 手動新增會員 */}
+      <div style={sectionStyle}>
+        <h3 style={sectionTitle}>手動新增會員</h3>
+        <div style={{ padding:'0 20px 20px', display:'flex', flexDirection:'column', gap:'14px' }}>
+          <p style={{ margin:0, fontSize:'13px', color:C.textSub }}>
+            直接建立帳號，信箱驗證狀態標記為「已驗證」，使用者可直接登入。
+          </p>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+            {newUserField('學號', 'student_id', { placeholder: '例：413402057' })}
+            {newUserField('信箱', 'email', { placeholder: '例：413402057@cloud.fju.edu.tw' })}
+            {newUserField('暱稱', 'nickname', { placeholder: '顯示名稱' })}
+            {newUserField('姓名', 'real_name', { placeholder: '選填', optional: true })}
+            {newUserField('系級', 'department_grade', { placeholder: '例：傳播系三甲', optional: true })}
+            {newUserField('密碼', 'password', { type: 'password', placeholder: '至少 6 個字元' })}
+          </div>
+          {createResult && (
+            <p style={{ margin:0, fontSize:'13px', fontWeight:500, color: createResult.ok ? C.green : C.red }}>
+              {createResult.msg}
+            </p>
+          )}
+          <button
+            onClick={handleCreateUser}
+            disabled={creating}
+            style={{
+              height:'38px', padding:'0 22px', borderRadius:'8px', border:'none',
+              background: creating ? C.accentLight : C.accent,
+              color: creating ? C.accentText : '#fff',
+              fontSize:'13px', fontWeight:600,
+              fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
+              cursor: creating ? 'not-allowed' : 'pointer',
+              alignSelf:'flex-start',
+            }}
+          >
+            {creating ? '建立中…' : '建立帳號'}
+          </button>
+        </div>
+      </div>
 
       {/* 驗證信補送 */}
       <div style={sectionStyle}>

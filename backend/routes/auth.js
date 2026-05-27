@@ -123,30 +123,32 @@ router.post('/verify-otp', async (req, res) => {
 
 // ── 註冊 POST /api/auth/register ─────────────────────────────────
 router.post('/register', async (req, res) => {
-  const { student_id, password, nickname, real_name, department_grade, email, skin_type } = req.body;
+  const { student_id, password, nickname, real_name, department_grade, email, skin_type, skip_verification } = req.body;
 
   try {
-    // 確認 email 已通過驗證（最近 30 分鐘內）
-    const verified = await pool.query(
-      `SELECT id FROM email_verifications
-       WHERE email = $1 AND verified_at IS NOT NULL
-         AND verified_at > NOW() - INTERVAL '30 minutes'
-       ORDER BY verified_at DESC LIMIT 1`,
-      [email]
-    );
-
-    if (verified.rows.length === 0) {
-      return res.status(403).json({ error: '電子郵件尚未完成驗證，請重新驗證' });
+    if (!skip_verification) {
+      // 確認 email 已通過驗證（最近 30 分鐘內）
+      const verified = await pool.query(
+        `SELECT id FROM email_verifications
+         WHERE email = $1 AND verified_at IS NOT NULL
+           AND verified_at > NOW() - INTERVAL '30 minutes'
+         ORDER BY verified_at DESC LIMIT 1`,
+        [email]
+      );
+      if (verified.rows.length === 0) {
+        return res.status(403).json({ error: '電子郵件尚未完成驗證，請重新驗證' });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    // skip_verification 時 last_verified_at 設為 NULL，後續在個人資料補驗證
     const result = await pool.query(
       `INSERT INTO users (student_id, password, nickname, real_name, department_grade, email, skin_type, last_verified_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING *`,
-      [student_id, hashedPassword, nickname, real_name || null, department_grade, email, skin_type]
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [student_id, hashedPassword, nickname, real_name || null, department_grade, email, skin_type,
+       skip_verification ? null : new Date()]
     );
 
-    // 清理驗證紀錄
     await pool.query('DELETE FROM email_verifications WHERE email = $1', [email]);
 
     res.json({ message: '註冊成功', user: result.rows[0] });
