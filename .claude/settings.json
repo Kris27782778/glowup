@@ -3,7 +3,8 @@
     "allow": [
       "Bash(node -e ' *)",
       "Bash(git count-objects *)",
-      "Bash(node -e \"require\\('./routes/admin'\\)\")"
+      "Bash(node -e \"require\\('./routes/admin'\\)\")",
+      "Bash(curl -s -X POST http://localhost:5001/api/admin/verify-admin -H 'Content-Type: application/json' -d '{\"student_id\":\"413402435\"}')"
     ]
   }
 }
