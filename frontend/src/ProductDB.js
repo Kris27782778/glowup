@@ -622,16 +622,19 @@ const fetchProducts = async (pageNum = page) => {
                                   ...styles.compareBtn,
                                   backgroundColor: inCompare ? T.accent : T.bgSurface,
                                   borderColor: inCompare ? T.accent : T.border,
+                                  flexDirection: 'column',
+                                  gap: '2px',
                                 }}
                                 onClick={e => toggleCompare(e, p)}
                                 title={inCompare ? '移出比較' : '加入比較'}
                               >
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
                                   stroke={inCompare ? '#fff' : T.accent}
                                   strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <rect x="2" y="3" width="8" height="18" rx="1.5"/>
                                   <rect x="14" y="3" width="8" height="18" rx="1.5"/>
                                 </svg>
+                                <span style={{ fontSize: '9px', fontFamily: '"DM Sans","Noto Sans TC",sans-serif', color: inCompare ? '#fff' : T.accent, lineHeight: 1 }}>比較</span>
                               </button>
                             );
                           })()}
@@ -1632,8 +1635,8 @@ const styles = {
     position: 'absolute',
     bottom: '16px',
     right: '16px',
-    width: '34px',
-    height: '34px',
+    width: '40px',
+    height: '40px',
     borderRadius: '50%',
     border: `1px solid ${T.border}`,
     backgroundColor: T.bgSurface,
@@ -1647,9 +1650,9 @@ const styles = {
   compareBtn: {
     position: 'absolute',
     bottom: '16px',
-    right: '58px', // 16(right) + 34(fav) + 8(gap)
-    width: '34px',
-    height: '34px',
+    right: '64px', // 16(right) + 40(fav) + 8(gap)
+    width: '40px',
+    height: '40px',
     borderRadius: '50%',
     border: `1px solid ${T.border}`,
     backgroundColor: T.bgSurface,
