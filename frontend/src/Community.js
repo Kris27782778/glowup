@@ -373,6 +373,7 @@ export default function Community() {
   const [activeTags, setActiveTags] = useState([]);
   const [search, setSearch] = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [showNewPost, setShowNewPost] = useState(false);
 
   const [apiPosts,    setApiPosts]    = useState([]);
@@ -473,6 +474,12 @@ export default function Community() {
 
   useReveal();
 
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 300);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   // 取得當前使用者膚質（用於個人化推薦）
   const storedUser = localStorage.getItem('user');
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
@@ -497,7 +504,7 @@ export default function Community() {
   const isPersonalTab = tab === 'mine' || tab === 'bookmarks';
   const filtered = sourcePosts
     .filter(p => activeTags.length === 0 || activeTags.every(tag => p.tags.includes(tag)))
-    .filter(p => !search || p.title.includes(search) || p.excerpt.includes(search))
+    .filter(p => !search || p.title.includes(search) || p.excerpt.includes(search) || (Array.isArray(p.tags) && p.tags.some(tag => tag.includes(search))))
     .sort((a, b) => tab === 'hot' ? 0 : b.id - a.id);
 
   // 根據用戶膚質推薦貼文
@@ -754,6 +761,17 @@ export default function Community() {
 
         </aside>
       </div>
+
+      {/* Back to top */}
+      {showScrollTop && (
+        <button
+          style={s.scrollTopBtn}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="回到頂部"
+        >
+          ↑
+        </button>
+      )}
     </div>
   );
 }
@@ -1286,5 +1304,17 @@ const s = {
     borderRadius: '8px',
     fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
     fontSize: '13px', color: T.textSecondary, cursor: 'pointer',
+  },
+
+  /* Back to top */
+  scrollTopBtn: {
+    position: 'fixed', bottom: '28px', right: '28px', zIndex: 999,
+    width: '40px', height: '40px',
+    backgroundColor: T.accent, color: '#fff',
+    border: 'none', borderRadius: '50%',
+    fontSize: '18px', lineHeight: 1, cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(196,137,122,0.35)',
+    transition: 'background-color 150ms, transform 150ms',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
 };

@@ -622,16 +622,19 @@ const fetchProducts = async (pageNum = page) => {
                                   ...styles.compareBtn,
                                   backgroundColor: inCompare ? T.accent : T.bgSurface,
                                   borderColor: inCompare ? T.accent : T.border,
+                                  flexDirection: 'column',
+                                  gap: '2px',
                                 }}
                                 onClick={e => toggleCompare(e, p)}
                                 title={inCompare ? '移出比較' : '加入比較'}
                               >
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
                                   stroke={inCompare ? '#fff' : T.accent}
                                   strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <rect x="2" y="3" width="8" height="18" rx="1.5"/>
                                   <rect x="14" y="3" width="8" height="18" rx="1.5"/>
                                 </svg>
+                                <span style={{ fontSize: '8px', fontFamily: '"DM Sans","Noto Sans TC",sans-serif', color: inCompare ? '#fff' : T.accent, lineHeight: 1 }}>比較</span>
                               </button>
                             );
                           })()}
@@ -642,7 +645,7 @@ const fetchProducts = async (pageNum = page) => {
                           onClick={e => { e.stopPropagation(); toggleFavorite(p.product_id); }}
                             title={favorites.includes(p.product_id) ? '取消收藏' : '加入收藏'}
                           >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill={favorites.includes(p.product_id) ? T.accent : 'none'} stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill={favorites.includes(p.product_id) ? T.accent : 'none'} stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                             </svg>
                           </button>
@@ -1632,8 +1635,8 @@ const styles = {
     position: 'absolute',
     bottom: '16px',
     right: '16px',
-    width: '34px',
-    height: '34px',
+    width: '30px',
+    height: '30px',
     borderRadius: '50%',
     border: `1px solid ${T.border}`,
     backgroundColor: T.bgSurface,
@@ -1647,9 +1650,9 @@ const styles = {
   compareBtn: {
     position: 'absolute',
     bottom: '16px',
-    right: '58px', // 16(right) + 34(fav) + 8(gap)
-    width: '34px',
-    height: '34px',
+    right: '54px', // 16(right) + 30(fav) + 8(gap)
+    width: '30px',
+    height: '30px',
     borderRadius: '50%',
     border: `1px solid ${T.border}`,
     backgroundColor: T.bgSurface,
