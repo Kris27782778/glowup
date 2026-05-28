@@ -157,7 +157,8 @@ router.get('/trending-tags', async (req, res) => {
   try {
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    const { data, error } = await supabase
+    // 本週貼文：決定熱門排名
+    const { data: weekData, error } = await supabase
       .from('forum_posts')
       .select('skin_type, domain, sub_category, effect_tags')
       .eq('status', 'active')
@@ -165,16 +166,33 @@ router.get('/trending-tags', async (req, res) => {
 
     if (error) return res.status(400).json({ error: error.message });
 
-    const counts = {};
-    for (const post of data || []) {
+    const weekCounts = {};
+    for (const post of weekData || []) {
       const tags = [post.skin_type, post.domain, post.sub_category, ...(post.effect_tags || [])].filter(Boolean);
-      for (const tag of tags) counts[tag] = (counts[tag] || 0) + 1;
+      for (const tag of tags) weekCounts[tag] = (weekCounts[tag] || 0) + 1;
     }
 
-    const result = Object.entries(counts)
+    // 取本週 top-5 tag 名稱
+    const topTags = Object.entries(weekCounts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([tag, count]) => ({ tag: `#${tag}`, count }));
+      .map(([tag]) => tag);
+
+    if (topTags.length === 0) return res.json([]);
+
+    // 全部貼文：算各 tag 的總貼文數（顯示用）
+    const { data: allData } = await supabase
+      .from('forum_posts')
+      .select('skin_type, domain, sub_category, effect_tags')
+      .eq('status', 'active');
+
+    const allCounts = {};
+    for (const post of allData || []) {
+      const tags = [post.skin_type, post.domain, post.sub_category, ...(post.effect_tags || [])].filter(Boolean);
+      for (const tag of tags) allCounts[tag] = (allCounts[tag] || 0) + 1;
+    }
+
+    const result = topTags.map(tag => ({ tag: `#${tag}`, count: allCounts[tag] || 0 }));
 
     res.json(result);
   } catch (err) {
