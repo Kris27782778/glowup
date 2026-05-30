@@ -682,19 +682,28 @@ function Dashboard() {
       {/* ── AI 顧問浮動按鈕 ── */}
       <button
         style={{
-          position: 'fixed', bottom: '32px', right: '32px', zIndex: 300,
-          width: '52px', height: '52px', borderRadius: '50%',
-          background: T.bgInverse, border: 'none', cursor: 'pointer',
-          boxShadow: '0 4px 20px rgba(28,25,23,0.25)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '22px', transition: 'transform 180ms, box-shadow 180ms',
+          position: 'fixed', bottom: '32px', right: '32px', zIndex: 1000,
+          display: 'flex', alignItems: 'center', gap: '8px',
+          padding: '0 20px 0 14px', height: '48px', borderRadius: '100px',
+          background: 'linear-gradient(135deg, #C9A86C 0%, #B8895A 55%, #9E6E42 100%)',
+          border: 'none', cursor: 'pointer',
+          boxShadow: '0 4px 20px rgba(185,130,65,0.50), 0 2px 8px rgba(28,25,23,0.18)',
+          transition: 'transform 200ms ease, box-shadow 200ms ease',
+          fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
         }}
-        title="AI 保養顧問"
+        title="AI 個人化保養顧問"
         onClick={() => setShowAI(true)}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(28,25,23,0.35)'; }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(28,25,23,0.25)'; }}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 8px 32px rgba(185,130,65,0.60), 0 4px 14px rgba(28,25,23,0.22)';
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = 'scale(1) translateY(0)';
+          e.currentTarget.style.boxShadow = '0 4px 20px rgba(185,130,65,0.50), 0 2px 8px rgba(28,25,23,0.18)';
+        }}
       >
-        ✦
+        <span style={{ fontSize: '15px', color: '#FFF8F0', lineHeight: 1, flexShrink: 0 }}>✦</span>
+        <span style={{ fontSize: '13px', fontWeight: 600, color: '#FFF8F0', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>AI 顧問</span>
       </button>
 
       {/* ── AI 顧問 Modal ── */}
