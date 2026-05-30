@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import API_BASE from './config';
 import { useReveal } from './hooks/useReveal';
@@ -679,53 +680,57 @@ function Dashboard() {
         </main>
       </div>
 
-      {/* ── AI 顧問浮動按鈕 ── */}
-      <button
-        style={{
-          position: 'fixed', bottom: '32px', right: '32px', zIndex: 1000,
-          display: 'flex', alignItems: 'center', gap: '8px',
-          padding: '0 20px 0 14px', height: '48px', borderRadius: '100px',
-          background: 'linear-gradient(135deg, #C9A86C 0%, #B8895A 55%, #9E6E42 100%)',
-          border: 'none', cursor: 'pointer',
-          boxShadow: '0 4px 20px rgba(185,130,65,0.50), 0 2px 8px rgba(28,25,23,0.18)',
-          transition: 'transform 200ms ease, box-shadow 200ms ease',
-          fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
-        }}
-        title="AI 個人化保養顧問"
-        onClick={() => setShowAI(true)}
-        onMouseEnter={e => {
-          e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-          e.currentTarget.style.boxShadow = '0 8px 32px rgba(185,130,65,0.60), 0 4px 14px rgba(28,25,23,0.22)';
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.transform = 'scale(1) translateY(0)';
-          e.currentTarget.style.boxShadow = '0 4px 20px rgba(185,130,65,0.50), 0 2px 8px rgba(28,25,23,0.18)';
-        }}
-      >
-        <span style={{ fontSize: '15px', color: '#FFF8F0', lineHeight: 1, flexShrink: 0 }}>✦</span>
-        <span style={{ fontSize: '13px', fontWeight: 600, color: '#FFF8F0', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>AI 顧問</span>
-      </button>
+      {/* ── AI 顧問浮動按鈕 + Modal（Portal 掛到 body，繞過父層 transform） ── */}
+      {createPortal(
+        <>
+          <button
+            style={{
+              position: 'fixed', bottom: '32px', right: '32px', zIndex: 1000,
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '0 20px 0 14px', height: '48px', borderRadius: '100px',
+              background: 'linear-gradient(135deg, #C9A86C 0%, #B8895A 55%, #9E6E42 100%)',
+              border: 'none', cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(185,130,65,0.50), 0 2px 8px rgba(28,25,23,0.18)',
+              transition: 'transform 200ms ease, box-shadow 200ms ease',
+              fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+            }}
+            title="AI 個人化保養顧問"
+            onClick={() => setShowAI(true)}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 32px rgba(185,130,65,0.60), 0 4px 14px rgba(28,25,23,0.22)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'scale(1) translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(185,130,65,0.50), 0 2px 8px rgba(28,25,23,0.18)';
+            }}
+          >
+            <span style={{ fontSize: '15px', color: '#FFF8F0', lineHeight: 1, flexShrink: 0 }}>✦</span>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#FFF8F0', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>AI 顧問</span>
+          </button>
 
-      {/* ── AI 顧問 Modal ── */}
-      {showAI && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 400,
-            background: 'rgba(28,25,23,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '24px',
-          }}
-          onClick={e => { if (e.target === e.currentTarget) setShowAI(false); }}
-        >
-          <div style={{
-            width: '100%', maxWidth: '560px', maxHeight: '85vh',
-            borderRadius: '20px', overflow: 'hidden',
-            boxShadow: '0 20px 60px rgba(28,25,23,0.3)',
-            display: 'flex', flexDirection: 'column',
-          }}>
-            <AIAdvisor embedded onClose={() => setShowAI(false)} />
-          </div>
-        </div>
+          {showAI && (
+            <div
+              style={{
+                position: 'fixed', inset: 0, zIndex: 1100,
+                background: 'rgba(28,25,23,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '24px',
+              }}
+              onClick={e => { if (e.target === e.currentTarget) setShowAI(false); }}
+            >
+              <div style={{
+                width: '100%', maxWidth: '560px', maxHeight: '85vh',
+                borderRadius: '20px', overflow: 'hidden',
+                boxShadow: '0 20px 60px rgba(28,25,23,0.3)',
+                display: 'flex', flexDirection: 'column',
+              }}>
+                <AIAdvisor embedded onClose={() => setShowAI(false)} />
+              </div>
+            </div>
+          )}
+        </>,
+        document.body
       )}
 
     </div>
