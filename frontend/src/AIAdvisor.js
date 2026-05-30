@@ -54,6 +54,8 @@ export default function AIAdvisor({ onClose, embedded = false }) {
   const [search, setSearch]           = useState('');
   const [allProducts, setAllProducts] = useState([]);
   const [loadingP, setLoadingP]       = useState(false);
+  const [customProducts, setCustomProducts] = useState([]);
+  const [customInput, setCustomInput]       = useState('');
   const [loading, setLoading]         = useState(false);
   const [result, setResult]           = useState('');
   const resultRef = useRef(null);
@@ -84,8 +86,17 @@ export default function AIAdvisor({ onClose, embedded = false }) {
 
   const removeProduct = id => setProducts(prev => prev.filter(p => p.product_id !== id));
 
+  const removeCustomProduct = name => setCustomProducts(prev => prev.filter(n => n !== name));
+
+  const addCustomProduct = () => {
+    const t = customInput.trim();
+    if (t && !customProducts.includes(t)) setCustomProducts(prev => [...prev, t]);
+    setCustomInput('');
+  };
+
   const reset = () => {
-    setStep(1); setSkinType(''); setConcerns([]); setProducts([]); setResult('');
+    setStep(1); setSkinType(''); setConcerns([]); setProducts([]);
+    setCustomProducts([]); setCustomInput(''); setResult('');
   };
 
   const submit = async () => {
@@ -97,10 +108,13 @@ export default function AIAdvisor({ onClose, embedded = false }) {
         body: JSON.stringify({
           skin_type: skinType,
           concerns: concerns.join('、'),
-          products: products.map(p => ({
-            name: p.name, brand: p.brand,
-            sub_category: p.sub_category, score: p.score,
-          })),
+          products: [
+            ...products.map(p => ({
+              name: p.name, brand: p.brand,
+              sub_category: p.sub_category, score: p.score,
+            })),
+            ...customProducts.map(name => ({ name, brand: null, sub_category: null, score: null })),
+          ],
         }),
       });
       const reader = res.body.getReader();
@@ -260,12 +274,18 @@ export default function AIAdvisor({ onClose, embedded = false }) {
             <p style={S.hint}>選填・點選加入，讓建議更精準</p>
 
             {/* 已選標籤 */}
-            {products.length > 0 && (
+            {(products.length > 0 || customProducts.length > 0) && (
               <div style={S.tagsWrap}>
                 {products.map(p => (
                   <div key={p.product_id} style={S.productTag}>
                     <span style={{ fontSize: '12px', fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>{p.name}</span>
                     <button style={S.removeBtn} onClick={() => removeProduct(p.product_id)}>✕</button>
+                  </div>
+                ))}
+                {customProducts.map(name => (
+                  <div key={`custom-${name}`} style={S.customTag}>
+                    <span style={{ fontSize: '12px', fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>{name}</span>
+                    <button style={S.removeBtn} onClick={() => removeCustomProduct(name)}>✕</button>
                   </div>
                 ))}
               </div>
@@ -325,6 +345,29 @@ export default function AIAdvisor({ onClose, embedded = false }) {
                 )}
               </div>
             )}
+
+            {/* 自行輸入產品 */}
+            <div style={{ marginTop: '12px' }}>
+              <p style={{ ...S.hint, margin: '0 0 6px' }}>找不到的產品？直接輸入名稱</p>
+              <div style={{ ...S.searchWrap, background: C.surface }}>
+                <span style={{ ...S.searchIcon, fontSize: '13px' }}>✎</span>
+                <input
+                  style={S.searchInput}
+                  placeholder="輸入產品名稱，按 Enter 新增"
+                  value={customInput}
+                  onChange={e => setCustomInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomProduct(); } }}
+                />
+                {customInput.trim() && (
+                  <button
+                    style={{ ...S.removeBtn, padding: '0 14px', fontSize: '18px', color: C.accent }}
+                    onClick={addCustomProduct}
+                  >
+                    +
+                  </button>
+                )}
+              </div>
+            </div>
 
             <div style={S.btnRow}>
               <button style={S.backBtn} onClick={() => setStep(2)}>← 上一步</button>
@@ -508,6 +551,13 @@ const S = {
     padding: '4px 10px 4px 12px',
     background: 'rgba(196,137,122,0.10)',
     border: '1px solid rgba(196,137,122,0.28)',
+    borderRadius: '999px',
+  },
+  customTag: {
+    display: 'flex', alignItems: 'center', gap: '6px',
+    padding: '4px 10px 4px 12px',
+    background: 'rgba(107,94,88,0.07)',
+    border: '1px solid rgba(107,94,88,0.20)',
     borderRadius: '999px',
   },
   removeBtn: {
