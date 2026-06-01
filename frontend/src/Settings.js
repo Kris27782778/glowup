@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from './hooks/useSettings';
 import API_BASE from './config';
@@ -48,6 +49,13 @@ function Settings() {
   const navigate = useNavigate();
   const { settings, update } = useSettings();
   const t = LANG[settings.language] || LANG['zh-TW'];
+
+  const [googleBound,      setGoogleBound]      = useState(null);
+  const [googleSuccess,    setGoogleSuccess]    = useState(false);
+  const [googleNoToken,    setGoogleNoToken]    = useState(false);
+  const [googleError,      setGoogleError]      = useState('');
+  const [googleEmail,      setGoogleEmail]      = useState(null);
+  const [showUnbindModal,  setShowUnbindModal]  = useState(false);
 
   const [showPwForm, setShowPwForm] = useState(false);
   const [currentPw,  setCurrentPw]  = useState('');
@@ -107,6 +115,70 @@ function Settings() {
       }
     } catch { setVerifyError('無法連接伺服器'); }
     finally { setVerifyLoading(false); }
+  };
+
+  // Google OAuth 狀態查詢與綁定成功偵測
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('google') === 'success') {
+      setGoogleSuccess(true);
+      setGoogleBound(true);
+      window.history.replaceState({}, '', '/settings');
+      return;
+    }
+    if (params.get('error') === 'session_lost') {
+      setGoogleError('Session 已過期，請重新點擊綁定按鈕');
+      window.history.replaceState({}, '', '/settings');
+    }
+    const token = localStorage.getItem('glowToken');
+    if (!token) { setGoogleNoToken(true); setGoogleBound(false); return; }
+    fetch(`${API_BASE}/api/auth/google/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(data => { setGoogleBound(!!data.bound); if (data.email) setGoogleEmail(data.email); })
+      .catch(() => setGoogleBound(false));
+  }, []);
+
+  const handleUnbindClick = () => setShowUnbindModal(true);
+
+  const confirmUnbind = async () => {
+    const token = localStorage.getItem('glowToken');
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/google/unbind`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setGoogleBound(false);
+        setGoogleSuccess(false);
+        setGoogleError('');
+      } else {
+        const data = await res.json();
+        setGoogleError(data.error || '取消綁定失敗，請稍後再試');
+      }
+    } catch {
+      setGoogleError('無法連接伺服器，請稍後再試');
+    }
+  };
+
+  const handleBindGoogle = async () => {
+    const token = localStorage.getItem('glowToken');
+    if (!token) { setGoogleError('請重新登入後再綁定 Google 帳號'); return; }
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/google/bind-init`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        window.location.href = `${API_BASE}/api/auth/google/bind?state=${data.state}`;
+      } else {
+        setGoogleError(data.error || '綁定初始化失敗，請重新登入後再試');
+      }
+    } catch {
+      setGoogleError('無法連接伺服器，請稍後再試');
+    }
   };
 
   const handleLogout = () => {
@@ -247,6 +319,39 @@ function Settings() {
           </Section>
         )}
 
+        {/* ── Google 帳號綁定 ── */}
+        <Section label="Google 帳號">
+          <div style={s.verifyCard}>
+            {googleBound === null && (
+              <p style={s.verifyHint}>載入中…</p>
+            )}
+            {googleBound === true && (
+              <div>
+                {googleSuccess && (
+                  <p style={{ ...s.verifyHint, color: '#5A9E6A', marginBottom: '8px' }}>綁定成功！</p>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ color: '#4CAF50', fontSize: '14px', fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>✓ 已綁定</span>
+                  <span style={{ fontSize: '14px', color: '#8C6A5A', fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>{googleEmail}</span>
+                </div>
+                <button onClick={handleUnbindClick} style={{ fontSize: '12px', color: '#B0906A', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: '"DM Sans","Noto Sans TC",sans-serif', padding: 0 }}>
+                  取消綁定
+                </button>
+              </div>
+            )}
+            {googleBound === false && (
+              googleNoToken
+                ? <p style={s.verifyHint}>請重新登入後使用此功能</p>
+                : (
+                  <button style={s.verifyBtn} onClick={handleBindGoogle}>
+                    綁定 Google 帳號
+                  </button>
+                )
+            )}
+            {googleError && <p style={s.verifyErr}>{googleError}</p>}
+          </div>
+        </Section>
+
         {/* ── 帳號安全 ── */}
         <Section label={t.security}>
           <button
@@ -303,6 +408,45 @@ function Settings() {
         <p style={s.footer}>GLŌW · {t.version} 1.0.0</p>
 
       </div>
+
+      {/* ── 取消綁定確認 Modal（portal 掛到 body，不受祖先 transform 影響）── */}
+      {showUnbindModal && createPortal(
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.35)', zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => setShowUnbindModal(false)}>
+          <div style={{
+            background: '#FAF7F5', borderRadius: '16px',
+            padding: '32px', width: '320px', textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#3D2B1F', fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>
+              取消綁定 Google 帳號
+            </div>
+            <div style={{ fontSize: '14px', color: '#8C6A5A', marginBottom: '24px', lineHeight: '1.6', fontFamily: '"DM Sans","Noto Sans TC",sans-serif' }}>
+              取消後將無法使用 Google 帳號登入，確定要繼續嗎？
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button onClick={() => setShowUnbindModal(false)} style={{
+                padding: '10px 24px', borderRadius: '8px', border: '1px solid #D4B5A0',
+                background: 'transparent', color: '#8C6A5A', cursor: 'pointer', fontSize: '14px',
+                fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+              }}>
+                取消
+              </button>
+              <button onClick={() => { setShowUnbindModal(false); confirmUnbind(); }} style={{
+                padding: '10px 24px', borderRadius: '8px', border: 'none',
+                background: '#C4897A', color: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: '600',
+                fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+              }}>
+                確定取消綁定
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
@@ -582,6 +726,19 @@ const s = {
     fontSize: '12px',
     color: '#C4614A',
     margin: 0,
+  },
+
+  unbindBtn: {
+    height: '28px',
+    padding: '0 12px',
+    backgroundColor: 'transparent',
+    color: 'var(--text-tertiary)',
+    border: '1px solid var(--border)',
+    borderRadius: '6px',
+    fontFamily: '"DM Sans","Noto Sans TC",sans-serif',
+    fontSize: '11px',
+    cursor: 'pointer',
+    flexShrink: 0,
   },
 
   /* Danger */

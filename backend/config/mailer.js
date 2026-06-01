@@ -1,4 +1,13 @@
 const https = require('https');
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
 
 async function sendVerificationEmail(to, otp) {
   const html = `
@@ -176,4 +185,62 @@ async function sendWelcomeEmail(to, nickname, studentId, tempPassword) {
   });
 }
 
-module.exports = { sendVerificationEmail, sendWelcomeEmail };
+async function sendGoogleBindEmail(to, nickname, googleEmail) {
+  const html = `
+    <!DOCTYPE html>
+    <html lang="zh-TW">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+    <body style="margin:0;padding:0;background:#F7F4F2;font-family:'DM Sans',sans-serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F4F2;padding:40px 0;">
+        <tr><td align="center">
+          <table width="480" cellpadding="0" cellspacing="0"
+            style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.06);">
+            <tr>
+              <td style="background:#1C1917;padding:36px 40px;text-align:center;">
+                <p style="margin:0;font-family:'Cormorant Garamond',Georgia,serif;
+                           font-size:36px;font-weight:300;letter-spacing:0.18em;color:#F7F4F2;">GL&#332;W</p>
+                <p style="margin:8px 0 0;font-size:11px;letter-spacing:0.2em;
+                           color:rgba(196,137,122,0.8);text-transform:uppercase;">輔大美妝交流平台</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:40px 40px 32px;">
+                <p style="margin:0 0 20px;font-size:20px;font-weight:600;color:#1C1917;">Google 帳號綁定成功</p>
+                <p style="margin:0 0 16px;font-size:14px;color:#6B5E58;line-height:1.8;">
+                  Hi ${nickname}，
+                </p>
+                <p style="margin:0 0 16px;font-size:14px;color:#6B5E58;line-height:1.8;">
+                  您的 GLŌW 帳號已成功綁定 Google 帳號（<strong>${googleEmail}</strong>）。
+                </p>
+                <p style="margin:0 0 16px;font-size:14px;color:#6B5E58;line-height:1.8;">
+                  日後您可以使用 Google 帳號直接登入 GLŌW，即使校園信箱到期也不影響使用。
+                </p>
+                <div style="background:#FFF8F6;border:1.5px solid #F0D5CC;border-radius:10px;padding:16px 20px;margin:24px 0;">
+                  <p style="margin:0;font-size:13px;color:#C4614A;line-height:1.7;">
+                    如果這不是您本人的操作，請立即至設定頁面取消綁定，或聯繫我們的客服。
+                  </p>
+                </div>
+                <p style="margin:0;font-size:13px;color:#A89990;line-height:1.6;">GLŌW 團隊</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#F0EBE7;padding:20px 40px;text-align:center;border-top:1px solid #E5DDD9;">
+                <p style="margin:0;font-size:11px;color:#A89990;">© 2026 GLŌW · 輔仁大學</p>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return transporter.sendMail({
+    from: `"GLŌW 輔大美妝平台" <${process.env.SMTP_USER}>`,
+    to,
+    subject: 'GLŌW — Google 帳號綁定成功通知',
+    html,
+  });
+}
+
+module.exports = { sendVerificationEmail, sendWelcomeEmail, sendGoogleBindEmail };

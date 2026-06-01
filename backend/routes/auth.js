@@ -2,8 +2,21 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const passport = require('passport');
 const pool = require('../config/db');
-const { sendVerificationEmail } = require('../config/mailer');
+const { sendVerificationEmail, sendGoogleBindEmail } = require('../config/mailer');
+
+const JWT_SECRET = process.env.ADMIN_KEY;
+
+function signUserToken(user) {
+  return jwt.sign({
+    user_id: user.user_id, student_id: user.student_id,
+    nickname: user.nickname, department_grade: user.department_grade,
+    email: user.email, skin_type: user.skin_type,
+    is_admin: user.is_admin || false, last_verified_at: user.last_verified_at,
+  }, JWT_SECRET, { expiresIn: '30d' });
+}
 
 // ── 工具：產生 6 位數 OTP ──────────────────────────────────────────
 function generateOTP() {
@@ -241,6 +254,7 @@ router.post('/login', async (req, res) => {
       if (daysLeft <= WARN_DAYS) {
         return res.json({
           message: '登入成功',
+          token: signUserToken(user),
           warning: { daysLeft },
           user: {
             user_id: user.user_id, student_id: user.student_id,
@@ -255,6 +269,7 @@ router.post('/login', async (req, res) => {
 
     res.json({
       message: '登入成功',
+      token: signUserToken(user),
       user: {
         user_id: user.user_id,
         student_id: user.student_id,
@@ -336,7 +351,7 @@ router.post('/force-change-password', async (req, res) => {
        RETURNING user_id, student_id, nickname, department_grade, email, skin_type, is_admin, last_verified_at`,
       [hashed, user_id]
     );
-    res.json({ message: '密碼已設定', user: result.rows[0] });
+    res.json({ message: '密碼已設定', token: signUserToken(result.rows[0]), user: result.rows[0] });
   } catch (err) {
     console.error('[force-change-password]', err.message);
     res.status(500).json({ error: '密碼設定失敗' });
@@ -392,6 +407,124 @@ router.post('/reverify', async (req, res) => {
   } catch (err) {
     console.error('[reverify]', err.message);
     res.status(500).json({ error: '驗證失敗' });
+  }
+});
+
+// ── JWT 驗證 middleware（給需要登入的 Google 路由使用）────────────
+function authMiddleware(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: '未登入' });
+  try {
+    req.user = jwt.verify(auth.slice(7), JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'token 無效' });
+  }
+}
+
+// ── Google 綁定初始化 GET /api/auth/google/bind-init ─────────────
+// 前端用 fetch + Authorization header 呼叫，回傳 base64 state（含 userId）
+// 前端拿到後直接 window.location.href 到 /google/bind?state=...
+router.get('/google/bind-init', (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: '未登入' });
+  try {
+    const decoded = jwt.verify(auth.slice(7), JWT_SECRET);
+    const state = Buffer.from(JSON.stringify({ type: 'bind', userId: decoded.user_id })).toString('base64');
+    res.json({ ok: true, state });
+  } catch {
+    res.status(401).json({ error: 'token 無效' });
+  }
+});
+
+// ── Google OAuth 綁定 GET /api/auth/google/bind ───────────────────
+router.get('/google/bind', (req, res, next) => {
+  const { state } = req.query;
+  passport.authenticate('google', { scope: ['profile', 'email'], state: state || 'bind', session: false, prompt: 'select_account' })(req, res, next);
+});
+
+// ── Google OAuth 登入 GET /api/auth/google/login ──────────────────
+router.get('/google/login', (req, res, next) => {
+  const state = Buffer.from(JSON.stringify({ type: 'login' })).toString('base64');
+  passport.authenticate('google', { scope: ['profile', 'email'], state, session: false })(req, res, next);
+});
+
+// ── Google OAuth 回呼 GET /api/auth/google/callback ───────────────
+router.get('/google/callback',
+  passport.authenticate('google', { failureRedirect: 'http://localhost:3000/settings?error=google_fail', session: false }),
+  async (req, res) => {
+    try {
+      const stateData = JSON.parse(Buffer.from(req.query.state, 'base64').toString());
+
+      if (stateData.type === 'bind') {
+        await pool.query(
+          'INSERT INTO user_oauth (user_id, provider, provider_id, provider_email) VALUES ($1, $2, $3, $4) ON CONFLICT (provider, provider_id) DO UPDATE SET provider_email = EXCLUDED.provider_email',
+          [stateData.userId, 'google', req.user.googleId, req.user.email]
+        );
+        pool.query('SELECT email, nickname FROM users WHERE user_id=$1', [stateData.userId])
+          .then(({ rows }) => {
+            if (rows.length > 0) {
+              sendGoogleBindEmail(rows[0].email, rows[0].nickname, req.user.email)
+                .catch(err => console.error('[google/bind email]', err.message));
+            }
+          })
+          .catch(() => {});
+        return res.redirect('http://localhost:3000/settings?google=success');
+      }
+
+      if (stateData.type === 'login') {
+        const oauthResult = await pool.query(
+          'SELECT user_id FROM user_oauth WHERE provider=$1 AND provider_id=$2',
+          ['google', req.user.googleId]
+        );
+        if (oauthResult.rows.length === 0) {
+          return res.redirect('http://localhost:3000/login?error=not_bound');
+        }
+        const userId = oauthResult.rows[0].user_id;
+        const userResult = await pool.query('SELECT * FROM users WHERE user_id=$1', [userId]);
+        if (userResult.rows.length === 0) {
+          return res.redirect('http://localhost:3000/login?error=not_bound');
+        }
+        const user = userResult.rows[0];
+        if (user.is_banned) {
+          return res.redirect('http://localhost:3000/login?error=banned');
+        }
+        return res.redirect(`http://localhost:3000/login?token=${signUserToken(user)}`);
+      }
+
+      return res.redirect('http://localhost:3000/settings?error=server_error');
+    } catch (err) {
+      console.error('[google/callback]', err.message);
+      return res.redirect('http://localhost:3000/settings?error=server_error');
+    }
+  }
+);
+
+// ── 取消 Google 綁定 DELETE /api/auth/google/unbind ──────────────
+router.delete('/google/unbind', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    await pool.query('DELETE FROM user_oauth WHERE user_id=$1 AND provider=$2', [userId, 'google']);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[google/unbind]', err.message);
+    res.status(500).json({ error: '取消綁定失敗' });
+  }
+});
+
+// ── Google 綁定狀態 GET /api/auth/google/status ───────────────────
+router.get('/google/status', async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: '需要登入' });
+  try {
+    const decoded = jwt.verify(auth.slice(7), JWT_SECRET);
+    const result = await pool.query(
+      `SELECT provider_email FROM user_oauth WHERE user_id=$1 AND provider='google'`,
+      [decoded.user_id]
+    );
+    res.json({ bound: result.rows.length > 0, email: result.rows[0]?.provider_email || null });
+  } catch {
+    res.status(401).json({ error: 'token 無效' });
   }
 });
 

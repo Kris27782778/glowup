@@ -30,6 +30,36 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 app.use(cors());
+
+const session = require('express-session');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+
+app.use(session({
+  secret: process.env.ADMIN_KEY,
+  resave: true,
+  saveUninitialized: true,
+  cookie: {
+    secure: false,
+    httpOnly: true,
+    maxAge: 5 * 60 * 1000,
+  },
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
+
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: process.env.GOOGLE_CALLBACK_URL,
+  passReqToCallback: true,
+}, async (req, accessToken, refreshToken, profile, done) => {
+  return done(null, { googleId: profile.id, email: profile.emails[0].value, name: profile.displayName });
+}));
+
 app.use(express.json());
 
 // 路由

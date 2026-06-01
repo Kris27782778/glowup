@@ -32,8 +32,9 @@ function Login() {
   const [loading,     setLoading]     = useState(false);
   const [focusField,  setFocusField]  = useState(null);
   const [agreed,      setAgreed]      = useState(false);
-  // 頁面載入時的 splash：'in' → 'exit' → 'done'
-  const [splash, setSplash] = useState('in');
+  // 頁面載入時的 splash：'in' → 'exit' → 'done'；有 Google token 直接跳過
+  const hasGoogleToken = new URLSearchParams(window.location.search).get('token');
+  const [splash, setSplash] = useState(hasGoogleToken ? 'done' : 'in');
   // 首次登入強制改密碼
   const [forcePwUser,  setForcePwUser]  = useState(null);
   const [newPw,        setNewPw]        = useState('');
@@ -51,6 +52,35 @@ function Login() {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const googleToken = params.get('token');
+    if (googleToken) {
+      try {
+        const b64 = googleToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(b64));
+        localStorage.setItem('user', JSON.stringify({
+          user_id: payload.user_id,
+          student_id: payload.student_id,
+          nickname: payload.nickname,
+          department_grade: payload.department_grade,
+          email: payload.email,
+          skin_type: payload.skin_type,
+          is_admin: payload.is_admin || false,
+          last_verified_at: payload.last_verified_at,
+        }));
+        localStorage.setItem('glowToken', googleToken);
+        navigate('/community', { replace: true });
+      } catch {
+        setError('Google 登入失敗，請重試');
+      }
+      return;
+    }
+    if (params.get('error') === 'not_bound') {
+      setError('此 Google 帳號尚未綁定，請使用學號登入後在設定頁面完成綁定');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleLogin = async () => {
     if (!studentId || !password) { setError(t('請填寫學號與密碼')); return; }
     if (!agreed) { setError('請先閱讀並同意隱私政策與使用條款'); return; }
@@ -66,6 +96,7 @@ function Login() {
         setForcePwUser(data.user);
       } else if (res.ok) {
         localStorage.setItem('user', JSON.stringify(data.user));
+        if (data.token) localStorage.setItem('glowToken', data.token);
         navigate('/community');
       } else if (res.status === 403 && data.code === 'REVERIFY_REQUIRED') {
         navigate('/reverify', { state: { student_id: studentId, email: data.email } });
@@ -93,6 +124,7 @@ function Login() {
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('user', JSON.stringify(data.user));
+        if (data.token) localStorage.setItem('glowToken', data.token);
         navigate('/community');
       } else {
         setForcePwError(data.error || '設定失敗，請稍後再試');
@@ -293,6 +325,22 @@ function Login() {
               {t('忘記密碼？') || '忘記密碼？'}
             </Link>
           </div>
+
+          {/* Google 登入 */}
+          <div style={styles.divider}>
+            <div style={styles.dividerLine} />
+            <span style={styles.dividerText}>或</span>
+            <div style={styles.dividerLine} />
+          </div>
+          <button
+            style={styles.loginBtn}
+            onClick={() => { window.location.href = `${API_BASE}/api/auth/google/login`; }}
+          >
+            使用 Google 帳號登入
+          </button>
+          <p style={{ textAlign: 'center', fontFamily: '"DM Sans","Noto Sans TC",sans-serif', fontSize: '11px', color: 'var(--text-tertiary)', margin: '-12px 0 0', lineHeight: 1.4 }}>
+            僅限已綁定校園帳號的用戶
+          </p>
 
           {/* 分隔 */}
           <div style={styles.divider}>
