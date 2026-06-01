@@ -154,12 +154,28 @@ router.post('/register', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 解析 department_grade：'科系 · 部別 · 年級'
+    const parts = (department_grade || '').split(' · ');
+    const deptName = parts[0]?.trim();
+    const session  = parts[1]?.trim();
+    const grade    = parts[2]?.trim() || null;
+
+    let department_id = null;
+    if (deptName && session) {
+      const deptResult = await pool.query(
+        'SELECT department_id FROM departments WHERE name = $1 AND session = $2',
+        [deptName, session]
+      );
+      if (deptResult.rows.length > 0) department_id = deptResult.rows[0].department_id;
+    }
+
     // skip_verification 時 last_verified_at 設為 NULL，後續在個人資料補驗證
     const result = await pool.query(
-      `INSERT INTO users (student_id, password, nickname, real_name, department_grade, email, skin_type, last_verified_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      `INSERT INTO users (student_id, password, nickname, real_name, department_grade, email, skin_type, last_verified_at, department_id, grade)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [student_id, hashedPassword, nickname, real_name || null, department_grade, email, skin_type,
-       skip_verification ? null : new Date()]
+       skip_verification ? null : new Date(), department_id, grade]
     );
 
     await pool.query('DELETE FROM email_verifications WHERE email = $1', [email]);
