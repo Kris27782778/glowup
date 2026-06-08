@@ -629,7 +629,10 @@ async function writeAudit(action, target_type, target_id, detail = {}, admin_not
       [action, target_type, target_id ?? null, JSON.stringify(detail), admin_note]
     );
   } catch (e) {
-    console.error('[audit]', e.message);
+    console.error('[audit WRITE FAILED]', e.message, '| action:', action);
+    if (e.message.includes('does not exist')) {
+      console.error('[audit] audit_logs 資料表不存在，請執行 migrations/create_audit_logs.sql');
+    }
   }
 }
 
@@ -651,6 +654,9 @@ router.get('/audit', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('[admin/audit]', err.message);
+    if (err.message.includes('does not exist')) {
+      return res.json([]);
+    }
     res.status(500).json({ error: '查詢失敗' });
   }
 });
