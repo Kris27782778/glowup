@@ -2219,8 +2219,17 @@ function AuditTab() {
                 {iconSvg}
               </div>
               <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:'12px', color:C.text, lineHeight:1.4 }}>
-                  <strong>{logText}</strong>
+                <div style={{ display:'flex', alignItems:'center', gap:'6px', flexWrap:'wrap' }}>
+                  <span style={{ fontSize:'12px', color:C.text, fontWeight:600 }}>{logText}</span>
+                  {row.admin_nickname && (
+                    <span style={{
+                      fontSize:'11px', padding:'1px 7px', borderRadius:'999px',
+                      background: C.accentLight, color: C.accentText,
+                      fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
+                    }}>
+                      {row.admin_nickname}
+                    </span>
+                  )}
                 </div>
                 {detail && detail !== '—' && (
                   <div style={{ fontSize:'11px', color:C.textDim, marginTop:'2px' }}>{detail}</div>
