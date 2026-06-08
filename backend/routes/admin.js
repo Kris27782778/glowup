@@ -349,10 +349,52 @@ router.patch('/ingredients/:id', async (req, res) => {
       values
     );
     if (result.rows.length === 0) return res.status(404).json({ error: '找不到成分' });
+    await writeAudit('ingredient.update', 'ingredient', req.params.id, req.body);
     res.json({ ingredient: result.rows[0] });
   } catch (err) {
     console.error('[admin/ingredients patch]', err.message);
     res.status(500).json({ error: '更新失敗' });
+  }
+});
+
+// ── 新增成分 POST /api/admin/ingredients ──────────────────────────
+router.post('/ingredients', async (req, res) => {
+  const { name, skin_oily, skin_dry, skin_sensitive, skin_normal, skin_combo,
+    effect_hydration, effect_oil_control, effect_repair, effect_anti_acne,
+    effect_exfoliate, effect_whitening, effect_anti_aging } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: '成分名稱為必填' });
+  try {
+    const result = await pool.query(
+      `INSERT INTO ingredients
+         (name, skin_oily, skin_dry, skin_sensitive, skin_normal, skin_combo,
+          effect_hydration, effect_oil_control, effect_repair, effect_anti_acne,
+          effect_exfoliate, effect_whitening, effect_anti_aging)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [name.trim(),
+       skin_oily ?? 0, skin_dry ?? 0, skin_sensitive ?? 0, skin_normal ?? 0, skin_combo ?? 0,
+       effect_hydration ?? 0, effect_oil_control ?? 0, effect_repair ?? 0, effect_anti_acne ?? 0,
+       effect_exfoliate ?? 0, effect_whitening ?? 0, effect_anti_aging ?? 0]
+    );
+    await writeAudit('ingredient.create', 'ingredient', result.rows[0].ingredient_id, { name });
+    res.json({ ingredient: result.rows[0] });
+  } catch (err) {
+    console.error('[admin/ingredients post]', err.message);
+    if (err.code === '23505') return res.status(409).json({ error: '此成分名稱已存在' });
+    res.status(500).json({ error: '新增失敗' });
+  }
+});
+
+// ── 刪除成分 DELETE /api/admin/ingredients/:id ────────────────────
+router.delete('/ingredients/:id', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT name FROM ingredients WHERE ingredient_id = $1', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: '找不到成分' });
+    await pool.query('DELETE FROM ingredients WHERE ingredient_id = $1', [req.params.id]);
+    await writeAudit('ingredient.delete', 'ingredient', req.params.id, { name: rows[0].name });
+    res.json({ message: '已刪除' });
+  } catch (err) {
+    console.error('[admin/ingredients delete]', err.message);
+    res.status(500).json({ error: '刪除失敗' });
   }
 });
 
