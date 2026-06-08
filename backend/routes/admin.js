@@ -648,7 +648,8 @@ router.get('/audit', async (req, res) => {
     }
     params.push(Math.min(200, parseInt(limit) || 50));
     const result = await pool.query(
-      `SELECT * FROM audit_logs ${where} ORDER BY created_at DESC LIMIT $${params.length}`,
+      `SELECT log_id AS id, action, target_type, target_id, detail, admin_note, created_at
+       FROM audit_logs ${where} ORDER BY created_at DESC LIMIT $${params.length}`,
       params
     );
     res.json(result.rows);
