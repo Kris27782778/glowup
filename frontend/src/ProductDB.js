@@ -145,12 +145,6 @@ useEffect(() => {
   return () => clearTimeout(timer);
 }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
 
-// 分頁按鈕觸發：page 改變時重新撈取（filter/search 重置 page 時跳過，避免重複請求）
-useEffect(() => {
-  if (skipNextPageEffect.current) { skipNextPageEffect.current = false; return; }
-  if (!category && !item && !search.trim()) return;
-  fetchProducts(page);
-}, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
 const fetchProducts = async (pageNum = page) => {
   if (!category && !item && !search.trim()) { setProducts([]); setTotalCount(0); return; }
@@ -674,7 +668,7 @@ const fetchProducts = async (pageNum = page) => {
                     <div style={styles.pagination}>
                       <button
                         style={{ ...styles.pageBtn, ...(page === 1 ? styles.pageBtnDisabled : {}) }}
-                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        onClick={() => { const p = Math.max(1, page - 1); setPage(p); fetchProducts(p); }}
                         disabled={page === 1}
                       >‹</button>
 
@@ -682,13 +676,13 @@ const fetchProducts = async (pageNum = page) => {
                         <button
                           key={n}
                           style={{ ...styles.pageBtn, ...(n === page ? styles.pageBtnActive : {}) }}
-                          onClick={() => setPage(n)}
+                          onClick={() => { setPage(n); fetchProducts(n); }}
                         >{n}</button>
                       ))}
 
                       <button
                         style={{ ...styles.pageBtn, ...(page === totalPages ? styles.pageBtnDisabled : {}) }}
-                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        onClick={() => { const p = Math.min(totalPages, page + 1); setPage(p); fetchProducts(p); }}
                         disabled={page === totalPages}
                       >›</button>
                     </div>

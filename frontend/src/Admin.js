@@ -102,7 +102,7 @@ function btnStyle(type) {
   const base = {
     height: '32px', padding: '0 14px', borderRadius: '7px', fontSize: '12px',
     fontFamily: '"DM Sans","Noto Sans TC",sans-serif', cursor: 'pointer', border: 'none',
-    fontWeight: 500,
+    fontWeight: 500, whiteSpace: 'nowrap',
   };
   if (type === 'danger')  return { ...base, background: C.red,    color: '#fff' };
   if (type === 'ghost')   return { ...base, background: 'transparent', border: `1px solid ${C.border}`, color: C.textSub };

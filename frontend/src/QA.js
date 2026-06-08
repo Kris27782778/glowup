@@ -58,7 +58,6 @@ export default function QA() {
     const expandId = location.state?.expandId;
     if (expandId) {
       setExpandedId(expandId);
-      setTab('mine');
       window.history.replaceState({}, '');
     }
 

@@ -386,6 +386,8 @@ export default function Community() {
   const [notesLoaded, setNotesLoaded] = useState(false);
   const [trending,    setTrending]    = useState([]);
   const [unsung,      setUnsung]      = useState([]);
+  const [totalPosts,  setTotalPosts]  = useState(null);
+  const [memberCount, setMemberCount] = useState(null);
 
   const mapPost = p => ({
     id:          p.post_id,
@@ -457,9 +459,14 @@ export default function Community() {
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data.data)) setApiPosts(data.data.map(mapPost));
+        if (typeof data.total === 'number') setTotalPosts(data.total);
         setApiLoaded(true);
       })
       .catch(() => setApiLoaded(true));
+    fetch(`${API_BASE}/api/auth/member-count`)
+      .then(r => r.json())
+      .then(data => { if (typeof data.count === 'number') setMemberCount(data.count); })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -530,9 +537,9 @@ export default function Community() {
           </div>
           <div style={s.heroStats} className="community-hero-stats">
             {[
-              { num: apiLoaded ? String(apiPosts.length) : '—', label: '篇貼文' },
-              { num: '1',   label: '位成員' },
-              { num: '15',  label: '個標籤' },
+              { num: totalPosts !== null ? String(totalPosts) : (apiLoaded ? String(apiPosts.length) : '—'), label: '篇貼文' },
+              { num: memberCount !== null ? String(memberCount) : '—', label: '位成員' },
+              { num: String(TAG_GROUPS.reduce((acc, g) => acc + g.tags.length, 0)), label: '個標籤' },
             ].map(item => (
               <div key={item.label} style={s.statItem}>
                 <span style={s.statNum}>{item.num}</span>

@@ -172,7 +172,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/questions/similar — AI-like 相似問題偵測（標題、說明、標籤加權）
+// POST /api/questions/similar — AI 智能相似問題偵測
 router.post('/similar', async (req, res) => {
   const { title = '', detail = '', tags = [], limit = 5, exclude_id } = req.body || {};
   const cleanTitle = String(title).trim();
@@ -182,46 +182,116 @@ router.post('/similar', async (req, res) => {
   }
 
   try {
-    const candidateLimit = 160;
+    // 第一步：關鍵字預篩，取候選問題
     let query = supabase
       .from('questions')
       .select('question_id, title, detail, tags, solved, views, created_at, answers(count)')
       .order('created_at', { ascending: false })
-      .limit(candidateLimit);
+      .limit(200);
 
     if (exclude_id) query = query.neq('question_id', exclude_id);
 
     const { data, error } = await query;
     if (error) return res.status(400).json({ error: error.message });
 
-    const scored = (data || [])
+    const inputTags = Array.isArray(tags) ? tags : [];
+    const preScored = (data || [])
       .map(q => {
         const answerCount = q.answers?.[0]?.count ?? 0;
         const result = scoreQuestionSimilarity(
-          { title: cleanTitle, detail: cleanDetail, tags: Array.isArray(tags) ? tags : [] },
+          { title: cleanTitle, detail: cleanDetail, tags: inputTags },
           { ...q, answer_count: answerCount },
         );
+        return {
+          question_id: q.question_id,
+          title: q.title,
+          excerpt: (q.detail || '').slice(0, 120),
+          tags: q.tags || [],
+          solved: q.solved,
+          views: q.views || 0,
+          answer_count: answerCount,
+          keywordScore: result.score,
+          matched_terms: result.matched_terms,
+        };
+      })
+      .filter(q => q.keywordScore >= 0.1)
+      .sort((a, b) => b.keywordScore - a.keywordScore)
+      .slice(0, 12);
+
+    if (preScored.length === 0) return res.json({ data: [], total: 0 });
+
+    // 第二步：Claude AI 重新評分
+    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+    if (!apiKey) {
+      // 無 API key，退回關鍵字結果
+      const fallback = preScored
+        .filter(q => q.keywordScore >= 0.18)
+        .slice(0, Number(limit) || 5)
+        .map(q => ({ ...q, id: q.question_id, score: q.keywordScore }));
+      return res.json({ data: fallback, total: fallback.length });
+    }
+
+    const anthropic = new Anthropic({ apiKey, timeout: 15000 });
+    const candidateList = preScored.map((q, i) =>
+      `${i + 1}. 標題：「${q.title}」　標籤：[${q.tags.join(', ')}]`
+    ).join('\n');
+
+    const msg = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      messages: [{
+        role: 'user',
+        content: `你是一個美妝保養問答系統的相似問題判斷引擎。
+
+用戶新問題：
+標題：「${cleanTitle}」
+${cleanDetail ? `說明：「${cleanDetail.slice(0, 200)}」` : ''}
+標籤：[${inputTags.join(', ')}]
+
+以下是候選問題，請評估每題與用戶問題的語意相似度（0.0～1.0）：
+${candidateList}
+
+只輸出 JSON 陣列，格式：[{"index":1,"score":0.85},{"index":2,"score":0.42}]
+僅包含 score >= 0.35 的項目，其餘省略。不要輸出其他文字。`,
+      }],
+    });
+
+    let aiScores = [];
+    try {
+      const text = msg.content[0]?.text || '[]';
+      const match = text.match(/\[[\s\S]*\]/);
+      aiScores = match ? JSON.parse(match[0]) : [];
+    } catch {
+      aiScores = [];
+    }
+
+    const scoreMap = new Map(aiScores.map(s => [s.index - 1, s.score]));
+
+    const result = preScored
+      .map((q, i) => {
+        const aiScore = scoreMap.get(i);
+        if (aiScore === undefined) return null;
         return {
           id: q.question_id,
           question_id: q.question_id,
           title: q.title,
-          excerpt: q.detail || '',
-          tags: q.tags || [],
+          excerpt: q.excerpt,
+          tags: q.tags,
           solved: q.solved,
-          views: q.views || 0,
-          answers: answerCount,
-          answer_count: answerCount,
-          score: Number(result.score.toFixed(3)),
-          matched_terms: result.matched_terms,
+          views: q.views,
+          answer_count: q.answer_count,
+          answers: q.answer_count,
+          score: Number(aiScore.toFixed(3)),
+          matched_terms: q.matched_terms,
         };
       })
-      .filter(q => q.score >= 0.18)
-      .sort((a, b) => b.score - a.score || b.answers - a.answers || b.views - a.views)
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score || b.answer_count - a.answer_count)
       .slice(0, Math.min(10, Math.max(1, Number(limit) || 5)));
 
-    res.json({ data: scored, total: scored.length });
+    res.json({ data: result, total: result.length });
   } catch (err) {
-    console.error(err);
+    console.error('[similar]', err.message);
     res.status(500).json({ error: '相似問題偵測失敗' });
   }
 });

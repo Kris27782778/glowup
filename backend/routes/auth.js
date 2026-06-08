@@ -528,4 +528,15 @@ router.get('/google/status', async (req, res) => {
   }
 });
 
+// ── 成員人數 GET /api/auth/member-count ──────────────────────────
+router.get('/member-count', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) FROM users WHERE COALESCE(is_banned, false) = false');
+    res.json({ count: parseInt(result.rows[0].count) });
+  } catch (err) {
+    console.error('[member-count]', err.message);
+    res.status(500).json({ error: '查詢失敗' });
+  }
+});
+
 module.exports = router;
