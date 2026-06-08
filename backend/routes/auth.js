@@ -8,6 +8,7 @@ const pool = require('../config/db');
 const { sendVerificationEmail, sendGoogleBindEmail } = require('../config/mailer');
 
 const JWT_SECRET = process.env.ADMIN_KEY;
+const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 function signUserToken(user) {
   return jwt.sign({
@@ -154,12 +155,28 @@ router.post('/register', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 解析 department_grade：'科系 · 部別 · 年級'
+    const parts = (department_grade || '').split(' · ');
+    const deptName = parts[0]?.trim();
+    const session  = parts[1]?.trim();
+    const grade    = parts[2]?.trim() || null;
+
+    let department_id = null;
+    if (deptName && session) {
+      const deptResult = await pool.query(
+        'SELECT department_id FROM departments WHERE name = $1 AND session = $2',
+        [deptName, session]
+      );
+      if (deptResult.rows.length > 0) department_id = deptResult.rows[0].department_id;
+    }
+
     // skip_verification 時 last_verified_at 設為 NULL，後續在個人資料補驗證
     const result = await pool.query(
-      `INSERT INTO users (student_id, password, nickname, real_name, department_grade, email, skin_type, last_verified_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      `INSERT INTO users (student_id, password, nickname, real_name, department_grade, email, skin_type, last_verified_at, department_id, grade)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [student_id, hashedPassword, nickname, real_name || null, department_grade, email, skin_type,
-       skip_verification ? null : new Date()]
+       skip_verification ? null : new Date(), department_id, grade]
     );
 
     await pool.query('DELETE FROM email_verifications WHERE email = $1', [email]);
@@ -451,7 +468,7 @@ router.get('/google/login', (req, res, next) => {
 
 // ── Google OAuth 回呼 GET /api/auth/google/callback ───────────────
 router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: 'http://localhost:3000/settings?error=google_fail', session: false }),
+  passport.authenticate('google', { failureRedirect: `${FRONTEND}/settings?error=google_fail`, session: false }),
   async (req, res) => {
     try {
       const stateData = JSON.parse(Buffer.from(req.query.state, 'base64').toString());
@@ -469,7 +486,7 @@ router.get('/google/callback',
             }
           })
           .catch(() => {});
-        return res.redirect('http://localhost:3000/settings?google=success');
+        return res.redirect(`${FRONTEND}/settings?google=success`);
       }
 
       if (stateData.type === 'login') {
@@ -478,24 +495,24 @@ router.get('/google/callback',
           ['google', req.user.googleId]
         );
         if (oauthResult.rows.length === 0) {
-          return res.redirect('http://localhost:3000/login?error=not_bound');
+          return res.redirect(`${FRONTEND}/login?error=not_bound`);
         }
         const userId = oauthResult.rows[0].user_id;
         const userResult = await pool.query('SELECT * FROM users WHERE user_id=$1', [userId]);
         if (userResult.rows.length === 0) {
-          return res.redirect('http://localhost:3000/login?error=not_bound');
+          return res.redirect(`${FRONTEND}/login?error=not_bound`);
         }
         const user = userResult.rows[0];
         if (user.is_banned) {
-          return res.redirect('http://localhost:3000/login?error=banned');
+          return res.redirect(`${FRONTEND}/login?error=banned`);
         }
-        return res.redirect(`http://localhost:3000/login?token=${signUserToken(user)}`);
+        return res.redirect(`${FRONTEND}/login?token=${signUserToken(user)}`);
       }
 
-      return res.redirect('http://localhost:3000/settings?error=server_error');
+      return res.redirect(`${FRONTEND}/settings?error=server_error`);
     } catch (err) {
       console.error('[google/callback]', err.message);
-      return res.redirect('http://localhost:3000/settings?error=server_error');
+      return res.redirect(`${FRONTEND}/settings?error=server_error`);
     }
   }
 );
