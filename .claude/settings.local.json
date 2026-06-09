@@ -68,10 +68,45 @@
       "Bash(rm -rf /Users/xuan/Desktop/glowup/frontend/node_modules/.cache && echo \"Cache cleared\")",
       "Bash(brctl status *)",
       "Bash(xattr /Users/xuan/Desktop/glowup/frontend/node_modules/fork-ts-checker-webpack-plugin/lib/watch/InclusiveNodeWatchFileSystem.js)",
-      "Bash(PGPASSWORD=group666asdfghtrewq psql *)"
+      "Bash(PGPASSWORD=group666asdfghtrewq psql *)",
+      "Bash(open http://localhost:3000)",
+      "Bash(pkill -f \"node.*server\")",
+      "Bash(sleep 2 && cat /tmp/backend.log)",
+      "Read(//private/tmp/**)",
+      "Bash(node index.js > /tmp/backend.log 2>&1 & *)",
+      "Bash(kill 18730)",
+      "Bash(echo \"New backend PID: $!\")",
+      "Bash(curl -s http://localhost:5001/api/posts/trending-tags)",
+      "Bash(cd /Users/wyk/Desktop/美妝樝本/frontend && CI=true npm run build 2>&1 | grep -E \"Error|error|Warning.*no-unused\" | head -20)",
+      "Read(//Users/wyk/Desktop/美妝樝本/**)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -)",
+      "Bash(lsof -ti:5001 -ti:3000)",
+      "Bash(sudo npm install -g vercel)",
+      "Bash(ls /Users/wyk/Desktop/ | grep 美)",
+      "Read(//Users/wyk/Desktop/**)",
+      "Bash(curl -s -X POST http://localhost:5001/api/auth/send-verification -H 'Content-Type: application/json' -d '{\"email\":\"wuyukai9@gmail.com\"}')",
+      "Bash(curl -s \"http://localhost:5001/api/products?limit=2\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); console.log\\(JSON.stringify\\(j.data?.[0], null, 2\\)\\)\")",
+      "Bash(curl -s http://localhost:3000 -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s \"http://localhost:5001/api/products?search=玻尿酸&limit=3\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); console.log\\('total:', j.total, 'data:', j.data?.length, 'first:', j.data?.[0]?.name\\)\")",
+      "Bash(curl -s \"http://localhost:5001/api/products?limit=3\")",
+      "Bash(curl -s \"http://localhost:5001/api/products?search=粉底&limit=5\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);const j=JSON.parse\\(d\\);console.log\\('count:',j.data?.length, j.data?.[0]?.name\\)\")",
+      "Bash(curl -v \"http://localhost:5001/api/products?search=%E7%B2%89%E5%BA%95&limit=5\")",
+      "Bash(vercel --prod)",
+      "Bash(git -C /Users/wyk/Desktop/美妝樣本 pull)",
+      "Bash(git -C /Users/wyk/Desktop/美妝樣本 stash)",
+      "Bash(git -C /Users/wyk/Desktop/美妝樣本 stash pop)",
+      "Bash(git -C /Users/wyk/Desktop/美妝樣本 diff --stat)",
+      "Bash(git -C /Users/wyk/Desktop/美妝樣本 add frontend/src/Dashboard.js)",
+      "Bash(sort -k6,7)",
+      "Bash(git -C /Users/wyk/Desktop/美妝樣本 pull --no-rebase)"
     ],
     "additionalDirectories": [
-      "/Users/xuan/Desktop/glowup/frontend/node_modules/.cache"
+      "/Users/xuan/Desktop/glowup/frontend/node_modules/.cache",
+      "/private/tmp"
     ]
   }
 }

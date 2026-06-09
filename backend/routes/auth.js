@@ -8,6 +8,7 @@ const pool = require('../config/db');
 const { sendVerificationEmail, sendGoogleBindEmail } = require('../config/mailer');
 
 const JWT_SECRET = process.env.ADMIN_KEY;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 function signUserToken(user) {
   return jwt.sign({
@@ -467,7 +468,7 @@ router.get('/google/login', (req, res, next) => {
 
 // ── Google OAuth 回呼 GET /api/auth/google/callback ───────────────
 router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: 'http://localhost:3000/settings?error=google_fail', session: false }),
+  passport.authenticate('google', { failureRedirect: `${FRONTEND_URL}/settings?error=google_fail`, session: false }),
   async (req, res) => {
     try {
       const stateData = JSON.parse(Buffer.from(req.query.state, 'base64').toString());
@@ -485,7 +486,7 @@ router.get('/google/callback',
             }
           })
           .catch(() => {});
-        return res.redirect('http://localhost:3000/settings?google=success');
+        return res.redirect(`${FRONTEND_URL}/settings?google=success`);
       }
 
       if (stateData.type === 'login') {
@@ -494,24 +495,24 @@ router.get('/google/callback',
           ['google', req.user.googleId]
         );
         if (oauthResult.rows.length === 0) {
-          return res.redirect('http://localhost:3000/login?error=not_bound');
+          return res.redirect(`${FRONTEND_URL}/login?error=not_bound`);
         }
         const userId = oauthResult.rows[0].user_id;
         const userResult = await pool.query('SELECT * FROM users WHERE user_id=$1', [userId]);
         if (userResult.rows.length === 0) {
-          return res.redirect('http://localhost:3000/login?error=not_bound');
+          return res.redirect(`${FRONTEND_URL}/login?error=not_bound`);
         }
         const user = userResult.rows[0];
         if (user.is_banned) {
-          return res.redirect('http://localhost:3000/login?error=banned');
+          return res.redirect(`${FRONTEND_URL}/login?error=banned`);
         }
-        return res.redirect(`http://localhost:3000/login?token=${signUserToken(user)}`);
+        return res.redirect(`${FRONTEND_URL}/login?token=${signUserToken(user)}`);
       }
 
-      return res.redirect('http://localhost:3000/settings?error=server_error');
+      return res.redirect(`${FRONTEND_URL}/settings?error=server_error`);
     } catch (err) {
       console.error('[google/callback]', err.message);
-      return res.redirect('http://localhost:3000/settings?error=server_error');
+      return res.redirect(`${FRONTEND_URL}/settings?error=server_error`);
     }
   }
 );
