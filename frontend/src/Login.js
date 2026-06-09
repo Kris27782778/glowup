@@ -58,7 +58,7 @@ function Login() {
     if (googleToken) {
       try {
         const b64 = googleToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(atob(b64));
+        const payload = JSON.parse(decodeURIComponent(escape(atob(b64))));
         localStorage.setItem('user', JSON.stringify({
           user_id: payload.user_id,
           student_id: payload.student_id,
