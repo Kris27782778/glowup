@@ -86,7 +86,7 @@ function Navbar() {
 
         {/* ── 左側：Logo + 導覽 ── */}
         <div style={styles.left}>
-          <Link to="/community" style={styles.logo}>GLŌW</Link>
+          <Link to="/" style={styles.logo}>GLŌW</Link>
           <div style={styles.divider} className="nav-divider" />
           <div style={styles.navLinks} className="nav-links">
             {NAV_KEYS.map(({ key, to }) => (
@@ -122,7 +122,7 @@ function Navbar() {
             <button
               className="nav-post-btn"
               style={styles.postBtn}
-              onClick={() => navigate('/community')}
+              onClick={() => navigate('/community/new')}
             >
               + {t('發布貼文')}
             </button>
@@ -256,7 +256,7 @@ function Navbar() {
                 <button className="nav-mobile-link" style={{ color: '#C4897A' }} onClick={() => { navigate('/admin'); setMobileOpen(false); }}>平台管理</button>
               )}
               <div className="nav-mobile-divider" />
-              <button className="nav-mobile-post-btn" onClick={() => { navigate('/community'); setMobileOpen(false); }}>
+              <button className="nav-mobile-post-btn" onClick={() => { navigate('/community/new'); setMobileOpen(false); }}>
                 + {t('發布貼文')}
               </button>
               <button

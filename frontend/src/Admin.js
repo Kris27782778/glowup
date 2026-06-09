@@ -102,7 +102,7 @@ function btnStyle(type) {
   const base = {
     height: '32px', padding: '0 14px', borderRadius: '7px', fontSize: '12px',
     fontFamily: '"DM Sans","Noto Sans TC",sans-serif', cursor: 'pointer', border: 'none',
-    fontWeight: 500,
+    fontWeight: 500, whiteSpace: 'nowrap',
   };
   if (type === 'danger')  return { ...base, background: C.red,    color: '#fff' };
   if (type === 'ghost')   return { ...base, background: 'transparent', border: `1px solid ${C.border}`, color: C.textSub };
@@ -1147,10 +1147,137 @@ const SCORE_COLS = [
   { key:'skin_sensitive', label:'敏感' }, { key:'skin_normal', label:'中性' },
   { key:'skin_combo', label:'混合' },
 ];
+const EFFECT_COLS = [
+  { key:'effect_hydration',   label:'保濕' },
+  { key:'effect_oil_control', label:'控油' },
+  { key:'effect_repair',      label:'修護' },
+  { key:'effect_anti_acne',   label:'抗痘' },
+  { key:'effect_exfoliate',   label:'去角質' },
+  { key:'effect_whitening',   label:'美白' },
+  { key:'effect_anti_aging',  label:'抗老' },
+];
+const EFFECT_COLORS = ['#7BAF7B','#C4760A','#C4897A','#B84040','#9B7EC8','#5B8FC4','#8A6A1E'];
+
+const ING_EMPTY = {
+  name:'',
+  skin_oily:0, skin_dry:0, skin_sensitive:0, skin_normal:0, skin_combo:0,
+  effect_hydration:0, effect_oil_control:0, effect_repair:0, effect_anti_acne:0,
+  effect_exfoliate:0, effect_whitening:0, effect_anti_aging:0,
+};
+
+function IngredientModal({ ingredient, onSave, onCancel }) {
+  const isNew = !ingredient;
+  const [form, setForm] = useState(ingredient ? { ...ingredient } : { ...ING_EMPTY });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const setNum = (k, v) => {
+    const n = parseInt(v, 10);
+    setForm(f => ({ ...f, [k]: isNaN(n) ? 0 : Math.max(-5, Math.min(5, n)) }));
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) { setErr('成分名稱為必填'); return; }
+    setSaving(true); setErr('');
+    const res = isNew
+      ? await adminFetch('/ingredients', { method:'POST', body: form })
+      : await adminFetch(`/ingredients/${ingredient.ingredient_id}`, { method:'PATCH', body: form });
+    setSaving(false);
+    if (res.error) { setErr(res.error); return; }
+    onSave();
+  };
+
+  const inputSt = {
+    width:'100%', boxSizing:'border-box', padding:'8px 10px',
+    background: C.bgCard, border:`1px solid ${C.border}`, borderRadius:'7px',
+    color: C.text, fontSize:'13px', fontFamily:'"DM Sans","Noto Sans TC",sans-serif', outline:'none',
+  };
+  const labelSt = {
+    fontSize:'11px', color:C.textDim, letterSpacing:'0.06em',
+    textTransform:'uppercase', marginBottom:'5px', display:'block',
+  };
+  const numSt = {
+    ...inputSt, width:'60px', textAlign:'center', padding:'6px 4px',
+  };
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.50)',
+      display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+      <div style={{ background: C.card, border:`1px solid ${C.border}`, borderRadius:'16px',
+        padding:'28px', width:'520px', maxHeight:'90vh', overflowY:'auto',
+        display:'flex', flexDirection:'column', gap:'20px',
+        boxShadow:'0 20px 60px rgba(0,0,0,0.15)' }}>
+
+        <div>
+          <h3 style={{ margin:0, fontSize:'16px', fontWeight:600, color:C.text }}>
+            {isNew ? '新增成分' : '編輯成分'}
+          </h3>
+          {!isNew && <p style={{ margin:'3px 0 0', fontSize:'11px', color:C.textDim }}>#{ingredient.ingredient_id}</p>}
+        </div>
+
+        {/* 名稱 */}
+        <div>
+          <label style={labelSt}>成分名稱</label>
+          <input style={inputSt} value={form.name}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="例：玻尿酸" />
+        </div>
+
+        {/* 膚質分數 */}
+        <div>
+          <label style={{ ...labelSt, marginBottom:'10px' }}>膚質適合分數（-5 ~ 5，越高越適合）</label>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:'10px' }}>
+            {SCORE_COLS.map(col => (
+              <div key={col.key} style={{ textAlign:'center' }}>
+                <div style={{ fontSize:'11px', color:C.textSub, marginBottom:'4px' }}>{col.label}</div>
+                <input type="number" min="-5" max="5" style={numSt}
+                  value={form[col.key] ?? 0}
+                  onChange={e => setNum(col.key, e.target.value)} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 功效標籤 */}
+        <div>
+          <label style={{ ...labelSt, marginBottom:'10px' }}>功效分數（0 = 無效果，正數 = 有效）</label>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'10px' }}>
+            {EFFECT_COLS.map((col, i) => (
+              <div key={col.key} style={{ textAlign:'center' }}>
+                <div style={{ fontSize:'11px', marginBottom:'4px',
+                  color: (form[col.key] > 0) ? EFFECT_COLORS[i] : C.textSub }}>
+                  {col.label}
+                </div>
+                <input type="number" min="-5" max="5" style={{
+                  ...numSt,
+                  borderColor: (form[col.key] > 0) ? EFFECT_COLORS[i] : C.border,
+                  color: (form[col.key] > 0) ? EFFECT_COLORS[i] : C.text,
+                }}
+                  value={form[col.key] ?? 0}
+                  onChange={e => setNum(col.key, e.target.value)} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {err && <p style={{ margin:0, fontSize:'12px', color:C.red }}>{err}</p>}
+
+        <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
+          <button onClick={onCancel} style={btnStyle('ghost')}>取消</button>
+          <button onClick={handleSave} disabled={saving} style={btnStyle('accent')}>
+            {saving ? '儲存中…' : isNew ? '新增' : '儲存'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function IngredientsTab() {
   const [ingredients, setIngredients] = useState([]);
   const [q, setQ] = useState('');
+  const [editing, setEditing] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const [delTarget, setDelTarget] = useState(null);
 
   const load = useCallback(() => {
     adminFetch(`/ingredients?q=${encodeURIComponent(q)}`).then(d => { if (Array.isArray(d)) setIngredients(d); });
@@ -1164,40 +1291,89 @@ function IngredientsTab() {
     return C.red;
   };
 
+  const handleDelete = async () => {
+    await adminFetch(`/ingredients/${delTarget.ingredient_id}`, { method:'DELETE' });
+    setDelTarget(null);
+    load();
+  };
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'10px' }}>
         <SearchBar value={q} onChange={setQ} placeholder="搜尋成分名稱" />
-        <span style={{ fontSize:'13px', color:C.textSub }}>{ingredients.length} 筆</span>
+        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+          <span style={{ fontSize:'13px', color:C.textSub }}>{ingredients.length} 筆</span>
+          <button onClick={() => setCreating(true)} style={btnStyle('accent')}>
+            ＋ 新增成分
+          </button>
+        </div>
       </div>
+
       <div style={sectionStyle}>
         <table style={tableStyle}>
           <thead><tr>
-            {['成分名稱','油性','乾性','敏感','中性','混合'].map(h => (
-              <th key={h} style={thStyle}>{h}</th>
-            ))}
+            <th style={thStyle}>成分名稱</th>
+            {SCORE_COLS.map(c => <th key={c.key} style={{ ...thStyle, textAlign:'center' }}>{c.label}</th>)}
+            <th style={thStyle}>功效標籤</th>
+            <th style={{ ...thStyle, textAlign:'right' }}>操作</th>
           </tr></thead>
           <tbody>
-            {ingredients.map(ing => (
-              <tr key={ing.ingredient_id}
-                style={{ borderBottom:`1px solid ${C.border}`, transition:'background 150ms' }}
-                onMouseEnter={e => e.currentTarget.style.background = C.bgRowHover}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <td style={{ ...tdStyle, color:C.text, fontWeight:500 }}>{ing.name}</td>
-                {SCORE_COLS.map(col => (
-                  <td key={col.key} style={{ ...tdStyle, textAlign:'center' }}>
-                    <span style={{ color: scoreColor(ing[col.key]), fontWeight:600, fontSize:'13px' }}>
-                      {ing[col.key] ?? '—'}
-                    </span>
+            {ingredients.map(ing => {
+              const activeEffects = EFFECT_COLS.map((c, i) => ({ ...c, val: ing[c.key], color: EFFECT_COLORS[i] }))
+                .filter(c => c.val > 0);
+              return (
+                <tr key={ing.ingredient_id}
+                  style={{ borderBottom:`1px solid ${C.border}`, transition:'background 150ms' }}
+                  onMouseEnter={e => e.currentTarget.style.background = C.bgRowHover}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <td style={{ ...tdStyle, color:C.text, fontWeight:500, minWidth:'120px' }}>{ing.name}</td>
+                  {SCORE_COLS.map(col => (
+                    <td key={col.key} style={{ ...tdStyle, textAlign:'center' }}>
+                      <span style={{ color: scoreColor(ing[col.key]), fontWeight:600, fontSize:'13px' }}>
+                        {ing[col.key] ?? '—'}
+                      </span>
+                    </td>
+                  ))}
+                  <td style={{ ...tdStyle, minWidth:'160px' }}>
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:'4px' }}>
+                      {activeEffects.length > 0 ? activeEffects.map(e => (
+                        <span key={e.key} style={{
+                          ...tagStyle,
+                          background: e.color + '1A',
+                          color: e.color,
+                          fontSize:'11px', padding:'2px 7px',
+                        }}>{e.label}</span>
+                      )) : <span style={{ color:C.textDim, fontSize:'12px' }}>—</span>}
+                    </div>
                   </td>
-                ))}
-              </tr>
-            ))}
+                  <td style={{ ...tdStyle, textAlign:'right' }}>
+                    <div style={{ display:'flex', gap:'6px', justifyContent:'flex-end' }}>
+                      <button onClick={() => setEditing(ing)} style={btnStyle('accent')}>編輯</button>
+                      <button onClick={() => setDelTarget(ing)} style={btnStyle('danger')}>刪除</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {ingredients.length === 0 && <EmptyState text="沒有符合的成分" />}
       </div>
+
+      {creating && (
+        <IngredientModal onSave={() => { setCreating(false); load(); }} onCancel={() => setCreating(false)} />
+      )}
+      {editing && (
+        <IngredientModal ingredient={editing} onSave={() => { setEditing(null); load(); }} onCancel={() => setEditing(null)} />
+      )}
+      {delTarget && (
+        <ConfirmModal
+          message={`確定要刪除成分「${delTarget.name}」？\n此操作無法復原，且可能影響使用此成分的分析。`}
+          onConfirm={handleDelete}
+          onCancel={() => setDelTarget(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1906,45 +2082,56 @@ function HealthTab() {
 
 // ── AuditTab（審計日誌）─────────────────────────────────────────
 const ACTION_LABELS = {
-  'user.ban':        { label:'停權用戶',     color: C.red,    bg: C.redBg },
-  'user.unban':      { label:'解除停權',     color: C.green,  bg: C.greenBg },
-  'user.delete':     { label:'刪除用戶',     color: C.red,    bg: C.redBg },
-  'product.create':  { label:'新增產品',     color: C.green,  bg: C.greenBg },
-  'product.update':  { label:'編輯產品',     color: C.orange, bg: C.orangeBg },
-  'product.remove':  { label:'下架產品',     color: C.red,    bg: C.redBg },
-  'product.restore': { label:'重新上架',     color: C.green,  bg: C.greenBg },
-  'ingredient.update':{ label:'編輯成分',    color: C.orange, bg: C.orangeBg },
-  'question.solve':  { label:'標記已解決',   color: C.green,  bg: C.greenBg },
-  'question.delete': { label:'刪除問題',     color: C.red,    bg: C.redBg },
-  'post.remove':     { label:'下架貼文',     color: C.red,    bg: C.redBg },
-  'post.restore':    { label:'恢復貼文',     color: C.green,  bg: C.greenBg },
-  'report.resolve':  { label:'核准並刪除',   color: C.red,    bg: C.redBg },
-  'report.dismiss':  { label:'關閉檢舉',     color: C.textDim, bg: 'rgba(0,0,0,0.05)' },
+  'user.ban':           { label:'停權用戶',     color: C.red,    bg: C.redBg },
+  'user.unban':         { label:'解除停權',     color: C.green,  bg: C.greenBg },
+  'user.delete':        { label:'刪除用戶',     color: C.red,    bg: C.redBg },
+  'product.create':     { label:'新增產品',     color: C.green,  bg: C.greenBg },
+  'product.update':     { label:'編輯產品',     color: C.orange, bg: C.orangeBg },
+  'product.remove':     { label:'下架產品',     color: C.red,    bg: C.redBg },
+  'product.restore':    { label:'重新上架',     color: C.green,  bg: C.greenBg },
+  'ingredient.create':  { label:'新增成分',     color: C.green,  bg: C.greenBg },
+  'ingredient.update':  { label:'編輯成分',     color: C.orange, bg: C.orangeBg },
+  'ingredient.delete':  { label:'刪除成分',     color: C.red,    bg: C.redBg },
+  'question.solve':     { label:'標記已解決',   color: C.green,  bg: C.greenBg },
+  'question.delete':    { label:'刪除問題',     color: C.red,    bg: C.redBg },
+  'post.remove':        { label:'下架貼文',     color: C.red,    bg: C.redBg },
+  'post.restore':       { label:'恢復貼文',     color: C.green,  bg: C.greenBg },
+  'report.resolve':     { label:'核准並刪除',   color: C.red,    bg: C.redBg },
+  'report.dismiss':     { label:'關閉檢舉',     color: C.textDim, bg: 'rgba(0,0,0,0.05)' },
 };
 
 const ACTION_GROUPS = [
   { label:'全部',   value:'' },
   { label:'用戶',   value:'user' },
   { label:'產品',   value:'product' },
+  { label:'成分',   value:'ingredient' },
   { label:'內容',   value:'question' },
   { label:'檢舉',   value:'report' },
 ];
 
+const AUDIT_POLL_MS = 15000;
+
 function AuditTab() {
-  const [logs, setLogs]       = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter]   = useState('');
+  const [logs, setLogs]         = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [filter, setFilter]     = useState('');
+  const [lastUpdate, setLastUpdate] = useState(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const data = await adminFetch(`/audit?action=${filter}&limit=100`);
       setLogs(Array.isArray(data) ? data : []);
-    } catch { setLogs([]); }
+      setLastUpdate(new Date());
+    } catch { /* keep previous logs */ }
     finally { setLoading(false); }
   }, [filter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    setLoading(true);
+    load();
+    const id = setInterval(load, AUDIT_POLL_MS);
+    return () => clearInterval(id);
+  }, [load]);
 
   const fmtDetail = (detail) => {
     if (!detail || typeof detail !== 'object') return '—';
@@ -1955,8 +2142,8 @@ function AuditTab() {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
-      {/* 篩選列 */}
-      <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+      {/* 篩選列 + 即時狀態 */}
+      <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', alignItems:'center' }}>
         {ACTION_GROUPS.map(g => (
           <button key={g.value} onClick={() => setFilter(g.value)}
             style={{
@@ -1968,9 +2155,26 @@ function AuditTab() {
               transition:'all 150ms',
             }}>{g.label}</button>
         ))}
-        <span style={{ marginLeft:'auto', fontSize:'13px', color:C.textDim, alignSelf:'center' }}>
-          共 {logs.length} 筆
-        </span>
+        <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'12px' }}>
+          {lastUpdate && (
+            <span style={{ fontSize:'11px', color:C.textDim }}>
+              更新於 {lastUpdate.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', second:'2-digit' })}
+            </span>
+          )}
+          <div style={{ display:'flex', alignItems:'center', gap:'5px' }}>
+            <span style={{
+              width:'7px', height:'7px', borderRadius:'50%', background: C.green,
+              boxShadow:`0 0 0 2px ${C.greenBg}`,
+              animation:'pulse 2s infinite',
+              display:'inline-block',
+            }} />
+            <span style={{ fontSize:'11px', color:C.green, fontWeight:500 }}>即時</span>
+          </div>
+          <button onClick={load} style={{ ...btnStyle('ghost'), height:'28px', padding:'0 10px', fontSize:'11px' }}>
+            刷新
+          </button>
+          <span style={{ fontSize:'13px', color:C.textDim }}>共 {logs.length} 筆</span>
+        </div>
       </div>
 
       {/* 日誌條目（log-entry 格式）*/}
@@ -1992,6 +2196,8 @@ function AuditTab() {
             if (a === 'user.unban')     return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
             if (a === 'user.delete')    return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>;
             if (a === 'product.create') return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+            if (a === 'ingredient.create') return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+            if (a === 'ingredient.delete') return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>;
             if (a === 'product.update' || a === 'ingredient.update') return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
             if (a === 'product.remove' || a === 'post.remove')  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>;
             if (a === 'product.restore'|| a === 'post.restore') return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>;
@@ -2013,8 +2219,17 @@ function AuditTab() {
                 {iconSvg}
               </div>
               <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:'12px', color:C.text, lineHeight:1.4 }}>
-                  <strong>{logText}</strong>
+                <div style={{ display:'flex', alignItems:'center', gap:'6px', flexWrap:'wrap' }}>
+                  <span style={{ fontSize:'12px', color:C.text, fontWeight:600 }}>{logText}</span>
+                  {row.admin_nickname && (
+                    <span style={{
+                      fontSize:'11px', padding:'1px 7px', borderRadius:'999px',
+                      background: C.accentLight, color: C.accentText,
+                      fontFamily:'"DM Sans","Noto Sans TC",sans-serif',
+                    }}>
+                      {row.admin_nickname}
+                    </span>
+                  )}
                 </div>
                 {detail && detail !== '—' && (
                   <div style={{ fontSize:'11px', color:C.textDim, marginTop:'2px' }}>{detail}</div>
@@ -2413,7 +2628,7 @@ const TAB_META = {
   users:        { title:'會員管理', desc:'管理所有已註冊的輔大同學，支援停權與刪除' },
   retention:    { title:'留存分析', desc:'用戶回訪與留存趨勢' },
   products:     { title:'產品管理', desc:'管理美妝產品資料庫，支援新增、編輯、下架' },
-  ingredients:  { title:'成分管理', desc:'管理成分知識庫，查看各成分的膚質適合分數' },
+  ingredients:  { title:'成分管理', desc:'新增／編輯成分，調整膚質分數與功效標籤' },
   questions:    { title:'問答管理', desc:'管理問答討論內容' },
   posts:        { title:'貼文審核', desc:'審核社群貼文，下架違規內容' },
   reports:      { title:'檢舉管理', desc:'處理用戶檢舉案件' },

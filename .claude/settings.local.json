@@ -67,7 +67,8 @@
       "Skill(claude-api:*)",
       "Bash(rm -rf /Users/xuan/Desktop/glowup/frontend/node_modules/.cache && echo \"Cache cleared\")",
       "Bash(brctl status *)",
-      "Bash(xattr /Users/xuan/Desktop/glowup/frontend/node_modules/fork-ts-checker-webpack-plugin/lib/watch/InclusiveNodeWatchFileSystem.js)"
+      "Bash(xattr /Users/xuan/Desktop/glowup/frontend/node_modules/fork-ts-checker-webpack-plugin/lib/watch/InclusiveNodeWatchFileSystem.js)",
+      "Bash(PGPASSWORD=group666asdfghtrewq psql *)"
     ],
     "additionalDirectories": [
       "/Users/xuan/Desktop/glowup/frontend/node_modules/.cache"
