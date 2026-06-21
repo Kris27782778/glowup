@@ -116,7 +116,7 @@ const en = {
   // ── Dashboard ───────────────────────────────────
   '帖子':   'Posts',
   '收藏':   'Saved',
-  '我的筆記': 'Notes',
+  '收藏的筆記': 'Notes',
 
   // Empty states
   '還沒有貼文':     'No posts yet',
@@ -125,7 +125,7 @@ const en = {
   '向社群提出你的保養疑問':           'Ask the community your skincare questions',
   '收藏夾是空的':   'Nothing saved yet',
   '收藏喜歡的貼文、成分與產品':       'Save posts, ingredients, and products you like',
-  '我的筆記尚未建立': 'No ingredient notes yet',
+  '收藏的筆記尚未建立': 'No ingredient notes yet',
   '標記你用過的成分，記錄使用心得':   "Track ingredients you've used and record your experience",
 
   // Dashboard sidebar

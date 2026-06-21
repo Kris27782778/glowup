@@ -495,8 +495,8 @@ export default function Community() {
   const TABS = [
     { key: 'latest',    label: '最新' },
     { key: 'hot',       label: '熱門' },
-    { key: 'mine',      label: '我的帖子' },
-    { key: 'bookmarks', label: '我的筆記' },
+    { key: 'mine',      label: '我的貼文' },
+    { key: 'bookmarks', label: '收藏的筆記' },
   ];
 
   const sourcePosts =
