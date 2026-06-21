@@ -114,7 +114,7 @@ const en = {
   '屏障較弱，選擇成分單純配方':       'Weakened barrier — choose minimal-ingredient formulas',
 
   // ── Dashboard ───────────────────────────────────
-  '帖子':   'Posts',
+  '我的貼文':   'Posts',
   '收藏':   'Saved',
   '收藏的筆記': 'Notes',
 

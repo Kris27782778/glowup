@@ -32,7 +32,7 @@ const SKIN_LABELS = {
   sensitive:  { label: '敏感性肌',     desc: '屏障較弱，選擇成分單純配方' },
 };
 
-const TAB_KEYS   = ['帖子', '問答', '收藏', '收藏的筆記', '歷史評論'];
+const TAB_KEYS   = ['我的貼文', '問答', '收藏', '收藏的筆記', '歷史評論'];
 const EMPTY_KEYS = [
   { title: '還沒有貼文',       sub: '分享你的保養心得，讓社群看見你的經驗' },
   { title: '還沒有問答記錄',   sub: '向社群提出你的保養疑問' },
